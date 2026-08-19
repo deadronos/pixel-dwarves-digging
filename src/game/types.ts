@@ -48,6 +48,48 @@ export type World = {
 
 export type Inventory = Record<MineableBlockType, number>
 
+export type WorkPreference = 'nearest' | 'ore-first' | 'deepest-first'
+export type HaulingPreference = 'nearest-stockpile' | 'finish-current-route'
+
+export type MaterialPriority = Record<
+  'coal' | 'iron' | 'crystal' | 'relic',
+  boolean
+>
+
+export type PolicyState = {
+  workPreference: WorkPreference
+  haulingPreference: HaulingPreference
+  materialPriority: MaterialPriority
+}
+
+export type TaskKind = 'idle' | 'dig' | 'haul'
+
+export type TaskState = {
+  kind: TaskKind
+  target?: Position
+  path: Position[]
+  progress: number
+  block?: MineableBlockType
+}
+
+export type DwarfState = {
+  id: string
+  position: Position
+  task: TaskState
+  carrying: MineableBlockType | null
+}
+
+export type SimulationState = {
+  world: World
+  dwarves: DwarfState[]
+  inventory: Inventory
+  policy: PolicyState
+  tick: number
+  totalCleared: number
+  completed: boolean
+  discoveredRelics: number
+}
+
 export const EMPTY_INVENTORY: Inventory = {
   grass: 0,
   dirt: 0,
