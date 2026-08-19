@@ -36,6 +36,8 @@ export type BuildingConstruction =
   | 'planned'
   | 'under-construction'
 export type ConstructionPolicy = 'conserve' | 'balanced' | 'expand'
+export type AccessFailure = 'support' | 'return-route' | 'storage-route'
+export type AccessRequestStatus = 'open' | 'resolved' | 'blocked'
 
 export type Cell = {
   block: BlockType
@@ -99,6 +101,16 @@ export type ConstructionOrder = {
   reason: 'access' | 'outpost' | 'capacity' | 'policy'
 }
 
+export type AccessRequest = {
+  id: string
+  target: Position
+  failure: AccessFailure
+  priority: number
+  approach?: Position
+  worldRevision: number
+  status: AccessRequestStatus
+}
+
 export type TaskKind = 'idle' | 'dig' | 'haul' | 'build'
 
 export type TaskState = {
@@ -109,6 +121,9 @@ export type TaskState = {
   block?: MineableBlockType
   buildingId?: string
   constructionOrderId?: string
+  purpose?: 'ordinary' | 'access' | 'recovery'
+  accessRequestId?: string
+  recoveryReason?: 'stranded' | 'storage-route'
 }
 
 export type DwarfState = {
@@ -126,6 +141,8 @@ export type SimulationState = {
   policy: PolicyState
   constructionOrders: ConstructionOrder[]
   constructionPolicy: ConstructionPolicy
+  accessRequests: AccessRequest[]
+  worldRevision: number
   tick: number
   totalCleared: number
   completed: boolean

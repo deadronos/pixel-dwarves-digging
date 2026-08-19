@@ -73,6 +73,8 @@ function makeStorageState(): SimulationState {
     },
     constructionOrders: [],
     constructionPolicy: 'balanced',
+    accessRequests: [],
+    worldRevision: 0,
     tick: 0,
     totalCleared: 0,
     completed: false,

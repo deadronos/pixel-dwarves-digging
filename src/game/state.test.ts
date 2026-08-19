@@ -11,6 +11,14 @@ describe('createGameStore', () => {
     expect(state.simulation.dwarves).toHaveLength(3)
   })
 
+  it('starts with empty access planning state and no active task purpose', () => {
+    const state = createGameStore('access-state-seed').getState().simulation
+
+    expect(state.accessRequests).toEqual([])
+    expect(state.worldRevision).toBe(0)
+    expect(state.dwarves[0].task.purpose).toBeUndefined()
+  })
+
   it('advances only when unpaused', () => {
     const store = createGameStore('pause-test')
     store.getState().setPaused(true)

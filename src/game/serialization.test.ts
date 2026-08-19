@@ -35,6 +35,8 @@ function makeState(): SimulationState {
     },
     constructionOrders: [],
     constructionPolicy: 'balanced',
+    accessRequests: [],
+    worldRevision: 0,
     tick: 12,
     totalCleared: 3,
     completed: false,
