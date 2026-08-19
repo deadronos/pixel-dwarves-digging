@@ -18,7 +18,8 @@ import {
   type UpgradeLevels,
 } from './types'
 
-export const GAME_STORAGE_KEY = 'pixel-dwarves-digging/save-v1'
+export const GAME_STORAGE_KEY = 'pixel-dwarves-digging/save-v2'
+export const LEGACY_GAME_STORAGE_KEY = 'pixel-dwarves-digging/save-v1'
 export const SIMULATION_TICK_MS = 100
 export type SimulationSpeed = 1 | 2 | 4
 
@@ -169,7 +170,9 @@ export function createGameStore(
     },
     loadLocalSave: () => {
       if (typeof window === 'undefined' || !window.localStorage) return false
-      const payload = window.localStorage.getItem(GAME_STORAGE_KEY)
+      const payload =
+        window.localStorage.getItem(GAME_STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_GAME_STORAGE_KEY)
       if (!payload) return false
       return get().importSave(payload)
     },

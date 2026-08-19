@@ -12,6 +12,13 @@ function BuildingMesh({ building }: { building: BuildingState }) {
   const isComplete = building.construction === 'completed'
   const color = BUILDING_COLORS[building.type]
   const depth = building.type === 'ladder' ? 0.12 : 0.26
+  const stored = Object.values(building.storage?.inventory ?? {}).reduce(
+    (total, amount) => total + (amount ?? 0),
+    0,
+  )
+  const fill = building.storage
+    ? Math.min(1, stored / Math.max(1, building.storage.capacity))
+    : 0
 
   return (
     <group
@@ -34,6 +41,12 @@ function BuildingMesh({ building }: { building: BuildingState }) {
       {building.type === 'stockpile' ? (
         <mesh position={[0, building.height * 0.22, 0.08]}>
           <boxGeometry args={[building.width * 0.5, 0.12, 0.08]} />
+          <meshBasicMaterial color="#f1e7c8" />
+        </mesh>
+      ) : null}
+      {building.storage ? (
+        <mesh position={[0, -building.height * 0.42, 0.1]}>
+          <boxGeometry args={[building.width * 0.74 * fill, 0.08, 0.08]} />
           <meshBasicMaterial color="#f1e7c8" />
         </mesh>
       ) : null}

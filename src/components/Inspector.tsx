@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
+import { getPrimaryStockpile } from '../game/buildings'
 import { BIOME_DEFINITIONS } from '../game/content'
+import { getAvailableCapacity } from '../game/logistics'
 import { canPrestige, UPGRADE_COSTS } from '../game/progression'
 import { useGameStore } from '../game/state'
 import type { UpgradeLevels } from '../game/types'
@@ -29,6 +31,14 @@ export default function Inspector() {
   const centerBiome =
     simulation.world.biomes[Math.floor(simulation.world.width / 2)]
   const biome = BIOME_DEFINITIONS[centerBiome]
+  const stockpile = getPrimaryStockpile(simulation.world)
+  const stockpileTotal = Object.values(
+    stockpile?.storage?.inventory ?? {},
+  ).reduce((total, amount) => total + amount, 0)
+  const stockpileCapacity = stockpile?.storage?.capacity ?? 0
+  const outpostCount = simulation.world.buildings.filter(
+    (building) => building.type === 'outpost',
+  ).length
 
   return (
     <aside className="inspector">
@@ -70,6 +80,25 @@ export default function Inspector() {
             <dt>relics found</dt>
             <dd>{simulation.discoveredRelics}</dd>
           </div>
+          <div>
+            <dt>main storage</dt>
+            <dd>
+              {stockpileTotal.toLocaleString()} /{' '}
+              {stockpileCapacity.toLocaleString()}
+            </dd>
+          </div>
+          <div>
+            <dt>free capacity</dt>
+            <dd>{getAvailableCapacity(simulation.world)}</dd>
+          </div>
+          <div>
+            <dt>outposts</dt>
+            <dd>{outpostCount}</dd>
+          </div>
+          <div>
+            <dt>building</dt>
+            <dd>{simulation.constructionOrders.length}</dd>
+          </div>
         </dl>
       </div>
 
@@ -77,7 +106,8 @@ export default function Inspector() {
         <span className="section-kicker">DIRECTIVE</span>
         <p className="directive">
           {simulation.policy.workPreference.replace('-', ' ')} ·{' '}
-          {simulation.policy.haulingPreference.replace('-', ' ')}
+          {simulation.policy.haulingPreference.replace('-', ' ')} ·{' '}
+          {simulation.constructionPolicy} construction
         </p>
         <p className="muted-copy">
           The colony selects reachable work from this policy. Terrain decides

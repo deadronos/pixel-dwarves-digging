@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { BLOCK_COLORS, BLOCK_LABELS, MINEABLE_BLOCKS } from '../game/content'
+import { getAggregateInventory } from '../game/logistics'
 import { useGameStore } from '../game/state'
 
 export default function Hud() {
@@ -10,6 +11,14 @@ export default function Hud() {
   const remaining = useMemo(
     () => simulation.world.cells.filter((cell) => cell.block !== 'air').length,
     [simulation.world.cells],
+  )
+  const inventory = useMemo(
+    () => getAggregateInventory(simulation),
+    [simulation],
+  )
+  const aggregateStored = useMemo(
+    () => Object.values(inventory).reduce((total, amount) => total + amount, 0),
+    [inventory],
   )
 
   return (
@@ -38,7 +47,7 @@ export default function Hud() {
         <div className="inventory-heading">
           <span className="section-kicker">GLOBAL INVENTORY</span>
           <strong>
-            {simulation.totalCleared.toLocaleString()} blocks stored
+            {aggregateStored.toLocaleString()} blocks stored / in transit
           </strong>
         </div>
         <div className="inventory-list">
@@ -49,7 +58,7 @@ export default function Hud() {
                 style={{ backgroundColor: BLOCK_COLORS[block] }}
               />
               <span>{BLOCK_LABELS[block]}</span>
-              <strong>{simulation.inventory[block].toLocaleString()}</strong>
+              <strong>{inventory[block].toLocaleString()}</strong>
             </div>
           ))}
         </div>

@@ -65,4 +65,30 @@ describe('serialization', () => {
       error: 'Save version is not supported.',
     })
   })
+
+  it('migrates a version-one global inventory into the main stockpile', () => {
+    const current = makeState()
+    const { buildings: _buildings, ...legacyWorld } = current.world
+    const legacyPayload = JSON.stringify({
+      schemaVersion: 1,
+      state: {
+        ...current,
+        world: legacyWorld,
+        dwarves: [],
+        inventory: { ...EMPTY_INVENTORY, dirt: 3 },
+      },
+    })
+
+    const result = parseSave(legacyPayload)
+
+    expect('state' in result).toBe(true)
+    if ('state' in result) {
+      const stockpile = result.state.world.buildings.find(
+        (building) => building.type === 'stockpile',
+      )
+      expect(stockpile?.storage?.inventory.dirt).toBe(3)
+      expect(result.state.constructionOrders).toEqual([])
+      expect(result.state.constructionPolicy).toBe('balanced')
+    }
+  })
 })
