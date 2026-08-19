@@ -1,0 +1,147 @@
+import type { BiomeId, BlockType, MineableBlockType } from './types'
+
+export const BIOME_IDS: readonly BiomeId[] = [
+  'meadow',
+  'desert',
+  'red-rock',
+  'frozen',
+  'mushroom',
+]
+
+export const MINERAL_BLOCKS = new Set<BlockType>([
+  'coal',
+  'iron',
+  'crystal',
+  'relic',
+])
+
+export const MINEABLE_BLOCKS: readonly MineableBlockType[] = [
+  'grass',
+  'dirt',
+  'sand',
+  'sandstone',
+  'red-stone',
+  'snow',
+  'packed-soil',
+  'ice',
+  'mushroom',
+  'loam',
+  'clay',
+  'stone',
+  'coal',
+  'iron',
+  'crystal',
+  'relic',
+]
+
+export type BiomeDefinition = {
+  label: string
+  surface: BlockType
+  topsoil: BlockType
+  subsoil: BlockType
+  deep: BlockType
+  accent: string
+}
+
+export const BIOME_DEFINITIONS: Record<BiomeId, BiomeDefinition> = {
+  meadow: {
+    label: 'Meadow',
+    surface: 'grass',
+    topsoil: 'dirt',
+    subsoil: 'stone',
+    deep: 'stone',
+    accent: '#88a477',
+  },
+  desert: {
+    label: 'Desert',
+    surface: 'sand',
+    topsoil: 'sand',
+    subsoil: 'sandstone',
+    deep: 'stone',
+    accent: '#d0a461',
+  },
+  'red-rock': {
+    label: 'Red-rock',
+    surface: 'red-stone',
+    topsoil: 'red-stone',
+    subsoil: 'stone',
+    deep: 'stone',
+    accent: '#ad6652',
+  },
+  frozen: {
+    label: 'Frozen',
+    surface: 'snow',
+    topsoil: 'packed-soil',
+    subsoil: 'ice',
+    deep: 'stone',
+    accent: '#8eafc0',
+  },
+  mushroom: {
+    label: 'Mushroom',
+    surface: 'mushroom',
+    topsoil: 'loam',
+    subsoil: 'clay',
+    deep: 'stone',
+    accent: '#bd7893',
+  },
+}
+
+export const BLOCK_LABELS: Record<BlockType, string> = {
+  air: 'Air',
+  grass: 'Grass',
+  dirt: 'Dirt',
+  sand: 'Sand',
+  sandstone: 'Sandstone',
+  'red-stone': 'Red stone',
+  snow: 'Snow',
+  'packed-soil': 'Packed soil',
+  ice: 'Ice',
+  mushroom: 'Mushroom cap',
+  loam: 'Loam',
+  clay: 'Clay',
+  stone: 'Stone',
+  coal: 'Coal',
+  iron: 'Iron',
+  crystal: 'Crystal',
+  relic: 'Relic',
+}
+
+export const BLOCK_COLORS: Record<BlockType, string> = {
+  air: '#20251f',
+  grass: '#6f9464',
+  dirt: '#87644c',
+  sand: '#c8a36b',
+  sandstone: '#a27b53',
+  'red-stone': '#9b5545',
+  snow: '#c8d6ce',
+  'packed-soil': '#73818b',
+  ice: '#7ca8b7',
+  mushroom: '#a76c88',
+  loam: '#725c61',
+  clay: '#a16a62',
+  stone: '#59615c',
+  coal: '#2d3330',
+  iron: '#a66c51',
+  crystal: '#75b7ae',
+  relic: '#dfbd62',
+}
+
+export const DIG_DURATION: Record<BlockType, number> = {
+  air: 0,
+  grass: 3,
+  dirt: 5,
+  sand: 4,
+  sandstone: 8,
+  'red-stone': 9,
+  snow: 3,
+  'packed-soil': 6,
+  ice: 7,
+  mushroom: 4,
+  loam: 5,
+  clay: 7,
+  stone: 12,
+  coal: 14,
+  iron: 18,
+  crystal: 24,
+  relic: 30,
+}
