@@ -58,7 +58,8 @@ function scoreTarget(
   target: Position,
   pathLength: number,
 ): number {
-  const cell = state.world.cells[indexFor(target.x, target.y, state.world.width)]
+  const cell =
+    state.world.cells[indexFor(target.x, target.y, state.world.width)]
   const mineralBonus = MINERAL_BLOCKS.has(cell.block) ? 50 : 0
   const preferredBonus =
     cell.block in state.policy.materialPriority &&
@@ -84,7 +85,8 @@ function compareCandidates(
 ): number {
   return (
     second.score - first.score ||
-    distance(first.target, second.target) - distance(second.target, first.target)
+    distance(first.target, second.target) -
+      distance(second.target, first.target)
   )
 }
 
@@ -127,7 +129,10 @@ function unchanged(dwarf: DwarfState, world: World): AdvanceResult {
   return { dwarf, world, minedBlock: null }
 }
 
-function advanceDwarf(state: SimulationState, dwarf: DwarfState): AdvanceResult {
+function advanceDwarf(
+  state: SimulationState,
+  dwarf: DwarfState,
+): AdvanceResult {
   const task = dwarf.task
 
   if (task.kind === 'idle') {
@@ -211,7 +216,11 @@ function advanceDwarf(state: SimulationState, dwarf: DwarfState): AdvanceResult 
 
   if (task.kind === 'haul' && task.target) {
     return unchanged(
-      { ...dwarf, carrying: null, task: { kind: 'idle', path: [], progress: 0 } },
+      {
+        ...dwarf,
+        carrying: null,
+        task: { kind: 'idle', path: [], progress: 0 },
+      },
       state.world,
     )
   }

@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import type { InstancedMesh } from 'three'
 import { Matrix4 } from 'three'
 import { BLOCK_COLORS, MINEABLE_BLOCKS } from '../game/content'
@@ -8,7 +8,7 @@ type TerrainLayerProps = {
   world: World
 }
 
-function BlockInstances({
+const BlockInstances = memo(function BlockInstances({
   world,
   block,
 }: {
@@ -51,9 +51,9 @@ function BlockInstances({
       <meshBasicMaterial color={BLOCK_COLORS[block]} />
     </instancedMesh>
   )
-}
+})
 
-export default function TerrainLayer({ world }: TerrainLayerProps) {
+const TerrainLayer = memo(function TerrainLayer({ world }: TerrainLayerProps) {
   return (
     <group>
       {MINEABLE_BLOCKS.map((block) => (
@@ -68,4 +68,6 @@ export default function TerrainLayer({ world }: TerrainLayerProps) {
       </mesh>
     </group>
   )
-}
+})
+
+export default TerrainLayer

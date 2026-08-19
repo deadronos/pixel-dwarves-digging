@@ -131,11 +131,16 @@ describe('stepSimulation', () => {
       ...initial.dwarves[0],
       id: 'dwarf-2',
     }
-    const twoDwarves = { ...initial, dwarves: [initial.dwarves[0], secondDwarf] }
+    const twoDwarves = {
+      ...initial,
+      dwarves: [initial.dwarves[0], secondDwarf],
+    }
 
     const result = stepSimulation(twoDwarves, 1)
     const targets = result.dwarves.map((dwarf) => dwarf.task.target)
 
-    expect(new Set(targets.map((target) => `${target?.x}:${target?.y}`)).size).toBe(2)
+    expect(
+      new Set(targets.map((target) => `${target?.x}:${target?.y}`)).size,
+    ).toBe(2)
   })
 })

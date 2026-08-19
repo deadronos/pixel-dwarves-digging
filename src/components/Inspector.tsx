@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { BIOME_DEFINITIONS } from '../game/content'
 import { canPrestige, UPGRADE_COSTS } from '../game/progression'
 import { useGameStore } from '../game/state'
@@ -18,9 +19,10 @@ export default function Inspector() {
   const simulation = useGameStore((state) => state.simulation)
   const prestige = useGameStore((state) => state.prestige)
   const buyUpgrade = useGameStore((state) => state.buyUpgrade)
-  const remaining = simulation.world.cells.filter(
-    (cell) => cell.block !== 'air',
-  ).length
+  const remaining = useMemo(
+    () => simulation.world.cells.filter((cell) => cell.block !== 'air').length,
+    [simulation.world.cells],
+  )
   const total = remaining + simulation.totalCleared
   const progress =
     total === 0 ? 100 : Math.round((simulation.totalCleared / total) * 100)

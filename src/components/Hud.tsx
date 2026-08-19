@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { BLOCK_COLORS, BLOCK_LABELS, MINEABLE_BLOCKS } from '../game/content'
 import { useGameStore } from '../game/state'
 
@@ -6,9 +7,10 @@ export default function Hud() {
   const paused = useGameStore((state) => state.paused)
   const speed = useGameStore((state) => state.speed)
   const saveStatus = useGameStore((state) => state.saveStatus)
-  const remaining = simulation.world.cells.filter(
-    (cell) => cell.block !== 'air',
-  ).length
+  const remaining = useMemo(
+    () => simulation.world.cells.filter((cell) => cell.block !== 'air').length,
+    [simulation.world.cells],
+  )
 
   return (
     <header className="hud">

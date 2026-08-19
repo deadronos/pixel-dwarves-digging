@@ -123,7 +123,10 @@ export function findReachableExposedSolids(
       if (!isInBounds(world, target)) continue
 
       const targetIndex = indexFor(target.x, target.y, world.width)
-      if (exposed[targetIndex] || getCell(world, target.x, target.y).block === 'air') {
+      if (
+        exposed[targetIndex] ||
+        getCell(world, target.x, target.y).block === 'air'
+      ) {
         continue
       }
 
@@ -148,11 +151,7 @@ export function findPath(
   const search = createSearch(world, from)
   if (!search) return null
 
-  return reconstructPath(
-    search,
-    indexFor(to.x, to.y, world.width),
-    world.width,
-  )
+  return reconstructPath(search, indexFor(to.x, to.y, world.width), world.width)
 }
 
 export function findAdjacentPaths(
