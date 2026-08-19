@@ -1,4 +1,9 @@
-import { BIOME_DEFINITIONS, BIOME_IDS, MINERAL_BLOCKS } from './content'
+import {
+  BIOME_DEFINITIONS,
+  BIOME_IDS,
+  BUILDING_DEFINITIONS,
+  MINERAL_BLOCKS,
+} from './content'
 import { createRng, hashSeed, randomBetween, randomInt } from './rng'
 import {
   type BiomeId,
@@ -77,7 +82,7 @@ function carveStarterPocket(
   }
 
   for (let x = start.x - 2; x <= start.x + 2; x += 1) {
-    for (let y = start.y; y <= start.y + 2; y += 1) {
+    for (let y = start.y; y <= start.y + 1; y += 1) {
       set(x, y, 'air')
     }
   }
@@ -119,6 +124,21 @@ export function generateWorld(seed: string, runNumber: number): World {
     cells[fallback] = { block: 'iron', biome: biomes[fallbackX] }
   }
 
+  const stockpileDefinition = BUILDING_DEFINITIONS.stockpile
+  const stockpileBuilding = {
+    id: 'stockpile-1',
+    type: 'stockpile' as const,
+    position: stockpile,
+    width: stockpileDefinition.width,
+    height: stockpileDefinition.height,
+    level: 1,
+    construction: 'completed' as const,
+    storage: {
+      capacity: stockpileDefinition.capacity,
+      inventory: {},
+    },
+  }
+
   return {
     width: MAP_WIDTH,
     height: MAP_HEIGHT,
@@ -129,7 +149,7 @@ export function generateWorld(seed: string, runNumber: number): World {
     biomes,
     start,
     stockpile,
-    buildings: [],
+    buildings: [stockpileBuilding],
   }
 }
 

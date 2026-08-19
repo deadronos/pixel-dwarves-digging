@@ -43,6 +43,28 @@ describe('generateWorld', () => {
     ).toBe(true)
   })
 
+  it('creates a deterministic visible level-one stockpile in the starter pocket', () => {
+    const world = generateWorld('starter-stockpile', 3)
+    const stockpile = world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+
+    expect(stockpile).toEqual(
+      expect.objectContaining({
+        type: 'stockpile',
+        level: 1,
+        construction: 'completed',
+        width: 3,
+        height: 2,
+        storage: expect.objectContaining({ capacity: 120 }),
+      }),
+    )
+    expect(stockpile?.position).toEqual({ x: 11, y: world.start.y })
+    expect(
+      world.cells.filter((cell) => cell.block === 'air').length,
+    ).toBeGreaterThan(0)
+  })
+
   it('places at least one mineral in a generated map', () => {
     const world = generateWorld('mineral-pocket', 8)
     const mineralCount = world.cells.filter((cell) =>
