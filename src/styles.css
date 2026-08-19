@@ -69,3 +69,23 @@ h1 {
   background: #20251f;
   color: #9ca889;
 }
+
+.world-stage {
+  min-height: 70vh;
+  max-width: 1440px;
+  margin: 0 auto;
+  border: 1px solid #384136;
+  background: #20251f;
+  overflow: hidden;
+}
+
+.world-canvas {
+  width: 100%;
+  height: 70vh;
+  min-height: 520px;
+  cursor: grab;
+}
+
+.world-canvas:active {
+  cursor: grabbing;
+}
