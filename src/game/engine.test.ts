@@ -16,15 +16,27 @@ function makeState(rows: string[]): SimulationState {
       biome: 'meadow',
     })),
   )
-  const supportBuildings = Array.from({ length: width }, (_, x) => ({
-    id: `bridge-${x}`,
-    type: 'bridge' as const,
-    position: { x, y: 1 },
-    width: 1,
-    height: 1,
-    level: 1,
-    construction: 'completed' as const,
-  }))
+  const supportBuildings = [
+    ...Array.from({ length: width }, (_, x) => ({
+      id: `bridge-${x}`,
+      type: 'bridge' as const,
+      position: { x, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed' as const,
+    })),
+    {
+      id: 'stockpile-1',
+      type: 'stockpile' as const,
+      position: { x: 1, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed' as const,
+      storage: { capacity: 120, inventory: {} },
+    },
+  ]
   const world: World = {
     width,
     height,

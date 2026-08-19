@@ -1,5 +1,6 @@
 import { DIG_DURATION, MINERAL_BLOCKS } from './content'
 import { getCell } from './generation'
+import { depositCarriedMaterial, selectStorageDestination } from './logistics'
 import {
   findPath,
   findReachableExposedSolids,
@@ -21,6 +22,7 @@ type AdvanceResult = {
   dwarf: DwarfState
   world: World
   minedBlock: MineableBlockType | null
+  depositedBlock?: MineableBlockType | null
 }
 
 const reachableWorkCache = new WeakMap<
@@ -187,6 +189,10 @@ function advanceDwarf(
       : unchanged(dwarf, state.world)
   }
 
+  if (task.kind === 'haul' && !task.target) {
+    return unchanged(dwarf, state.world)
+  }
+
   if (task.path.length > 0) {
     const movementSteps = Math.min(
       task.path.length,
@@ -222,18 +228,24 @@ function advanceDwarf(
 
     if (duration > 0 && nextProgress >= duration) {
       const nextWorld = clearCell(state.world, target)
-      const haulPath =
-        findPath(nextWorld, dwarf.position, nextWorld.stockpile) ?? []
+      const destination = selectStorageDestination(
+        { ...state, world: nextWorld },
+        minedBlock,
+        dwarf.position,
+      )
+      const haulTarget = destination?.position ?? nextWorld.stockpile
+      const haulPath = findPath(nextWorld, dwarf.position, haulTarget) ?? []
       return {
         dwarf: {
           ...dwarf,
           carrying: minedBlock,
           task: {
             kind: 'haul',
-            target: nextWorld.stockpile,
+            target: haulTarget,
             path: haulPath,
             progress: 0,
             block: minedBlock,
+            buildingId: destination?.id,
           },
         },
         world: nextWorld,
@@ -248,6 +260,25 @@ function advanceDwarf(
   }
 
   if (task.kind === 'haul' && task.target) {
+    if (task.buildingId && task.block) {
+      const depositedWorld = depositCarriedMaterial(
+        state.world,
+        task.buildingId,
+        task.block,
+      )
+      if (!depositedWorld) return unchanged(dwarf, state.world)
+      return {
+        dwarf: {
+          ...dwarf,
+          carrying: null,
+          task: { kind: 'idle', path: [], progress: 0 },
+        },
+        world: depositedWorld,
+        minedBlock: null,
+        depositedBlock: task.block,
+      }
+    }
+
     return unchanged(
       {
         ...dwarf,
@@ -285,9 +316,11 @@ function stepOnce(state: SimulationState): SimulationState {
     nextState.world = advanced.world
 
     if (advanced.minedBlock) {
-      nextState.inventory[advanced.minedBlock] += 1
       nextState.totalCleared += 1
       if (advanced.minedBlock === 'relic') nextState.discoveredRelics += 1
+    }
+    if (advanced.depositedBlock) {
+      nextState.inventory[advanced.depositedBlock] += 1
     }
   }
 
