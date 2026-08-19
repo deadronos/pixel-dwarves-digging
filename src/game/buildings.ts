@@ -96,17 +96,14 @@ export function canPlaceBuilding(
     height: definition.height,
   }
 
-  if (
-    !cellsFor(footprint).every((cell) =>
-      isInBounds(world, cell.x, cell.y),
-    )
-  ) {
+  if (!cellsFor(footprint).every((cell) => isInBounds(world, cell.x, cell.y))) {
     return false
   }
 
   if (
     world.buildings.some(
-      (building) => building.construction !== 'planned' && overlaps(building, footprint),
+      (building) =>
+        building.construction !== 'planned' && overlaps(building, footprint),
     )
   ) {
     return false

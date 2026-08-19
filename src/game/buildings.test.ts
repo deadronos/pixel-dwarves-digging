@@ -6,17 +6,12 @@ import {
   getStorageCapacity,
   reserveConstructionMaterials,
 } from './buildings'
-import {
-  EMPTY_INVENTORY,
-  type SimulationState,
-  type World,
-} from './types'
+import { EMPTY_INVENTORY, type SimulationState, type World } from './types'
 
 function makeBuildingState(): SimulationState {
   const width = 8
   const height = 6
   const cells = Array.from({ length: width * height }, (_, index) => {
-    const x = index % width
     const y = Math.floor(index / width)
     return {
       block: y >= 3 ? ('stone' as const) : ('air' as const),
