@@ -1,5 +1,5 @@
 import { completeConstruction, reserveConstructionMaterials } from './buildings'
-import { DIG_DURATION, MINERAL_BLOCKS } from './content'
+import { DIG_DURATION, MINEABLE_BLOCKS, MINERAL_BLOCKS } from './content'
 import { getCell } from './generation'
 import {
   depositCarriedMaterial,
@@ -361,7 +361,7 @@ function advanceDwarf(
     const target = task.target
     const targetCell =
       state.world.cells[indexFor(target.x, target.y, state.world.width)]
-    if (targetCell.block === 'air') {
+    if (targetCell.block === 'air' || targetCell.block === 'bedrock') {
       return unchanged(
         { ...dwarf, task: { kind: 'idle', path: [], progress: 0 } },
         state.world,
@@ -479,7 +479,9 @@ function stepOnce(state: SimulationState): SimulationState {
     }
   }
 
-  const hasSolids = nextState.world.cells.some((cell) => cell.block !== 'air')
+  const hasSolids = nextState.world.cells.some((cell) =>
+    MINEABLE_BLOCKS.some((block) => block === cell.block),
+  )
   const allDwarvesSettled = nextState.dwarves.every(
     (dwarf) => dwarf.task.kind === 'idle' && dwarf.carrying === null,
   )

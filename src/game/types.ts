@@ -3,6 +3,7 @@ export const MAP_HEIGHT = 80
 
 export type BlockType =
   | 'air'
+  | 'bedrock'
   | 'grass'
   | 'dirt'
   | 'sand'
@@ -20,7 +21,7 @@ export type BlockType =
   | 'crystal'
   | 'relic'
 
-export type MineableBlockType = Exclude<BlockType, 'air'>
+export type MineableBlockType = Exclude<BlockType, 'air' | 'bedrock'>
 
 export type BiomeId = 'meadow' | 'desert' | 'red-rock' | 'frozen' | 'mushroom'
 
