@@ -88,6 +88,23 @@ export type SimulationState = {
   totalCleared: number
   completed: boolean
   discoveredRelics: number
+  prestigeCurrency: number
+  upgrades: UpgradeLevels
+}
+
+export type UpgradeLevels = {
+  toolPower: number
+  moveSpeed: number
+  satchel: number
+  extraBunks: number
+  prospecting: number
+}
+
+export type PrestigeMode = 'full-clear' | 'relic'
+
+export type SerializedSave = {
+  schemaVersion: number
+  state: SimulationState
 }
 
 export const EMPTY_INVENTORY: Inventory = {

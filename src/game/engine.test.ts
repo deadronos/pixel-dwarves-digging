@@ -53,6 +53,14 @@ function makeState(rows: string[]): SimulationState {
     totalCleared: 0,
     completed: false,
     discoveredRelics: 0,
+    prestigeCurrency: 0,
+    upgrades: {
+      toolPower: 0,
+      moveSpeed: 0,
+      satchel: 0,
+      extraBunks: 0,
+      prospecting: 0,
+    },
   }
 }
 
