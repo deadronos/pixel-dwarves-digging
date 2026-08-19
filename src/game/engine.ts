@@ -1,7 +1,9 @@
 import { DIG_DURATION, MINERAL_BLOCKS } from './content'
+import { getCell } from './generation'
 import {
   findPath,
   findReachableExposedSolids,
+  isSupported,
   type ReachableExposedSolid,
 } from './pathfinding'
 import {
@@ -129,10 +131,41 @@ function unchanged(dwarf: DwarfState, world: World): AdvanceResult {
   return { dwarf, world, minedBlock: null }
 }
 
+function settleDwarf(world: World, dwarf: DwarfState): DwarfState {
+  if (isSupported(world, dwarf.position)) {
+    return { ...dwarf, movement: 'grounded' }
+  }
+
+  for (let y = dwarf.position.y - 1; y >= 0; y -= 1) {
+    const candidate = { x: dwarf.position.x, y }
+    if (getCell(world, candidate.x, candidate.y).block !== 'air') continue
+    if (!isSupported(world, candidate)) continue
+    return {
+      ...dwarf,
+      position: candidate,
+      movement: 'falling',
+      task: { kind: 'idle', path: [], progress: 0 },
+    }
+  }
+
+  return {
+    ...dwarf,
+    movement: 'stranded',
+    task: { kind: 'idle', path: [], progress: 0 },
+  }
+}
+
 function advanceDwarf(
   state: SimulationState,
   dwarf: DwarfState,
 ): AdvanceResult {
+  if (dwarf.movement === 'falling') {
+    return unchanged(dwarf, state.world)
+  }
+  if (dwarf.movement === 'stranded') {
+    return unchanged(dwarf, state.world)
+  }
+
   const task = dwarf.task
 
   if (task.kind === 'idle') {
@@ -240,6 +273,10 @@ function stepOnce(state: SimulationState): SimulationState {
     inventory: cloneInventory(state.inventory),
     dwarves: state.dwarves.slice(),
   }
+
+  nextState.dwarves = nextState.dwarves.map((dwarf) =>
+    settleDwarf(nextState.world, dwarf),
+  )
 
   for (let index = 0; index < state.dwarves.length; index += 1) {
     const before = nextState.dwarves[index]

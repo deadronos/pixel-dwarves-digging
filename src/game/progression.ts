@@ -32,6 +32,7 @@ function createDwarves(
   return Array.from({ length: count }, (_, index) => ({
     id: `dwarf-${index + 1}`,
     position: { ...world.start },
+    movement: 'grounded' as const,
     task: { kind: 'idle' as const, path: [], progress: 0 },
     carrying: null,
   }))

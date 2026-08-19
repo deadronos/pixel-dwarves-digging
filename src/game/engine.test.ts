@@ -44,6 +44,7 @@ function makeState(rows: string[]): SimulationState {
       {
         id: 'dwarf-1',
         position: { x: 1, y: 1 },
+        movement: 'grounded',
         task: { kind: 'idle', path: [], progress: 0 },
         carrying: null,
       },
@@ -135,6 +136,30 @@ describe('stepSimulation', () => {
 
     expect(moved.world).toBe(assigned.world)
     expect(moved.world.cells).toBe(assigned.world.cells)
+  })
+
+  it('drops a dwarf onto the nearest supported cell when support is removed', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings
+      .filter((building) => building.position.x !== 2)
+      .concat({
+        id: 'floor-2',
+        type: 'bridge',
+        position: { x: 2, y: 0 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      })
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      position: { x: 2, y: 2 },
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].position).toEqual({ x: 2, y: 1 })
+    expect(result.dwarves[0].movement).toBe('falling')
   })
 
   it('reserves different exposed targets for dwarves assigned in one tick', () => {

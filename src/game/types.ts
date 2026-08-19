@@ -113,6 +113,7 @@ export type TaskState = {
 export type DwarfState = {
   id: string
   position: Position
+  movement: 'grounded' | 'falling' | 'stranded'
   task: TaskState
   carrying: MineableBlockType | null
 }
