@@ -1,12 +1,30 @@
 import { DIG_DURATION, MINERAL_BLOCKS } from './content'
-import { findAdjacentPaths, findExposedSolids, findPath } from './pathfinding'
+import {
+  findPath,
+  findReachableExposedSolids,
+  type ReachableExposedSolid,
+} from './pathfinding'
 import {
   cloneInventory,
   type DwarfState,
   indexFor,
+  type MineableBlockType,
   type Position,
   type SimulationState,
+  type World,
 } from './types'
+
+type TargetCandidate = ReachableExposedSolid & { score: number }
+type AdvanceResult = {
+  dwarf: DwarfState
+  world: World
+  minedBlock: MineableBlockType | null
+}
+
+const reachableWorkCache = new WeakMap<
+  World,
+  Map<string, ReachableExposedSolid[]>
+>()
 
 function distance(first: Position, second: Position): number {
   return Math.abs(first.x - second.x) + Math.abs(first.y - second.y)
@@ -16,10 +34,64 @@ function taskKey(position: Position): string {
   return `${position.x}:${position.y}`
 }
 
+function reachableTargets(
+  world: World,
+  from: Position,
+): ReachableExposedSolid[] {
+  let byPosition = reachableWorkCache.get(world)
+  if (!byPosition) {
+    byPosition = new Map()
+    reachableWorkCache.set(world, byPosition)
+  }
+
+  const key = taskKey(from)
+  const cached = byPosition.get(key)
+  if (cached) return cached
+
+  const result = findReachableExposedSolids(world, from)
+  byPosition.set(key, result)
+  return result
+}
+
+function scoreTarget(
+  state: SimulationState,
+  target: Position,
+  pathLength: number,
+): number {
+  const cell = state.world.cells[indexFor(target.x, target.y, state.world.width)]
+  const mineralBonus = MINERAL_BLOCKS.has(cell.block) ? 50 : 0
+  const preferredBonus =
+    cell.block in state.policy.materialPriority &&
+    state.policy.materialPriority[
+      cell.block as keyof typeof state.policy.materialPriority
+    ]
+      ? 35
+      : 0
+  const depthBonus = state.world.height - target.y
+  const baseScore =
+    state.policy.workPreference === 'nearest'
+      ? 100 - pathLength
+      : state.policy.workPreference === 'deepest-first'
+        ? depthBonus - pathLength
+        : mineralBonus + preferredBonus - pathLength
+
+  return baseScore + mineralBonus + preferredBonus
+}
+
+function compareCandidates(
+  first: TargetCandidate,
+  second: TargetCandidate,
+): number {
+  return (
+    second.score - first.score ||
+    distance(first.target, second.target) - distance(second.target, first.target)
+  )
+}
+
 function chooseTarget(
   state: SimulationState,
   dwarf: DwarfState,
-): { target: Position; path: Position[] } | null {
+): ReachableExposedSolid | null {
   const reserved = new Set(
     state.dwarves
       .filter((candidate) => candidate.id !== dwarf.id && candidate.task.target)
@@ -28,69 +100,53 @@ function chooseTarget(
       ),
   )
 
-  const candidates = findExposedSolids(state.world, dwarf.position)
-    .filter((target) => !reserved.has(taskKey(target)))
-    .map((target) => {
-      const cell =
-        state.world.cells[indexFor(target.x, target.y, state.world.width)]
-      const adjacent = findAdjacentPaths(state.world, dwarf.position, target)[0]
-      if (!adjacent) return null
-
-      const mineralBonus = MINERAL_BLOCKS.has(cell.block) ? 50 : 0
-      const preferredBonus =
-        cell.block in state.policy.materialPriority &&
-        state.policy.materialPriority[
-          cell.block as keyof typeof state.policy.materialPriority
-        ]
-          ? 35
-          : 0
-      const depthBonus = state.world.height - target.y
-      const baseScore =
-        state.policy.workPreference === 'nearest'
-          ? 100 - adjacent.path.length
-          : state.policy.workPreference === 'deepest-first'
-            ? depthBonus - adjacent.path.length
-            : mineralBonus + preferredBonus - adjacent.path.length
-
-      return {
-        target,
-        path: adjacent.path,
-        score: baseScore + mineralBonus + preferredBonus,
-      }
-    })
-    .filter(
-      (
-        candidate,
-      ): candidate is { target: Position; path: Position[]; score: number } =>
-        candidate !== null,
-    )
-    .sort(
-      (first, second) =>
-        second.score - first.score ||
-        distance(first.target, dwarf.position) -
-          distance(second.target, dwarf.position),
-    )
+  const candidates = reachableTargets(state.world, dwarf.position)
+    .filter(({ target }) => !reserved.has(taskKey(target)))
+    .map(({ target, path }) => ({
+      target,
+      path,
+      score: scoreTarget(state, target, path.length),
+    }))
+    .sort(compareCandidates)
 
   const selected = candidates[0]
   return selected ? { target: selected.target, path: selected.path } : null
 }
 
-function advanceDwarf(state: SimulationState, dwarf: DwarfState): DwarfState {
+function clearCell(world: World, target: Position): World {
+  const targetIndex = indexFor(target.x, target.y, world.width)
+  return {
+    ...world,
+    cells: world.cells.map((cell, index) =>
+      index === targetIndex ? { ...cell, block: 'air' as const } : cell,
+    ),
+  }
+}
+
+function unchanged(dwarf: DwarfState, world: World): AdvanceResult {
+  return { dwarf, world, minedBlock: null }
+}
+
+function advanceDwarf(state: SimulationState, dwarf: DwarfState): AdvanceResult {
   const task = dwarf.task
 
   if (task.kind === 'idle') {
     const assignment = chooseTarget(state, dwarf)
     return assignment
       ? {
-          ...dwarf,
-          task: {
-            kind: 'dig',
-            target: assignment.target,
-            path: assignment.path,
-            progress: 0,
+          dwarf: {
+            ...dwarf,
+            task: {
+              kind: 'dig',
+              target: assignment.target,
+              path: assignment.path,
+              progress: 0,
+            },
           },
+          world: state.world,
+          minedBlock: null,
         }
-      : dwarf
+      : unchanged(dwarf, state.world)
   }
 
   if (task.path.length > 0) {
@@ -98,11 +154,14 @@ function advanceDwarf(state: SimulationState, dwarf: DwarfState): DwarfState {
       task.path.length,
       1 + state.upgrades.moveSpeed,
     )
-    return {
-      ...dwarf,
-      position: task.path[movementSteps - 1],
-      task: { ...task, path: task.path.slice(movementSteps) },
-    }
+    return unchanged(
+      {
+        ...dwarf,
+        position: task.path[movementSteps - 1],
+        task: { ...task, path: task.path.slice(movementSteps) },
+      },
+      state.world,
+    )
   }
 
   if (task.kind === 'dig' && task.target) {
@@ -110,7 +169,10 @@ function advanceDwarf(state: SimulationState, dwarf: DwarfState): DwarfState {
     const targetCell =
       state.world.cells[indexFor(target.x, target.y, state.world.width)]
     if (targetCell.block === 'air') {
-      return { ...dwarf, task: { kind: 'idle', path: [], progress: 0 } }
+      return unchanged(
+        { ...dwarf, task: { kind: 'idle', path: [], progress: 0 } },
+        state.world,
+      )
     }
 
     const minedBlock = targetCell.block
@@ -121,41 +183,43 @@ function advanceDwarf(state: SimulationState, dwarf: DwarfState): DwarfState {
     const nextProgress = task.progress + 1
 
     if (duration > 0 && nextProgress >= duration) {
-      const nextWorld = {
-        ...state.world,
-        cells: state.world.cells.map((cell, index) =>
-          index === indexFor(target.x, target.y, state.world.width)
-            ? { ...cell, block: 'air' as const }
-            : cell,
-        ),
-      }
+      const nextWorld = clearCell(state.world, target)
       const haulPath =
         findPath(nextWorld, dwarf.position, nextWorld.stockpile) ?? []
       return {
-        ...dwarf,
-        carrying: minedBlock,
-        task: {
-          kind: 'haul',
-          target: nextWorld.stockpile,
-          path: haulPath,
-          progress: 0,
-          block: minedBlock,
+        dwarf: {
+          ...dwarf,
+          carrying: minedBlock,
+          task: {
+            kind: 'haul',
+            target: nextWorld.stockpile,
+            path: haulPath,
+            progress: 0,
+            block: minedBlock,
+          },
         },
+        world: nextWorld,
+        minedBlock,
       }
     }
 
-    return { ...dwarf, task: { ...task, progress: nextProgress } }
+    return unchanged(
+      { ...dwarf, task: { ...task, progress: nextProgress } },
+      state.world,
+    )
   }
 
   if (task.kind === 'haul' && task.target) {
-    return {
-      ...dwarf,
-      carrying: null,
-      task: { kind: 'idle', path: [], progress: 0 },
-    }
+    return unchanged(
+      { ...dwarf, carrying: null, task: { kind: 'idle', path: [], progress: 0 } },
+      state.world,
+    )
   }
 
-  return { ...dwarf, task: { kind: 'idle', path: [], progress: 0 } }
+  return unchanged(
+    { ...dwarf, task: { kind: 'idle', path: [], progress: 0 } },
+    state.world,
+  )
 }
 
 function stepOnce(state: SimulationState): SimulationState {
@@ -165,38 +229,20 @@ function stepOnce(state: SimulationState): SimulationState {
     ...state,
     tick: state.tick + 1,
     inventory: cloneInventory(state.inventory),
-    world: { ...state.world, cells: [...state.world.cells] },
+    dwarves: state.dwarves.slice(),
   }
 
-  for (const dwarf of state.dwarves) {
-    const before =
-      nextState.dwarves.find((candidate) => candidate.id === dwarf.id) ?? dwarf
-    const after = advanceDwarf(nextState, before)
+  for (let index = 0; index < state.dwarves.length; index += 1) {
+    const before = nextState.dwarves[index]
+    const advanced = advanceDwarf(nextState, before)
+    nextState.dwarves[index] = advanced.dwarf
+    nextState.world = advanced.world
 
-    if (
-      before.task.kind === 'dig' &&
-      after.task.kind === 'haul' &&
-      before.task.target &&
-      after.carrying
-    ) {
-      const target = before.task.target
-      const block = after.carrying
-      nextState.inventory[block] += 1
+    if (advanced.minedBlock) {
+      nextState.inventory[advanced.minedBlock] += 1
       nextState.totalCleared += 1
-      if (block === 'relic') nextState.discoveredRelics += 1
-      nextState.world = {
-        ...nextState.world,
-        cells: nextState.world.cells.map((cell, index) =>
-          index === indexFor(target.x, target.y, nextState.world.width)
-            ? { ...cell, block: 'air' as const }
-            : cell,
-        ),
-      }
+      if (advanced.minedBlock === 'relic') nextState.discoveredRelics += 1
     }
-
-    nextState.dwarves = nextState.dwarves.map((candidate) =>
-      candidate.id === after.id ? after : candidate,
-    )
   }
 
   const hasSolids = nextState.world.cells.some((cell) => cell.block !== 'air')

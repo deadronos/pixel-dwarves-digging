@@ -1,5 +1,5 @@
 import { getCell } from './generation'
-import type { Position, World } from './types'
+import { indexFor, type Position, type World } from './types'
 
 const DIRECTIONS: Position[] = [
   { x: 0, y: 1 },
@@ -8,8 +8,12 @@ const DIRECTIONS: Position[] = [
   { x: -1, y: 0 },
 ]
 
-function key(position: Position): string {
-  return `${position.x}:${position.y}`
+type SearchResult = {
+  fromIndex: number
+  queue: Int32Array
+  count: number
+  previous: Int32Array
+  distance: Int32Array
 }
 
 function isInBounds(world: World, position: Position): boolean {
@@ -28,11 +32,109 @@ function isWalkable(world: World, position: Position): boolean {
   )
 }
 
-function neighbors(position: Position): Position[] {
-  return DIRECTIONS.map((direction) => ({
-    x: position.x + direction.x,
-    y: position.y + direction.y,
-  }))
+function positionFor(index: number, width: number): Position {
+  return { x: index % width, y: Math.floor(index / width) }
+}
+
+function createSearch(world: World, from: Position): SearchResult | null {
+  if (!isWalkable(world, from)) return null
+
+  const size = world.width * world.height
+  const fromIndex = indexFor(from.x, from.y, world.width)
+  const queue = new Int32Array(size)
+  const previous = new Int32Array(size)
+  const distance = new Int32Array(size)
+  previous.fill(-1)
+  distance.fill(-1)
+
+  let head = 0
+  let tail = 1
+  queue[0] = fromIndex
+  distance[fromIndex] = 0
+
+  while (head < tail) {
+    const currentIndex = queue[head]
+    head += 1
+    const current = positionFor(currentIndex, world.width)
+
+    for (const direction of DIRECTIONS) {
+      const next = {
+        x: current.x + direction.x,
+        y: current.y + direction.y,
+      }
+      if (!isWalkable(world, next)) continue
+
+      const nextIndex = indexFor(next.x, next.y, world.width)
+      if (distance[nextIndex] !== -1) continue
+
+      distance[nextIndex] = distance[currentIndex] + 1
+      previous[nextIndex] = currentIndex
+      queue[tail] = nextIndex
+      tail += 1
+    }
+  }
+
+  return { fromIndex, queue, count: tail, previous, distance }
+}
+
+function reconstructPath(
+  search: SearchResult,
+  targetIndex: number,
+  width: number,
+): Position[] | null {
+  if (targetIndex === search.fromIndex) return []
+  if (search.distance[targetIndex] === -1) return null
+
+  const reversed: Position[] = []
+  let cursor = targetIndex
+  while (cursor !== search.fromIndex) {
+    reversed.push(positionFor(cursor, width))
+    cursor = search.previous[cursor]
+    if (cursor === -1) return null
+  }
+  reversed.reverse()
+  return reversed
+}
+
+export type ReachableExposedSolid = {
+  target: Position
+  path: Position[]
+}
+
+export function findReachableExposedSolids(
+  world: World,
+  from: Position,
+): ReachableExposedSolid[] {
+  const search = createSearch(world, from)
+  if (!search) return []
+
+  const exposed = new Uint8Array(world.width * world.height)
+  const results: ReachableExposedSolid[] = []
+
+  for (let index = 0; index < search.count; index += 1) {
+    const standIndex = search.queue[index]
+    const stand = positionFor(standIndex, world.width)
+
+    for (const direction of DIRECTIONS) {
+      const target = {
+        x: stand.x + direction.x,
+        y: stand.y + direction.y,
+      }
+      if (!isInBounds(world, target)) continue
+
+      const targetIndex = indexFor(target.x, target.y, world.width)
+      if (exposed[targetIndex] || getCell(world, target.x, target.y).block === 'air') {
+        continue
+      }
+
+      const path = reconstructPath(search, standIndex, world.width)
+      if (!path) continue
+      exposed[targetIndex] = 1
+      results.push({ target, path })
+    }
+  }
+
+  return results
 }
 
 export function findPath(
@@ -43,39 +145,14 @@ export function findPath(
   if (from.x === to.x && from.y === to.y) return []
   if (!isWalkable(world, from) || !isWalkable(world, to)) return null
 
-  const queue: Position[] = [from]
-  const visited = new Set([key(from)])
-  const previous = new Map<string, Position>()
+  const search = createSearch(world, from)
+  if (!search) return null
 
-  while (queue.length > 0) {
-    const current = queue.shift()
-    if (!current) break
-
-    for (const next of neighbors(current)) {
-      if (!isInBounds(world, next)) continue
-      const nextKey = key(next)
-      if (visited.has(nextKey) || !isWalkable(world, next)) continue
-
-      visited.add(nextKey)
-      previous.set(nextKey, current)
-
-      if (next.x === to.x && next.y === to.y) {
-        const path: Position[] = []
-        let cursor = next
-        while (cursor.x !== from.x || cursor.y !== from.y) {
-          path.unshift(cursor)
-          const parent = previous.get(key(cursor))
-          if (!parent) return null
-          cursor = parent
-        }
-        return path
-      }
-
-      queue.push(next)
-    }
-  }
-
-  return null
+  return reconstructPath(
+    search,
+    indexFor(to.x, to.y, world.width),
+    world.width,
+  )
 }
 
 export function findAdjacentPaths(
@@ -83,11 +160,14 @@ export function findAdjacentPaths(
   from: Position,
   target: Position,
 ): Array<{ path: Position[]; stand: Position }> {
-  return neighbors(target)
-    .map((stand) => {
-      const path = findPath(world, from, stand)
-      return path ? { path, stand } : null
-    })
+  return DIRECTIONS.map((direction) => {
+    const stand = {
+      x: target.x + direction.x,
+      y: target.y + direction.y,
+    }
+    const path = findPath(world, from, stand)
+    return path ? { path, stand } : null
+  })
     .filter(
       (result): result is { path: Position[]; stand: Position } =>
         result !== null,
@@ -96,30 +176,5 @@ export function findAdjacentPaths(
 }
 
 export function findExposedSolids(world: World, from: Position): Position[] {
-  const queue: Position[] = [from]
-  const visited = new Set([key(from)])
-  const targets: Position[] = []
-
-  while (queue.length > 0) {
-    const current = queue.shift()
-    if (!current) break
-
-    for (const next of neighbors(current)) {
-      if (!isInBounds(world, next)) continue
-      const nextKey = key(next)
-      const cell = getCell(world, next.x, next.y)
-      if (cell.block !== 'air') {
-        targets.push(next)
-      } else if (!visited.has(nextKey)) {
-        visited.add(nextKey)
-        queue.push(next)
-      }
-    }
-  }
-
-  return targets.filter(
-    (target, index) =>
-      targets.findIndex((candidate) => key(candidate) === key(target)) ===
-      index,
-  )
+  return findReachableExposedSolids(world, from).map(({ target }) => target)
 }
