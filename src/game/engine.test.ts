@@ -115,4 +115,32 @@ describe('stepSimulation', () => {
     const moved = stepSimulation(upgradedMovementState, 2)
     expect(moved.dwarves[0].position.x).toBe(4)
   })
+
+  it('preserves the world reference during movement-only ticks', () => {
+    const initial = makeState(['........', '.....d..', '........'])
+    const assigned = stepSimulation(initial, 1)
+    const moved = stepSimulation(assigned, 1)
+
+    expect(moved.world).toBe(assigned.world)
+    expect(moved.world.cells).toBe(assigned.world.cells)
+  })
+
+  it('reserves different exposed targets for dwarves assigned in one tick', () => {
+    const initial = makeState(['.....', '..dd.', '.....'])
+    const secondDwarf = {
+      ...initial.dwarves[0],
+      id: 'dwarf-2',
+    }
+    const twoDwarves = {
+      ...initial,
+      dwarves: [initial.dwarves[0], secondDwarf],
+    }
+
+    const result = stepSimulation(twoDwarves, 1)
+    const targets = result.dwarves.map((dwarf) => dwarf.task.target)
+
+    expect(
+      new Set(targets.map((target) => `${target?.x}:${target?.y}`)).size,
+    ).toBe(2)
+  })
 })

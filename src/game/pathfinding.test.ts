@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findPath } from './pathfinding'
+import { findPath, findReachableExposedSolids } from './pathfinding'
 import type { Cell, World } from './types'
 
 function makeWorld(rows: string[]): World {
@@ -38,5 +38,22 @@ describe('findPath', () => {
       { x: 5, y: 2 },
       { x: 5, y: 1 },
     ])
+  })
+
+  it('returns exposed solids with shortest paths to a standing cell', () => {
+    const world = makeWorld(['......', '..d...', '......'])
+
+    expect(findReachableExposedSolids(world, { x: 1, y: 1 })).toContainEqual({
+      target: { x: 2, y: 1 },
+      path: [],
+    })
+  })
+
+  it('does not return the same exposed solid more than once', () => {
+    const world = makeWorld(['.....', '.ddd.', '.d.d.', '.....'])
+    const targets = findReachableExposedSolids(world, { x: 2, y: 3 })
+    const keys = targets.map(({ target }) => `${target.x}:${target.y}`)
+
+    expect(new Set(keys).size).toBe(keys.length)
   })
 })
