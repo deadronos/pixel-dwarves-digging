@@ -94,10 +94,14 @@ function advanceDwarf(state: SimulationState, dwarf: DwarfState): DwarfState {
   }
 
   if (task.path.length > 0) {
+    const movementSteps = Math.min(
+      task.path.length,
+      1 + state.upgrades.moveSpeed,
+    )
     return {
       ...dwarf,
-      position: task.path[0],
-      task: { ...task, path: task.path.slice(1) },
+      position: task.path[movementSteps - 1],
+      task: { ...task, path: task.path.slice(movementSteps) },
     }
   }
 
@@ -110,7 +114,10 @@ function advanceDwarf(state: SimulationState, dwarf: DwarfState): DwarfState {
     }
 
     const minedBlock = targetCell.block
-    const duration = DIG_DURATION[minedBlock]
+    const duration = Math.max(
+      1,
+      DIG_DURATION[minedBlock] - state.upgrades.toolPower * 2,
+    )
     const nextProgress = task.progress + 1
 
     if (duration > 0 && nextProgress >= duration) {

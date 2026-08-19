@@ -98,4 +98,21 @@ describe('stepSimulation', () => {
 
     expect(stepSimulation(initial, 1).completed).toBe(true)
   })
+
+  it('applies tool and movement upgrades to active dwarves', () => {
+    const toolState = makeState(['.....', '..d..', '.....'])
+    const upgradedToolState = {
+      ...toolState,
+      upgrades: { ...toolState.upgrades, toolPower: 2 },
+    }
+    expect(stepSimulation(upgradedToolState, 2).totalCleared).toBe(1)
+
+    const movementState = makeState(['........', '.....d..', '........'])
+    const upgradedMovementState = {
+      ...movementState,
+      upgrades: { ...movementState.upgrades, moveSpeed: 2 },
+    }
+    const moved = stepSimulation(upgradedMovementState, 2)
+    expect(moved.dwarves[0].position.x).toBe(4)
+  })
 })

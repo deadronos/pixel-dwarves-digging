@@ -1,4 +1,4 @@
-import { create, type StoreApi } from 'zustand'
+import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import { stepSimulation } from './engine'
 import { generateWorld, randomStarterSeed } from './generation'
 import {
@@ -98,7 +98,7 @@ function writeLocalSave(simulation: SimulationState): void {
 
 export function createGameStore(
   seed = randomStarterSeed(),
-): StoreApi<GameStore> {
+): UseBoundStore<StoreApi<GameStore>> {
   let intervalId: ReturnType<typeof setInterval> | undefined
 
   const store = create<GameStore>((set, get) => ({
