@@ -16,6 +16,15 @@ function makeState(rows: string[]): SimulationState {
       biome: 'meadow',
     })),
   )
+  const supportBuildings = Array.from({ length: width }, (_, x) => ({
+    id: `bridge-${x}`,
+    type: 'bridge' as const,
+    position: { x, y: 1 },
+    width: 1,
+    height: 1,
+    level: 1,
+    construction: 'completed' as const,
+  }))
   const world: World = {
     width,
     height,
@@ -26,7 +35,7 @@ function makeState(rows: string[]): SimulationState {
     biomes: Array(width).fill('meadow'),
     start: { x: 1, y: 1 },
     stockpile: { x: 1, y: 1 },
-    buildings: [],
+    buildings: supportBuildings,
   }
 
   return {
@@ -80,7 +89,7 @@ describe('stepSimulation', () => {
   })
 
   it('uses ore-first policy when an ore target is exposed', () => {
-    const initial = makeState(['.....', '..dI.', '.....'])
+    const initial = makeState(['.....', 'I.d..', '.....'])
     const policyState = {
       ...initial,
       policy: {
@@ -93,7 +102,7 @@ describe('stepSimulation', () => {
     const result = stepSimulation(policyState, 1)
 
     expect(result.dwarves[0].task.kind).toBe('dig')
-    expect(result.dwarves[0].task.target).toEqual({ x: 3, y: 1 })
+    expect(result.dwarves[0].task.target).toEqual({ x: 0, y: 1 })
   })
 
   it('reports completed when every solid block is air', () => {

@@ -44,7 +44,7 @@ function overlaps(
 }
 
 function hasSupport(world: World, position: Position): boolean {
-  const below = { x: position.x, y: position.y + 1 }
+  const below = { x: position.x, y: position.y - 1 }
   if (!isInBounds(world, below.x, below.y)) return false
   const cell = world.cells[below.y * world.width + below.x]
   if (cell.block !== 'air') return true
@@ -127,7 +127,7 @@ export function canPlaceBuilding(
   }
 
   const bottomRow = cellsFor(footprint).filter(
-    (cell) => cell.y === footprint.position.y + footprint.height - 1,
+    (cell) => cell.y === footprint.position.y,
   )
   return bottomRow.every((cell) => hasSupport(world, cell))
 }

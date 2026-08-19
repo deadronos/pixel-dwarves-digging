@@ -14,7 +14,7 @@ function makeBuildingState(): SimulationState {
   const cells = Array.from({ length: width * height }, (_, index) => {
     const y = Math.floor(index / width)
     return {
-      block: y >= 3 ? ('stone' as const) : ('air' as const),
+      block: y <= 2 ? ('stone' as const) : ('air' as const),
       biome: 'meadow' as const,
     }
   })
@@ -113,13 +113,13 @@ describe('building helpers', () => {
     expect(
       canPlaceBuilding(placementWorld, {
         type: 'outpost',
-        position: { x: 5, y: 1 },
+        position: { x: 5, y: 3 },
       }),
     ).toBe(true)
     expect(
       canPlaceBuilding(placementWorld, {
         type: 'outpost',
-        position: { x: 5, y: 0 },
+        position: { x: 5, y: 4 },
       }),
     ).toBe(false)
   })
