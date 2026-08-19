@@ -124,6 +124,52 @@ describe('building helpers', () => {
     ).toBe(false)
   })
 
+  it('allows bridges and ladders only when they have an anchor', () => {
+    const state = makeBuildingState()
+    const bridgeWorld = {
+      ...state.world,
+      buildings: [
+        ...state.world.buildings,
+        {
+          id: 'bridge-anchor',
+          type: 'bridge' as const,
+          position: { x: 4, y: 3 },
+          width: 1,
+          height: 1,
+          level: 1,
+          construction: 'completed' as const,
+        },
+      ],
+    }
+
+    expect(
+      canPlaceBuilding(bridgeWorld, {
+        type: 'bridge',
+        position: { x: 3, y: 3 },
+      }),
+    ).toBe(true)
+    expect(
+      canPlaceBuilding(state.world, {
+        type: 'bridge',
+        position: { x: 3, y: 3 },
+      }),
+    ).toBe(false)
+    const ladderWorld = {
+      ...state.world,
+      cells: state.world.cells.map((cell, index) =>
+        index === 3 * state.world.width + 2
+          ? { ...cell, block: 'stone' as const }
+          : cell,
+      ),
+    }
+    expect(
+      canPlaceBuilding(ladderWorld, {
+        type: 'ladder',
+        position: { x: 3, y: 3 },
+      }),
+    ).toBe(true)
+  })
+
   it('reserves and consumes construction stone exactly once', () => {
     const state = makeBuildingState()
     const reserved = reserveConstructionMaterials(state, 'outpost-order')

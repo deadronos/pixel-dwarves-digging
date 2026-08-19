@@ -192,4 +192,49 @@ describe('stepSimulation', () => {
       new Set(targets.map((target) => `${target?.x}:${target?.y}`)).size,
     ).toBe(2)
   })
+
+  it('assigns a builder and completes a reserved outpost order', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.cells[0] = { block: 'stone', biome: 'meadow' }
+    state.inventory.stone = 12
+    state.world.buildings.push({
+      id: 'outpost-1',
+      type: 'outpost',
+      position: { x: 3, y: 1 },
+      width: 2,
+      height: 2,
+      level: 1,
+      construction: 'planned',
+    })
+    state.constructionOrders = [
+      {
+        id: 'outpost-order',
+        buildingId: 'outpost-1',
+        type: 'outpost',
+        required: { stone: 12 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'outpost',
+      },
+    ]
+
+    const assigned = stepSimulation(state, 1)
+    expect(assigned.dwarves[0].task.kind).toBe('build')
+    expect(assigned.dwarves[0].carrying).toBe('stone')
+
+    let completed = assigned
+    for (let index = 0; index < 200; index += 1) {
+      completed = stepSimulation(completed, 1)
+      if (completed.constructionOrders.length === 0) break
+    }
+
+    expect(completed.constructionOrders).toHaveLength(0)
+    expect(completed.world.buildings).toContainEqual(
+      expect.objectContaining({
+        id: 'outpost-1',
+        construction: 'completed',
+      }),
+    )
+  })
 })

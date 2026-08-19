@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { stepSimulation } from './engine'
-import { getAggregateInventory, selectStorageDestination } from './logistics'
+import {
+  getAggregateInventory,
+  planExpansionOrder,
+  selectStorageDestination,
+} from './logistics'
 import { EMPTY_INVENTORY, type SimulationState } from './types'
 
 function makeStorageState(): SimulationState {
   const width = 6
-  const height = 2
+  const height = 3
   const cells = [
     ...Array.from({ length: width }, () => ({
       block: 'stone' as const,
@@ -17,6 +21,11 @@ function makeStorageState(): SimulationState {
     { block: 'air' as const, biome: 'meadow' as const },
     { block: 'air' as const, biome: 'meadow' as const },
     { block: 'air' as const, biome: 'meadow' as const },
+    { block: 'air' as const, biome: 'meadow' as const },
+    ...Array.from({ length: width }, () => ({
+      block: 'air' as const,
+      biome: 'meadow' as const,
+    })),
   ]
   return {
     world: {
@@ -119,5 +128,22 @@ describe('logistics helpers', () => {
       id: 'outpost-1',
       position: { x: 4, y: 1 },
     })
+  })
+
+  it('plans one remote outpost when expansion policy has enough stone', () => {
+    const state = makeStorageState()
+    state.constructionPolicy = 'expand'
+    state.inventory.stone = 12
+
+    const planned = planExpansionOrder(state)
+
+    expect(planned.constructionOrders).toHaveLength(1)
+    expect(planned.constructionOrders[0].reason).toBe('outpost')
+    expect(planned.world.buildings).toContainEqual(
+      expect.objectContaining({
+        type: 'outpost',
+        construction: 'planned',
+      }),
+    )
   })
 })

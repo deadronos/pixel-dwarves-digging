@@ -1,7 +1,13 @@
+import { completeConstruction, reserveConstructionMaterials } from './buildings'
 import { DIG_DURATION, MINERAL_BLOCKS } from './content'
 import { getCell } from './generation'
-import { depositCarriedMaterial, selectStorageDestination } from './logistics'
 import {
+  depositCarriedMaterial,
+  planExpansionOrder,
+  selectStorageDestination,
+} from './logistics'
+import {
+  findAdjacentPaths,
   findPath,
   findReachableExposedSolids,
   isSupported,
@@ -23,6 +29,8 @@ type AdvanceResult = {
   world: World
   minedBlock: MineableBlockType | null
   depositedBlock?: MineableBlockType | null
+  inventory?: SimulationState['inventory']
+  constructionOrders?: SimulationState['constructionOrders']
 }
 
 const reachableWorkCache = new WeakMap<
@@ -119,6 +127,40 @@ function chooseTarget(
   return selected ? { target: selected.target, path: selected.path } : null
 }
 
+function chooseBuildOrder(
+  state: SimulationState,
+  dwarf: DwarfState,
+): { orderId: string; path: Position[]; stand: Position } | null {
+  const candidates = state.constructionOrders
+    .filter((order) => {
+      if (
+        state.constructionPolicy === 'conserve' &&
+        order.reason !== 'access'
+      ) {
+        return false
+      }
+      const required = order.required.stone ?? 0
+      const delivered = order.delivered.stone ?? 0
+      const reserved = order.reserved.stone ?? 0
+      return delivered < required && reserved > 0
+    })
+    .flatMap((order) => {
+      const building = state.world.buildings.find(
+        ({ id }) => id === order.buildingId,
+      )
+      if (!building) return []
+      const route = findAdjacentPaths(
+        state.world,
+        dwarf.position,
+        building.position,
+      )[0]
+      return route ? [{ orderId: order.id, ...route }] : []
+    })
+    .sort((first, second) => first.path.length - second.path.length)
+
+  return candidates[0] ?? null
+}
+
 function clearCell(world: World, target: Position): World {
   const targetIndex = indexFor(target.x, target.y, world.width)
   return {
@@ -171,6 +213,68 @@ function advanceDwarf(
   const task = dwarf.task
 
   if (task.kind === 'idle') {
+    const buildOrder = chooseBuildOrder(state, dwarf)
+    if (buildOrder) {
+      const order = state.constructionOrders.find(
+        ({ id }) => id === buildOrder.orderId,
+      )
+      return {
+        dwarf: {
+          ...dwarf,
+          carrying: 'stone',
+          task: {
+            kind: 'build',
+            target: buildOrder.stand,
+            path: buildOrder.path,
+            progress: 0,
+            block: 'stone',
+            buildingId: order?.buildingId,
+            constructionOrderId: buildOrder.orderId,
+          },
+        },
+        world: state.world,
+        minedBlock: null,
+      }
+    }
+
+    const orderNeedingMaterials = state.constructionOrders.find((order) => {
+      const required = order.required.stone ?? 0
+      const delivered = order.delivered.stone ?? 0
+      const reserved = order.reserved.stone ?? 0
+      return delivered < required && reserved < required - delivered
+    })
+    if (orderNeedingMaterials) {
+      const reservedState = reserveConstructionMaterials(
+        state,
+        orderNeedingMaterials.id,
+      )
+      const reservedBuild = chooseBuildOrder(reservedState, dwarf)
+      if (reservedBuild) {
+        const order = reservedState.constructionOrders.find(
+          ({ id }) => id === reservedBuild.orderId,
+        )
+        return {
+          dwarf: {
+            ...dwarf,
+            carrying: 'stone',
+            task: {
+              kind: 'build',
+              target: reservedBuild.stand,
+              path: reservedBuild.path,
+              progress: 0,
+              block: 'stone',
+              buildingId: order?.buildingId,
+              constructionOrderId: reservedBuild.orderId,
+            },
+          },
+          world: reservedState.world,
+          minedBlock: null,
+          inventory: reservedState.inventory,
+          constructionOrders: reservedState.constructionOrders,
+        }
+      }
+    }
+
     const assignment = chooseTarget(state, dwarf)
     return assignment
       ? {
@@ -206,6 +310,51 @@ function advanceDwarf(
       },
       state.world,
     )
+  }
+
+  if (task.kind === 'build' && task.target && task.constructionOrderId) {
+    const order = state.constructionOrders.find(
+      ({ id }) => id === task.constructionOrderId,
+    )
+    if (!order || dwarf.carrying !== 'stone') {
+      return unchanged(
+        {
+          ...dwarf,
+          carrying: null,
+          task: { kind: 'idle', path: [], progress: 0 },
+        },
+        state.world,
+      )
+    }
+
+    const delivered = (order.delivered.stone ?? 0) + 1
+    const reserved = Math.max(0, (order.reserved.stone ?? 0) - 1)
+    const constructionOrders = state.constructionOrders.map((candidate) =>
+      candidate.id === order.id
+        ? {
+            ...candidate,
+            delivered: { ...candidate.delivered, stone: delivered },
+            reserved: { ...candidate.reserved, stone: reserved },
+            progress: delivered,
+          }
+        : candidate,
+    )
+    const updatedState = { ...state, constructionOrders }
+    const completedState =
+      delivered >= (order.required.stone ?? 0)
+        ? completeConstruction(updatedState, order.id)
+        : updatedState
+
+    return {
+      dwarf: {
+        ...dwarf,
+        carrying: null,
+        task: { kind: 'idle', path: [], progress: 0 },
+      },
+      world: completedState.world,
+      minedBlock: null,
+      constructionOrders: completedState.constructionOrders,
+    }
   }
 
   if (task.kind === 'dig' && task.target) {
@@ -298,11 +447,13 @@ function advanceDwarf(
 function stepOnce(state: SimulationState): SimulationState {
   if (state.completed) return { ...state, tick: state.tick + 1 }
 
+  const plannedState = planExpansionOrder(state)
+
   const nextState: SimulationState = {
-    ...state,
-    tick: state.tick + 1,
-    inventory: cloneInventory(state.inventory),
-    dwarves: state.dwarves.slice(),
+    ...plannedState,
+    tick: plannedState.tick + 1,
+    inventory: cloneInventory(plannedState.inventory),
+    dwarves: plannedState.dwarves.slice(),
   }
 
   nextState.dwarves = nextState.dwarves.map((dwarf) =>
@@ -314,6 +465,10 @@ function stepOnce(state: SimulationState): SimulationState {
     const advanced = advanceDwarf(nextState, before)
     nextState.dwarves[index] = advanced.dwarf
     nextState.world = advanced.world
+    if (advanced.inventory) nextState.inventory = advanced.inventory
+    if (advanced.constructionOrders) {
+      nextState.constructionOrders = advanced.constructionOrders
+    }
 
     if (advanced.minedBlock) {
       nextState.totalCleared += 1

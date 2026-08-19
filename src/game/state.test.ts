@@ -41,6 +41,16 @@ describe('createGameStore', () => {
     expect(store.getState().simulation.world).toBe(worldBefore)
   })
 
+  it('updates construction policy without replacing the world', () => {
+    const store = createGameStore('construction-policy-test')
+    const worldBefore = store.getState().simulation.world
+
+    store.getState().setConstructionPolicy('expand')
+
+    expect(store.getState().simulation.constructionPolicy).toBe('expand')
+    expect(store.getState().simulation.world).toBe(worldBefore)
+  })
+
   it('exports and imports the active save', () => {
     const store = createGameStore('save-test')
     const exported = store.getState().exportSave()

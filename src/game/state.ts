@@ -9,6 +9,7 @@ import {
 } from './progression'
 import { parseSave, serializeState } from './serialization'
 import {
+  type ConstructionPolicy,
   cloneInventory,
   EMPTY_INVENTORY,
   type PolicyState,
@@ -40,6 +41,7 @@ export type GameStore = {
     material: keyof PolicyState['materialPriority'],
     enabled: boolean,
   ) => void
+  setConstructionPolicy: (policy: ConstructionPolicy) => void
   tickSimulation: () => void
   startSimulation: () => void
   stopSimulation: () => void
@@ -72,6 +74,7 @@ export function createInitialSimulation(
   upgrades: UpgradeLevels = DEFAULT_UPGRADES,
   prestigeCurrency = 0,
   policy: PolicyState = DEFAULT_POLICY,
+  constructionPolicy: ConstructionPolicy = 'balanced',
 ): SimulationState {
   const world = generateWorld(seed, runNumber)
   return {
@@ -83,7 +86,7 @@ export function createInitialSimulation(
       materialPriority: { ...policy.materialPriority },
     },
     constructionOrders: [],
-    constructionPolicy: 'balanced',
+    constructionPolicy,
     tick: 0,
     totalCleared: 0,
     completed: false,
@@ -139,6 +142,10 @@ export function createGameStore(
           },
         },
       })),
+    setConstructionPolicy: (constructionPolicy) =>
+      set((current) => ({
+        simulation: { ...current.simulation, constructionPolicy },
+      })),
     tickSimulation: () => {
       const current = get()
       if (current.paused) return
@@ -190,6 +197,7 @@ export function createGameStore(
           current.upgrades,
           current.prestigeCurrency,
           current.policy,
+          current.constructionPolicy,
         ),
         saveStatus: 'NEW RUN',
         saveError: null,

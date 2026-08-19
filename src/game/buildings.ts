@@ -3,6 +3,7 @@ import type {
   BuildingState,
   BuildingType,
   ConstructionOrder,
+  Inventory,
   Position,
   SimulationState,
   World,
@@ -56,6 +57,40 @@ function hasSupport(world: World, position: Position): boolean {
         (occupied) => occupied.x === below.x && occupied.y === below.y,
       ),
   )
+}
+
+function hasCompletedBuildingAt(world: World, position: Position): boolean {
+  return world.buildings.some(
+    (building) =>
+      building.construction === 'completed' &&
+      building.type !== 'ladder' &&
+      position.x >= building.position.x &&
+      position.x < building.position.x + building.width &&
+      position.y >= building.position.y &&
+      position.y < building.position.y + building.height,
+  )
+}
+
+function hasHorizontalAnchor(world: World, position: Position): boolean {
+  return [-1, 1].some((offset) => {
+    const neighbor = { x: position.x + offset, y: position.y }
+    if (!isInBounds(world, neighbor.x, neighbor.y)) return false
+    return (
+      world.cells[neighbor.y * world.width + neighbor.x].block !== 'air' ||
+      hasCompletedBuildingAt(world, neighbor)
+    )
+  })
+}
+
+function hasLadderAnchor(world: World, position: Position): boolean {
+  return [-1, 1].some((offset) => {
+    const neighbor = { x: position.x + offset, y: position.y }
+    if (!isInBounds(world, neighbor.x, neighbor.y)) return false
+    return (
+      world.cells[neighbor.y * world.width + neighbor.x].block !== 'air' ||
+      hasCompletedBuildingAt(world, neighbor)
+    )
+  })
 }
 
 export function getPrimaryStockpile(world: World): BuildingState | null {
@@ -126,6 +161,13 @@ export function canPlaceBuilding(
     return false
   }
 
+  if (request.type === 'bridge') {
+    return cellsFor(footprint).every((cell) => hasHorizontalAnchor(world, cell))
+  }
+  if (request.type === 'ladder') {
+    return cellsFor(footprint).every((cell) => hasLadderAnchor(world, cell))
+  }
+
   const bottomRow = cellsFor(footprint).filter(
     (cell) => cell.y === footprint.position.y,
   )
@@ -145,6 +187,33 @@ function updateOrder(
   }
 }
 
+function removeFromStorage(
+  world: World,
+  material: keyof Inventory,
+  amount: number,
+): World {
+  let remaining = amount
+  return {
+    ...world,
+    buildings: world.buildings.map((building) => {
+      if (!building.storage || remaining <= 0) return building
+      const stored = building.storage.inventory[material] ?? 0
+      const removed = Math.min(stored, remaining)
+      remaining -= removed
+      return {
+        ...building,
+        storage: {
+          ...building.storage,
+          inventory: {
+            ...building.storage.inventory,
+            [material]: stored - removed,
+          },
+        },
+      }
+    }),
+  }
+}
+
 export function reserveConstructionMaterials(
   state: SimulationState,
   orderId: string,
@@ -154,16 +223,18 @@ export function reserveConstructionMaterials(
 
   const inventory = { ...state.inventory }
   const reserved = { ...order.reserved }
+  let world = state.world
   for (const [material, amount] of Object.entries(order.required)) {
     const key = material as keyof typeof inventory
     const available = inventory[key]
     const needed = Math.max(0, (amount ?? 0) - (reserved[key] ?? 0))
     const taken = Math.min(available, needed)
     inventory[key] -= taken
+    world = removeFromStorage(world, key, taken)
     reserved[key] = (reserved[key] ?? 0) + taken
   }
 
-  return updateOrder({ ...state, inventory }, orderId, (current) => ({
+  return updateOrder({ ...state, world, inventory }, orderId, (current) => ({
     ...current,
     reserved,
   }))

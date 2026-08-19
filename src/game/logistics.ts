@@ -1,3 +1,5 @@
+import { canPlaceBuilding } from './buildings'
+import { BUILDING_DEFINITIONS } from './content'
 import { findPath } from './pathfinding'
 import {
   cloneInventory,
@@ -103,4 +105,58 @@ export function depositCarriedMaterial(
       }
     }),
   }
+}
+
+export function planExpansionOrder(state: SimulationState): SimulationState {
+  if (state.constructionPolicy !== 'expand') return state
+  if (
+    state.world.buildings.some((building) => building.type === 'outpost') ||
+    state.constructionOrders.some((order) => order.type === 'outpost')
+  ) {
+    return state
+  }
+
+  const requiredStone = BUILDING_DEFINITIONS.outpost.stone
+  if (state.inventory.stone < requiredStone) return state
+
+  for (let x = state.world.start.x + 3; x < state.world.width - 1; x += 1) {
+    const position = { x, y: state.world.start.y }
+    if (!canPlaceBuilding(state.world, { type: 'outpost', position })) continue
+
+    const buildingId = `outpost-${state.world.buildings.length + 1}`
+    const orderId = `${buildingId}-order`
+    return {
+      ...state,
+      world: {
+        ...state.world,
+        buildings: [
+          ...state.world.buildings,
+          {
+            id: buildingId,
+            type: 'outpost',
+            position,
+            width: BUILDING_DEFINITIONS.outpost.width,
+            height: BUILDING_DEFINITIONS.outpost.height,
+            level: 1,
+            construction: 'planned',
+          },
+        ],
+      },
+      constructionOrders: [
+        ...state.constructionOrders,
+        {
+          id: orderId,
+          buildingId,
+          type: 'outpost',
+          required: { stone: requiredStone },
+          reserved: {},
+          delivered: {},
+          progress: 0,
+          reason: 'outpost',
+        },
+      ],
+    }
+  }
+
+  return state
 }
