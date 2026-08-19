@@ -1,0 +1,71 @@
+:root {
+  color: #f1e7c8;
+  background: #161916;
+  font-family: "Courier New", monospace;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: #161916;
+}
+
+button,
+select,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 1440px;
+  margin: 0 auto 18px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: #b89d64;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+}
+
+h1 {
+  margin: 0;
+  color: #f1e7c8;
+  font-size: clamp(28px, 5vw, 58px);
+  letter-spacing: 0.07em;
+}
+
+.status-chip {
+  border: 1px solid #5a604c;
+  color: #9ca889;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  padding: 8px 10px;
+}
+
+.world-placeholder {
+  display: grid;
+  min-height: 70vh;
+  max-width: 1440px;
+  margin: 0 auto;
+  place-items: center;
+  border: 1px solid #384136;
+  background: #20251f;
+  color: #9ca889;
+}
