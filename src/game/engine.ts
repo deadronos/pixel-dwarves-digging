@@ -82,11 +82,11 @@ function scoreTarget(
 function compareCandidates(
   first: TargetCandidate,
   second: TargetCandidate,
+  origin: Position,
 ): number {
   return (
     second.score - first.score ||
-    distance(first.target, second.target) -
-      distance(second.target, first.target)
+    distance(first.target, origin) - distance(second.target, origin)
   )
 }
 
@@ -109,7 +109,7 @@ function chooseTarget(
       path,
       score: scoreTarget(state, target, path.length),
     }))
-    .sort(compareCandidates)
+    .sort((first, second) => compareCandidates(first, second, dwarf.position))
 
   const selected = candidates[0]
   return selected ? { target: selected.target, path: selected.path } : null
