@@ -1,4 +1,7 @@
 import { useEffect } from 'react'
+import ControlBar from './components/ControlBar'
+import Hud from './components/Hud'
+import Inspector from './components/Inspector'
 import WorldCanvas from './components/WorldCanvas'
 import { useGameStore } from './game/state'
 
@@ -14,21 +17,14 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">
-            AUTONOMOUS EXCAVATION / RUN{' '}
-            {String(simulation.world.runNumber).padStart(2, '0')}
-          </p>
-          <h1>PIXEL DWARVES</h1>
-        </div>
-        <span className="status-chip">
-          {simulation.completed ? 'READY TO PRESTIGE' : 'DIGGING'}
-        </span>
-      </header>
-      <section className="world-stage" aria-label="Terrain workspace">
-        <WorldCanvas world={simulation.world} dwarves={simulation.dwarves} />
-      </section>
+      <Hud />
+      <div className="main-layout">
+        <section className="world-stage" aria-label="Terrain workspace">
+          <WorldCanvas world={simulation.world} dwarves={simulation.dwarves} />
+        </section>
+        <Inspector />
+      </div>
+      <ControlBar />
     </main>
   )
 }
