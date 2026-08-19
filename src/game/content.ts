@@ -1,5 +1,12 @@
 import type { BiomeId, BlockType, MineableBlockType } from './types'
 
+export const BUILDING_DEFINITIONS = {
+  stockpile: { width: 3, height: 2, capacity: 120 },
+  outpost: { width: 2, height: 2, capacity: 48, stone: 12 },
+  bridge: { width: 1, height: 1, stone: 2 },
+  ladder: { width: 1, height: 1, stone: 1 },
+} as const
+
 export const BIOME_IDS: readonly BiomeId[] = [
   'meadow',
   'desert',

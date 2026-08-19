@@ -129,6 +129,7 @@ export function generateWorld(seed: string, runNumber: number): World {
     biomes,
     start,
     stockpile,
+    buildings: [],
   }
 }
 

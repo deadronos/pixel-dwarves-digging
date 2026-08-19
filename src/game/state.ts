@@ -81,6 +81,8 @@ export function createInitialSimulation(
       ...policy,
       materialPriority: { ...policy.materialPriority },
     },
+    constructionOrders: [],
+    constructionPolicy: 'balanced',
     tick: 0,
     totalCleared: 0,
     completed: false,

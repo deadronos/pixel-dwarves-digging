@@ -22,6 +22,7 @@ function makeWorld(rows: string[]): World {
     biomes: Array(width).fill('meadow'),
     start: { x: 1, y: 1 },
     stockpile: { x: 1, y: 1 },
+    buildings: [],
   }
 }
 

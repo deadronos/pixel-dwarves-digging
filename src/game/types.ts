@@ -29,6 +29,13 @@ export type Position = {
   y: number
 }
 
+export type BuildingType = 'stockpile' | 'outpost' | 'bridge' | 'ladder'
+export type BuildingConstruction =
+  | 'completed'
+  | 'planned'
+  | 'under-construction'
+export type ConstructionPolicy = 'conserve' | 'balanced' | 'expand'
+
 export type Cell = {
   block: BlockType
   biome: BiomeId
@@ -43,7 +50,9 @@ export type World = {
   surfaceHeights: number[]
   biomes: BiomeId[]
   start: Position
+  /** @deprecated Use the primary stockpile building position. */
   stockpile: Position
+  buildings: BuildingState[]
 }
 
 export type Inventory = Record<MineableBlockType, number>
@@ -62,7 +71,34 @@ export type PolicyState = {
   materialPriority: MaterialPriority
 }
 
-export type TaskKind = 'idle' | 'dig' | 'haul'
+export type StorageState = {
+  capacity: number
+  inventory: Partial<Inventory>
+}
+
+export type BuildingState = {
+  id: string
+  type: BuildingType
+  position: Position
+  width: number
+  height: number
+  level: number
+  construction: BuildingConstruction
+  storage?: StorageState
+}
+
+export type ConstructionOrder = {
+  id: string
+  buildingId: string
+  type: Exclude<BuildingType, 'stockpile'>
+  required: Partial<Inventory>
+  reserved: Partial<Inventory>
+  delivered: Partial<Inventory>
+  progress: number
+  reason: 'access' | 'outpost' | 'capacity' | 'policy'
+}
+
+export type TaskKind = 'idle' | 'dig' | 'haul' | 'build'
 
 export type TaskState = {
   kind: TaskKind
@@ -70,6 +106,8 @@ export type TaskState = {
   path: Position[]
   progress: number
   block?: MineableBlockType
+  buildingId?: string
+  constructionOrderId?: string
 }
 
 export type DwarfState = {
@@ -84,6 +122,8 @@ export type SimulationState = {
   dwarves: DwarfState[]
   inventory: Inventory
   policy: PolicyState
+  constructionOrders: ConstructionOrder[]
+  constructionPolicy: ConstructionPolicy
   tick: number
   totalCleared: number
   completed: boolean

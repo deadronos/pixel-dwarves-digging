@@ -26,6 +26,7 @@ function makeState(rows: string[]): SimulationState {
     biomes: Array(width).fill('meadow'),
     start: { x: 1, y: 1 },
     stockpile: { x: 1, y: 1 },
+    buildings: [],
   }
 
   return {
@@ -49,6 +50,8 @@ function makeState(rows: string[]): SimulationState {
         relic: false,
       },
     },
+    constructionOrders: [],
+    constructionPolicy: 'balanced',
     tick: 0,
     totalCleared: 0,
     completed: false,
