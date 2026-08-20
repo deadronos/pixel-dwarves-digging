@@ -180,9 +180,49 @@ function isTask(value: unknown, width: number, height: number): boolean {
   ) {
     return false
   }
+  if (
+    value.recoveryReason !== undefined &&
+    !['stranded', 'storage-route'].includes(value.recoveryReason as string)
+  ) {
+    return false
+  }
+
+  if (value.kind === 'dig') {
+    return (
+      value.target !== undefined &&
+      value.buildingId === undefined &&
+      value.constructionOrderId === undefined &&
+      (value.purpose !== 'access' || typeof value.accessRequestId === 'string')
+    )
+  }
+
+  if (value.kind === 'build') {
+    return (
+      value.target !== undefined &&
+      typeof value.block === 'string' &&
+      typeof value.buildingId === 'string' &&
+      typeof value.constructionOrderId === 'string'
+    )
+  }
+
+  if (value.kind === 'haul') {
+    const hasCargo = typeof value.block === 'string'
+    return (
+      hasCargo &&
+      (value.target !== undefined
+        ? typeof value.buildingId === 'string'
+        : value.purpose === 'recovery' &&
+          value.recoveryReason === 'storage-route')
+    )
+  }
+
   return (
-    value.recoveryReason === undefined ||
-    ['stranded', 'storage-route'].includes(value.recoveryReason as string)
+    value.target === undefined &&
+    value.block === undefined &&
+    value.buildingId === undefined &&
+    value.constructionOrderId === undefined &&
+    value.accessRequestId === undefined &&
+    (value.purpose === undefined || value.purpose === 'recovery')
   )
 }
 
@@ -201,6 +241,27 @@ function isDwarf(value: unknown, width: number, height: number): boolean {
 }
 
 function isConstructionOrder(value: unknown): boolean {
+  const required = isRecord(value) ? value.required : undefined
+  const reserved = isRecord(value) ? value.reserved : undefined
+  const delivered = isRecord(value) ? value.delivered : undefined
+  const materials = isRecord(required)
+    ? Object.entries(required).filter(([, amount]) => (amount as number) > 0)
+    : []
+  const totalRequired = materials.reduce(
+    (total, [, amount]) => total + (typeof amount === 'number' ? amount : 0),
+    0,
+  )
+  const quantitiesValid = materials.every(([material, amount]) => {
+    const key = material as MineableBlockType
+    const requiredAmount = amount as number
+    const reservedAmount = isRecord(reserved)
+      ? ((reserved[key] as number | undefined) ?? 0)
+      : 0
+    const deliveredAmount = isRecord(delivered)
+      ? ((delivered[key] as number | undefined) ?? 0)
+      : 0
+    return reservedAmount + deliveredAmount <= requiredAmount
+  })
   return (
     isRecord(value) &&
     typeof value.id === 'string' &&
@@ -210,6 +271,9 @@ function isConstructionOrder(value: unknown): boolean {
     isInventoryRecord(value.reserved, true) &&
     isInventoryRecord(value.delivered, true) &&
     isNonNegativeInteger(value.progress) &&
+    materials.length > 0 &&
+    value.progress <= totalRequired &&
+    quantitiesValid &&
     ['access', 'outpost', 'capacity', 'policy'].includes(
       value.reason as string,
     ) &&
@@ -387,12 +451,18 @@ function isSimulationState(value: unknown): value is SimulationState {
     value.constructionOrders.every(isConstructionOrder) &&
     new Set(value.constructionOrders.map((order) => order.id)).size ===
       value.constructionOrders.length &&
-    value.constructionOrders.every(
-      (order) =>
-        buildingIds.has(order.buildingId) &&
+    value.constructionOrders.every((order) => {
+      const building = world.buildings.find(
+        (candidate) => candidate.id === order.buildingId,
+      )
+      return (
+        building !== undefined &&
+        building.type === order.type &&
+        building.construction !== 'completed' &&
         (order.accessRequestId === undefined ||
-          requestIds.has(order.accessRequestId)),
-    ) &&
+          requestIds.has(order.accessRequestId))
+      )
+    }) &&
     Array.isArray(value.accessRequests) &&
     value.accessRequests.every((request) =>
       isAccessRequest(request, world.width, world.height),
@@ -410,6 +480,7 @@ function isSimulationState(value: unknown): value is SimulationState {
         'waiting-for-stone',
         'waiting-for-material',
         'awaiting-recovery',
+        'storage-full',
         'no-safe-work',
       ].includes(safety.blockedReason as string)) &&
     (value.constructionPolicy === 'conserve' ||
@@ -423,7 +494,9 @@ function isSimulationState(value: unknown): value is SimulationState {
         (task.task.constructionOrderId === undefined ||
           orderIds.has(task.task.constructionOrderId as string)) &&
         (task.task.accessRequestId === undefined ||
-          requestIds.has(task.task.accessRequestId as string))
+          requestIds.has(task.task.accessRequestId as string)) &&
+        ((task.task.kind !== 'haul' && task.task.kind !== 'build') ||
+          task.task.block === (dwarf as { carrying: string | null }).carrying)
       )
     })
   )

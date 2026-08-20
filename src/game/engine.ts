@@ -2,6 +2,7 @@ import {
   canCompleteConstruction,
   completeConstruction,
   reserveConstructionMaterials,
+  returnMaterialToStorage,
 } from './buildings'
 import {
   BOOTSTRAP_NO_PROGRESS_TICK_LIMIT,
@@ -19,8 +20,8 @@ import {
   assessDigSafety,
   depositCarriedMaterial,
   findEmergencyLadderPlan,
-  getAvailableCapacity,
   getAvailableConstructionMaterial,
+  getAvailableStateCapacity,
   hasReachableStorage,
   isBootstrapProtectedTarget,
   planAccessConstructionOrder,
@@ -263,6 +264,59 @@ function resolveAccessRequests(state: SimulationState): SimulationState {
   }
 }
 
+function reopenAccessRequest(
+  state: SimulationState,
+  unsafe: ReachableExposedSolid & {
+    score: number
+    stand: Position
+    failure: AccessRequest['failure']
+  },
+): SimulationState {
+  const requestId = `access-${taskKey(unsafe.target)}`
+  return {
+    ...state,
+    accessRequests: state.accessRequests.map((request) =>
+      request.id === requestId && request.status === 'resolved'
+        ? {
+            ...request,
+            failure: unsafe.failure,
+            priority: unsafe.score,
+            approach: unsafe.stand,
+            worldRevision: state.worldRevision,
+            status: 'open' as const,
+            blockedReason: undefined,
+          }
+        : request,
+    ),
+  }
+}
+
+function reopenResolvedAccessRequests(state: SimulationState): SimulationState {
+  let next = state
+  for (const request of state.accessRequests) {
+    if (request.status !== 'resolved') continue
+    for (const dwarf of state.dwarves) {
+      if (dwarf.task.kind !== 'idle' || dwarf.carrying) continue
+      const candidate = reachableTargets(state.world, dwarf.position).find(
+        ({ target }) => taskKey(target) === taskKey(request.target),
+      )
+      if (!candidate) continue
+      const stand = candidate.path.at(-1) ?? dwarf.position
+      const safety = assessDigSafety(state, stand, candidate.target)
+      if (!safety.safe && safety.failure !== 'storage-route') {
+        next = reopenAccessRequest(next, {
+          ...candidate,
+          stand,
+          score: scoreTarget(state, candidate.target, candidate.path.length),
+          failure: safety.failure ?? 'support',
+        })
+        break
+      }
+    }
+  }
+  return next
+}
+
 function trimOpenAccessRequests(state: SimulationState): SimulationState {
   const openRequests = state.accessRequests
     .filter((request) => request.status === 'open')
@@ -283,7 +337,9 @@ function trimOpenAccessRequests(state: SimulationState): SimulationState {
 }
 
 function planAccessRequests(state: SimulationState): SimulationState {
-  let next = trimOpenAccessRequests(resolveAccessRequests(state))
+  let next = trimOpenAccessRequests(
+    reopenResolvedAccessRequests(resolveAccessRequests(state)),
+  )
   let openRequestCount = next.accessRequests.filter(
     (request) => request.status === 'open',
   ).length
@@ -294,7 +350,15 @@ function planAccessRequests(state: SimulationState): SimulationState {
     const unsafe = findUnsafeTarget(next, dwarf)
     if (!unsafe || unsafe.failure === 'storage-route') continue
     const requestId = `access-${taskKey(unsafe.target)}`
-    if (next.accessRequests.some((request) => request.id === requestId)) {
+    const existingRequest = next.accessRequests.find(
+      (request) => request.id === requestId,
+    )
+    if (existingRequest?.status === 'resolved') {
+      next = reopenAccessRequest(next, unsafe)
+      openRequestCount += 1
+      continue
+    }
+    if (existingRequest) {
       continue
     }
     next = {
@@ -435,12 +499,16 @@ function invalidateTask(
     dwarf.task.kind === 'build' && dwarf.task.constructionOrderId
       ? dwarf.carrying
       : null
-  const inventory = buildMaterial
-    ? {
-        ...state.inventory,
-        [buildMaterial]: state.inventory[buildMaterial] + 1,
-      }
-    : undefined
+  const returnedMaterial = buildMaterial
+    ? returnMaterialToStorage(state.world, buildMaterial)
+    : { world: state.world, stored: false }
+  const inventory =
+    buildMaterial && returnedMaterial.stored
+      ? {
+          ...state.inventory,
+          [buildMaterial]: state.inventory[buildMaterial] + 1,
+        }
+      : undefined
   const constructionOrders =
     buildMaterial && dwarf.task.constructionOrderId
       ? state.constructionOrders.map((order) =>
@@ -461,12 +529,14 @@ function invalidateTask(
   return {
     dwarf: {
       ...dwarf,
-      carrying: buildMaterial ? null : dwarf.carrying,
-      task: buildMaterial
-        ? { kind: 'idle', path: [], progress: 0 }
-        : recoveryTask(dwarf, dwarf.carrying ? 'storage-route' : 'stranded'),
+      carrying:
+        buildMaterial && returnedMaterial.stored ? null : dwarf.carrying,
+      task:
+        buildMaterial && returnedMaterial.stored
+          ? { kind: 'idle', path: [], progress: 0 }
+          : recoveryTask(dwarf, dwarf.carrying ? 'storage-route' : 'stranded'),
     },
-    world: state.world,
+    world: returnedMaterial.world,
     minedBlock: null,
     inventory,
     constructionOrders,
@@ -579,7 +649,7 @@ function updateSafetyState(state: SimulationState): SimulationState['safety'] {
     (request) =>
       request.status === 'open' && request.blockedReason === 'no-builder-route',
   )
-  const storageCapacityExhausted = getAvailableCapacity(state.world) === 0
+  const storageCapacityExhausted = getAvailableStateCapacity(state) === 0
   const storageRouteUnavailable = !hasReachableStorage(state)
   const hasStorageBlockedWork =
     !hasSafeWork &&
@@ -591,6 +661,22 @@ function updateSafetyState(state: SimulationState): SimulationState['safety'] {
       (storageCapacityExhausted && storageRouteUnavailable))
   const hasMineableSolids = state.world.cells.some((cell) =>
     MINEABLE_BLOCKS.some((block) => block === cell.block),
+  )
+  const hasWaitingConstructionMaterial = state.constructionOrders.some(
+    (order) => {
+      const pending = (
+        Object.keys(order.required) as Array<keyof Inventory>
+      ).filter(
+        (material) =>
+          (order.delivered[material] ?? 0) < (order.required[material] ?? 0),
+      )
+      return (
+        pending.length > 0 &&
+        pending.every(
+          (material) => getAvailableConstructionMaterial(state, material) === 0,
+        )
+      )
+    },
   )
   const noProgressTicks = state.safety.noProgressTicks ?? 0
   const bootstrapActive =
@@ -620,6 +706,15 @@ function updateSafetyState(state: SimulationState): SimulationState['safety'] {
     )
   ) {
     return blocked('waiting-for-stone')
+  }
+
+  if (
+    !hasSafeWork &&
+    !hasBuildWork &&
+    !hasActiveWork &&
+    hasWaitingConstructionMaterial
+  ) {
+    return blocked('waiting-for-material')
   }
 
   if (
@@ -713,6 +808,7 @@ function advanceDwarf(
         state,
         dwarf.carrying,
         dwarf.position,
+        dwarf.id,
       )
       const path = destination
         ? findPath(state.world, dwarf.position, destination.position)
@@ -859,7 +955,6 @@ function advanceDwarf(
           },
           world: state.world,
           minedBlock: null,
-          progressed: true,
         }
       : unchanged(dwarf, state.world)
   }
@@ -870,6 +965,7 @@ function advanceDwarf(
       state,
       dwarf.carrying,
       dwarf.position,
+      dwarf.id,
     )
     const path = destination
       ? findPath(state.world, dwarf.position, destination.position)
@@ -936,24 +1032,16 @@ function advanceDwarf(
       return invalidateTask(state, dwarf)
     }
     if (!order || !material || dwarf.carrying !== material) {
-      const inventory =
-        material && dwarf.carrying === material
-          ? {
-              ...state.inventory,
-              [material]: state.inventory[material] + 1,
-            }
-          : undefined
-      return {
-        dwarf: {
-          ...dwarf,
-          carrying: null,
-          task: { kind: 'idle', path: [], progress: 0 },
-        },
-        world: state.world,
-        minedBlock: null,
-        inventory,
-        progressed: true,
-      }
+      return material && dwarf.carrying === material
+        ? invalidateTask(state, dwarf)
+        : unchanged(
+            {
+              ...dwarf,
+              carrying: null,
+              task: { kind: 'idle', path: [], progress: 0 },
+            },
+            state.world,
+          )
     }
 
     if (!canCompleteConstruction(state.world, order.buildingId)) {
@@ -973,10 +1061,15 @@ function advanceDwarf(
         : candidate,
     )
     const updatedState = { ...state, constructionOrders }
-    const completedState =
-      delivered >= (order.required[material] ?? 0)
-        ? completeConstruction(updatedState, order.id)
-        : updatedState
+    const completedState = Object.entries(order.required).every(
+      ([requiredMaterial, requiredAmount]) =>
+        (requiredMaterial === material
+          ? delivered
+          : (order.delivered[requiredMaterial as keyof Inventory] ?? 0)) >=
+        (requiredAmount ?? 0),
+    )
+      ? completeConstruction(updatedState, order.id)
+      : updatedState
 
     return {
       dwarf: {
@@ -1134,7 +1227,10 @@ function advanceDwarf(
 function stepOnce(state: SimulationState): SimulationState {
   if (state.completed) return { ...state, tick: state.tick + 1 }
 
-  const plannedState = planExpansionOrder(planAccessRequests(state))
+  const plannedState =
+    state.safety.phase === 'blocked'
+      ? reopenResolvedAccessRequests(state)
+      : planExpansionOrder(planAccessRequests(state))
 
   const nextState: SimulationState = {
     ...plannedState,
@@ -1180,6 +1276,9 @@ function stepOnce(state: SimulationState): SimulationState {
   const allDwarvesSettled = nextState.dwarves.every(
     (dwarf) => dwarf.task.kind === 'idle' && dwarf.carrying === null,
   )
+  const hasPendingPlans =
+    nextState.constructionOrders.length > 0 ||
+    nextState.accessRequests.some((request) => request.status === 'open')
   const safetyState: SimulationState = {
     ...nextState,
     safety: {
@@ -1192,7 +1291,7 @@ function stepOnce(state: SimulationState): SimulationState {
   return {
     ...safetyState,
     safety: updateSafetyState(safetyState),
-    completed: !hasSolids && allDwarvesSettled,
+    completed: !hasSolids && allDwarvesSettled && !hasPendingPlans,
   }
 }
 
