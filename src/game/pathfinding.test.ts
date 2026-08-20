@@ -48,6 +48,21 @@ describe('findPath', () => {
     expect(findPath(world, { x: 1, y: 1 }, { x: 3, y: 1 })).toBeNull()
   })
 
+  it('can route through a solid cell when that cell is virtually cleared', () => {
+    const world = makeWorld(['######', '..#...', '######'])
+
+    expect(findPath(world, { x: 0, y: 1 }, { x: 5, y: 1 })).toBeNull()
+    expect(
+      findPath(world, { x: 0, y: 1 }, { x: 5, y: 1 }, { x: 2, y: 1 }),
+    ).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      { x: 4, y: 1 },
+      { x: 5, y: 1 },
+    ])
+  })
+
   it('uses a completed bridge across an unsupported gap', () => {
     const world = makeWorld(['##.###', '......', '######'])
     world.buildings = [

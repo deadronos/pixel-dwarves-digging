@@ -9,7 +9,6 @@ import {
   findAdjacentPaths,
   findPath,
   isSupported,
-  simulateDigWorld,
 } from './pathfinding'
 import {
   type AccessFailure,
@@ -332,6 +331,7 @@ export function selectStorageDestination(
   _block: MineableBlockType,
   from: Position,
   excludeDwarfId?: string,
+  cleared?: Position,
 ): StorageDestination | null {
   const candidates = storageBuildings(state.world)
     .filter(
@@ -340,7 +340,7 @@ export function selectStorageDestination(
     )
     .map((building) => ({
       building,
-      path: findPath(state.world, from, building.position),
+      path: findPath(state.world, from, building.position, cleared),
     }))
     .filter(
       (
@@ -372,15 +372,16 @@ export function assessDigSafety(
     return { safe: false, failure: 'support' }
   }
 
-  const worldAfterDig = simulateDigWorld(state.world, target)
-  if (!isSupported(worldAfterDig, stand)) {
+  if (!isSupported(state.world, stand, target)) {
     return { safe: false, failure: 'support' }
   }
 
   const storage = selectStorageDestination(
-    { ...state, world: worldAfterDig },
+    state,
     targetCell.block,
     stand,
+    undefined,
+    target,
   )
   return storage
     ? { safe: true, storage }

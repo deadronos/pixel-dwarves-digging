@@ -53,21 +53,44 @@ function hasLadder(world: World, position: Position): boolean {
   return buildingAt(world, position)?.type === 'ladder'
 }
 
-export function isSupported(world: World, position: Position): boolean {
+function isCleared(position: Position, cleared?: Position): boolean {
+  return (
+    cleared !== undefined &&
+    position.x === cleared.x &&
+    position.y === cleared.y
+  )
+}
+
+function isAir(world: World, position: Position, cleared?: Position): boolean {
+  return isCleared(position, cleared)
+    ? true
+    : getCell(world, position.x, position.y).block === 'air'
+}
+
+export function isSupported(
+  world: World,
+  position: Position,
+  cleared?: Position,
+): boolean {
   if (!isInBounds(world, position)) return false
   if (hasFloor(world, position) || hasLadder(world, position)) return true
   if (position.y === 0) return false
 
-  const below = getCell(world, position.x, position.y - 1)
-  if (below.block !== 'air') return true
+  if (!isAir(world, { x: position.x, y: position.y - 1 }, cleared)) {
+    return true
+  }
   return hasFloor(world, { x: position.x, y: position.y - 1 })
 }
 
-function isWalkable(world: World, position: Position): boolean {
+function isWalkable(
+  world: World,
+  position: Position,
+  cleared?: Position,
+): boolean {
   return (
     isInBounds(world, position) &&
-    getCell(world, position.x, position.y).block === 'air' &&
-    isSupported(world, position)
+    isAir(world, position, cleared) &&
+    isSupported(world, position, cleared)
   )
 }
 
@@ -85,8 +108,14 @@ export function canMoveBetween(
   world: World,
   from: Position,
   to: Position,
+  cleared?: Position,
 ): boolean {
-  if (!isWalkable(world, from) || !isWalkable(world, to)) return false
+  if (
+    !isWalkable(world, from, cleared) ||
+    !isWalkable(world, to, cleared)
+  ) {
+    return false
+  }
   const vertical = from.x === to.x && from.y !== to.y
   if (!vertical) return true
   return hasLadder(world, from) || hasLadder(world, to)
@@ -96,8 +125,12 @@ function positionFor(index: number, width: number): Position {
   return { x: index % width, y: Math.floor(index / width) }
 }
 
-function createSearch(world: World, from: Position): SearchResult | null {
-  if (!isWalkable(world, from)) return null
+function createSearch(
+  world: World,
+  from: Position,
+  cleared?: Position,
+): SearchResult | null {
+  if (!isWalkable(world, from, cleared)) return null
 
   const size = world.width * world.height
   const fromIndex = indexFor(from.x, from.y, world.width)
@@ -122,7 +155,7 @@ function createSearch(world: World, from: Position): SearchResult | null {
         x: current.x + direction.x,
         y: current.y + direction.y,
       }
-      if (!canMoveBetween(world, current, next)) continue
+      if (!canMoveBetween(world, current, next, cleared)) continue
 
       const nextIndex = indexFor(next.x, next.y, world.width)
       if (distance[nextIndex] !== -1) continue
@@ -206,13 +239,19 @@ export function findPath(
   world: World,
   from: Position,
   to: Position,
+  cleared?: Position,
 ): Position[] | null {
   if (from.x === to.x && from.y === to.y) {
-    return isWalkable(world, from) ? [] : null
+    return isWalkable(world, from, cleared) ? [] : null
   }
-  if (!isWalkable(world, from) || !isWalkable(world, to)) return null
+  if (
+    !isWalkable(world, from, cleared) ||
+    !isWalkable(world, to, cleared)
+  ) {
+    return null
+  }
 
-  const search = createSearch(world, from)
+  const search = createSearch(world, from, cleared)
   if (!search) return null
 
   return reconstructPath(search, indexFor(to.x, to.y, world.width), world.width)
@@ -222,13 +261,14 @@ export function findAdjacentPaths(
   world: World,
   from: Position,
   target: Position,
+  cleared?: Position,
 ): Array<{ path: Position[]; stand: Position }> {
   return DIRECTIONS.map((direction) => {
     const stand = {
       x: target.x + direction.x,
       y: target.y + direction.y,
     }
-    const path = findPath(world, from, stand)
+    const path = findPath(world, from, stand, cleared)
     return path ? { path, stand } : null
   })
     .filter(
