@@ -1,51 +1,49 @@
 import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import type { InstancedMesh } from 'three'
 import { Matrix4 } from 'three'
-import { BLOCK_COLORS, MINEABLE_BLOCKS } from '../game/content'
-import type { BlockType, World } from '../game/types'
+import { BLOCK_COLORS } from '../game/content'
+import type { Cell, World } from '../game/types'
+import {
+  createTerrainPositions,
+  RENDERED_BLOCKS,
+  type RenderedBlockType,
+  type TerrainPositions,
+  updateTerrainPositions,
+} from './terrainPositions'
 
 type TerrainLayerProps = {
   world: World
 }
 
 const BlockInstances = memo(function BlockInstances({
-  world,
+  positions,
   block,
 }: {
-  world: World
-  block: BlockType
+  positions: TerrainPositions
+  block: RenderedBlockType
 }) {
   const meshRef = useRef<InstancedMesh>(null)
   const matrix = useMemo(() => new Matrix4(), [])
-  const positions = useMemo(
-    () =>
-      world.cells.reduce<Array<[number, number]>>((result, cell, index) => {
-        if (cell.block === block) {
-          result.push([index % world.width, Math.floor(index / world.width)])
-        }
-        return result
-      }, []),
-    [block, world.cells, world.width],
-  )
+  const blockPositions = positions.get(block) ?? []
 
   useLayoutEffect(() => {
     const mesh = meshRef.current
     if (!mesh) return
 
-    positions.forEach(([x, y], index) => {
+    blockPositions.forEach(([x, y], index) => {
       matrix.makeTranslation(x + 0.5, y + 0.5, 0)
       mesh.setMatrixAt(index, matrix)
     })
     mesh.instanceMatrix.needsUpdate = true
-  }, [matrix, positions])
+    mesh.computeBoundingSphere()
+  }, [blockPositions, matrix])
 
-  if (positions.length === 0) return null
+  if (blockPositions.length === 0) return null
 
   return (
     <instancedMesh
       ref={meshRef}
-      args={[undefined, undefined, positions.length]}
-      frustumCulled={false}
+      args={[undefined, undefined, blockPositions.length]}
     >
       <boxGeometry args={[0.96, 0.96, 0.18]} />
       <meshBasicMaterial color={BLOCK_COLORS[block]} />
@@ -54,12 +52,39 @@ const BlockInstances = memo(function BlockInstances({
 })
 
 const TerrainLayer = memo(function TerrainLayer({ world }: TerrainLayerProps) {
+  const positionCache = useRef<{
+    cells: Cell[]
+    width: number
+    positions: TerrainPositions
+  } | null>(null)
+  const positions = useMemo(() => {
+    const previous = positionCache.current
+    const next =
+      previous?.width === world.width
+        ? updateTerrainPositions(
+            previous.positions,
+            previous.cells,
+            world.cells,
+            world.width,
+          )
+        : createTerrainPositions(world.cells, world.width)
+    positionCache.current = {
+      cells: world.cells,
+      width: world.width,
+      positions: next,
+    }
+    return next
+  }, [world.cells, world.width])
+
   return (
     <group>
-      {MINEABLE_BLOCKS.map((block) => (
-        <BlockInstances key={block} world={world} block={block} />
+      {RENDERED_BLOCKS.map((block) => (
+        <BlockInstances
+          key={`${block}-${positions.get(block)?.length ?? 0}`}
+          positions={positions}
+          block={block}
+        />
       ))}
-      <BlockInstances world={world} block="bedrock" />
       <mesh
         position={[world.width / 2, world.height / 2, -0.2]}
         scale={[world.width, world.height, 1]}

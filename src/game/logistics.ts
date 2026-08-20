@@ -5,12 +5,7 @@ import {
   getEmergencyReserveMaterial,
   STARTER_PROTECTED_RADIUS,
 } from './content'
-import {
-  findAdjacentPaths,
-  findPath,
-  isSupported,
-  simulateDigWorld,
-} from './pathfinding'
+import { findAdjacentPaths, findPath, isSupported } from './pathfinding'
 import {
   type AccessFailure,
   type AccessRequest,
@@ -41,6 +36,31 @@ export type EmergencyLadderPlan = {
   world: World
   destination: StorageDestination
   path: Position[]
+}
+
+const digSafetyCache = new WeakMap<World, Map<string, DigSafety>>()
+
+function digSafetyKey(
+  state: SimulationState,
+  stand: Position,
+  target: Position,
+): string {
+  const reservations = state.dwarves
+    .filter(
+      (dwarf) =>
+        dwarf.carrying !== null &&
+        dwarf.task.kind === 'haul' &&
+        dwarf.task.target !== undefined,
+    )
+    .map((dwarf) => {
+      const targetKey = dwarf.task.target
+        ? `${dwarf.task.target.x}:${dwarf.task.target.y}`
+        : ''
+      return `${dwarf.id}:${dwarf.task.buildingId ?? ''}:${targetKey}`
+    })
+    .sort()
+    .join('|')
+  return `${stand.x}:${stand.y}|${target.x}:${target.y}|${reservations}`
 }
 
 export function isBootstrapActive(state: SimulationState): boolean {
@@ -332,6 +352,7 @@ export function selectStorageDestination(
   _block: MineableBlockType,
   from: Position,
   excludeDwarfId?: string,
+  cleared?: Position,
 ): StorageDestination | null {
   const candidates = storageBuildings(state.world)
     .filter(
@@ -340,7 +361,7 @@ export function selectStorageDestination(
     )
     .map((building) => ({
       building,
-      path: findPath(state.world, from, building.position),
+      path: findPath(state.world, from, building.position, cleared),
     }))
     .filter(
       (
@@ -358,7 +379,7 @@ export function selectStorageDestination(
     : null
 }
 
-export function assessDigSafety(
+function assessDigSafetyUncached(
   state: SimulationState,
   stand: Position,
   target: Position,
@@ -372,19 +393,40 @@ export function assessDigSafety(
     return { safe: false, failure: 'support' }
   }
 
-  const worldAfterDig = simulateDigWorld(state.world, target)
-  if (!isSupported(worldAfterDig, stand)) {
+  if (!isSupported(state.world, stand, target)) {
     return { safe: false, failure: 'support' }
   }
 
   const storage = selectStorageDestination(
-    { ...state, world: worldAfterDig },
+    state,
     targetCell.block,
     stand,
+    undefined,
+    target,
   )
   return storage
     ? { safe: true, storage }
     : { safe: false, failure: 'storage-route' }
+}
+
+export function assessDigSafety(
+  state: SimulationState,
+  stand: Position,
+  target: Position,
+): DigSafety {
+  let worldCache = digSafetyCache.get(state.world)
+  if (!worldCache) {
+    worldCache = new Map()
+    digSafetyCache.set(state.world, worldCache)
+  }
+
+  const key = digSafetyKey(state, stand, target)
+  const cached = worldCache.get(key)
+  if (cached) return cached
+
+  const result = assessDigSafetyUncached(state, stand, target)
+  worldCache.set(key, result)
+  return result
 }
 
 export function depositCarriedMaterial(

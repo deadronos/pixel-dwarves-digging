@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import ControlBar from './components/ControlBar'
 import Hud from './components/Hud'
 import Inspector from './components/Inspector'
-import WorldCanvas from './components/WorldCanvas'
 import { useGameStore } from './game/state'
+
+const WorldCanvas = lazy(() => import('./components/WorldCanvas'))
 
 export default function App() {
   const simulation = useGameStore((state) => state.simulation)
@@ -20,7 +21,22 @@ export default function App() {
       <Hud />
       <div className="main-layout">
         <section className="world-stage" aria-label="Terrain workspace">
-          <WorldCanvas world={simulation.world} dwarves={simulation.dwarves} />
+          <Suspense
+            fallback={
+              <div
+                className="world-canvas"
+                role="img"
+                aria-label="Loading terrain simulation"
+              >
+                loading terrain…
+              </div>
+            }
+          >
+            <WorldCanvas
+              world={simulation.world}
+              dwarves={simulation.dwarves}
+            />
+          </Suspense>
         </section>
         <Inspector />
       </div>

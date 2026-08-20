@@ -1,5 +1,10 @@
 import { useMemo } from 'react'
-import { BLOCK_COLORS, BLOCK_LABELS, MINEABLE_BLOCKS } from '../game/content'
+import {
+  BLOCK_COLORS,
+  BLOCK_LABELS,
+  MINEABLE_BLOCK_SET,
+  MINEABLE_BLOCKS,
+} from '../game/content'
 import { getAggregateInventory } from '../game/logistics'
 import { useGameStore } from '../game/state'
 
@@ -11,7 +16,7 @@ export default function Hud() {
   const remaining = useMemo(
     () =>
       simulation.world.cells.filter((cell) =>
-        MINEABLE_BLOCKS.some((block) => block === cell.block),
+        MINEABLE_BLOCK_SET.has(cell.block),
       ).length,
     [simulation.world.cells],
   )
