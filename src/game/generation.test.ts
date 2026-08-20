@@ -125,7 +125,7 @@ describe('generateWorld', () => {
         `${seed} should expose a reachable starter stone block`,
       ).toBe(true)
 
-      if (index < 5) {
+      if (index < 12) {
         const result = stepSimulation(initial, 300)
         expect(
           result.totalCleared,

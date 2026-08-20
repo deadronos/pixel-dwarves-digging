@@ -165,6 +165,11 @@ export function planAccessConstructionOrder(
   state: SimulationState,
   request: AccessRequest,
 ): SimulationState {
+  // A missing storage route is a capacity/logistics failure, not a terrain
+  // access failure. Building ladders here can create an infinite loop of
+  // infrastructure that never makes the mined material deliverable.
+  if (request.failure === 'storage-route') return state
+
   if (
     request.status !== 'open' ||
     state.constructionOrders.some(
@@ -287,13 +292,52 @@ export function getAvailableCapacity(
     )
 }
 
+function getReservedStorageCapacity(
+  state: SimulationState,
+  buildingId?: string,
+  excludeDwarfId?: string,
+): number {
+  return state.dwarves.filter(
+    (dwarf) =>
+      dwarf.id !== excludeDwarfId &&
+      dwarf.carrying !== null &&
+      dwarf.task.kind === 'haul' &&
+      dwarf.task.target !== undefined &&
+      (!buildingId || dwarf.task.buildingId === buildingId),
+  ).length
+}
+
+export function getAvailableStateCapacity(
+  state: SimulationState,
+  buildingId?: string,
+  excludeDwarfId?: string,
+): number {
+  return Math.max(
+    0,
+    getAvailableCapacity(state.world, buildingId) -
+      getReservedStorageCapacity(state, buildingId, excludeDwarfId),
+  )
+}
+
+export function hasReachableStorage(state: SimulationState): boolean {
+  return state.dwarves.some(
+    (dwarf) =>
+      selectStorageDestination(state, 'stone', dwarf.position, dwarf.id) !==
+      null,
+  )
+}
+
 export function selectStorageDestination(
   state: SimulationState,
   _block: MineableBlockType,
   from: Position,
+  excludeDwarfId?: string,
 ): StorageDestination | null {
   const candidates = storageBuildings(state.world)
-    .filter((building) => getAvailableCapacity(state.world, building.id) > 0)
+    .filter(
+      (building) =>
+        getAvailableStateCapacity(state, building.id, excludeDwarfId) > 0,
+    )
     .map((building) => ({
       building,
       path: findPath(state.world, from, building.position),

@@ -93,7 +93,11 @@ export function createInitialSimulation(
     constructionPolicy,
     accessRequests: [],
     worldRevision: 0,
-    safety: { phase: 'bootstrap', emergencyStone: STARTER_EMERGENCY_STONE },
+    safety: {
+      phase: 'bootstrap',
+      emergencyStone: STARTER_EMERGENCY_STONE,
+      noProgressTicks: 0,
+    },
     tick: 0,
     totalCleared: 0,
     completed: false,

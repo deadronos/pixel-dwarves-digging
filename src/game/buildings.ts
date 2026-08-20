@@ -135,20 +135,13 @@ export function canPlaceBuilding(
     return false
   }
 
-  if (
-    world.buildings.some(
-      (building) =>
-        building.construction !== 'planned' && overlaps(building, footprint),
-    )
-  ) {
+  if (world.buildings.some((building) => overlaps(building, footprint))) {
     return false
   }
 
   const occupied = new Set(
     world.buildings.flatMap((building) =>
-      building.construction === 'completed'
-        ? cellsFor(building).map((cell) => `${cell.x}:${cell.y}`)
-        : [],
+      cellsFor(building).map((cell) => `${cell.x}:${cell.y}`),
     ),
   )
   if (
@@ -214,12 +207,53 @@ function removeFromStorage(
   }
 }
 
+export function returnMaterialToStorage(
+  world: World,
+  material: keyof Inventory,
+): { world: World; stored: boolean } {
+  const destination = world.buildings.find(
+    (building) =>
+      building.construction === 'completed' &&
+      building.storage &&
+      Object.values(building.storage.inventory).reduce(
+        (total, amount) => total + (amount ?? 0),
+        0,
+      ) < building.storage.capacity,
+  )
+  if (!destination?.storage) return { world, stored: false }
+
+  return {
+    world: {
+      ...world,
+      buildings: world.buildings.map((building) =>
+        building.id === destination.id && building.storage
+          ? {
+              ...building,
+              storage: {
+                ...building.storage,
+                inventory: {
+                  ...building.storage.inventory,
+                  [material]: (building.storage.inventory[material] ?? 0) + 1,
+                },
+              },
+            }
+          : building,
+      ),
+    },
+    stored: true,
+  }
+}
+
 export function reserveConstructionMaterials(
   state: SimulationState,
   orderId: string,
 ): SimulationState {
   const order = state.constructionOrders.find(({ id }) => id === orderId)
   if (!order) return state
+  const building = state.world.buildings.find(
+    ({ id }) => id === order.buildingId,
+  )
+  if (!building || building.construction === 'completed') return state
 
   const inventory = { ...state.inventory }
   const reserved = { ...order.reserved }
@@ -254,6 +288,12 @@ export function completeConstruction(
   )
   if (!building) return state
 
+  const materialsComplete = Object.entries(order.required).every(
+    ([material, required]) =>
+      (order.delivered[material as keyof Inventory] ?? 0) >= (required ?? 0),
+  )
+  if (!materialsComplete) return state
+
   const definition = BUILDING_DEFINITIONS[order.type]
   const completedBuilding: BuildingState = {
     ...building,
@@ -279,4 +319,21 @@ export function completeConstruction(
       ({ id }) => id !== orderId,
     ),
   }
+}
+
+export function canCompleteConstruction(
+  world: World,
+  buildingId: string,
+): boolean {
+  const building = world.buildings.find(({ id }) => id === buildingId)
+  if (!building || building.construction === 'completed') return false
+
+  const placementWorld = {
+    ...world,
+    buildings: world.buildings.filter(({ id }) => id !== buildingId),
+  }
+  return canPlaceBuilding(placementWorld, {
+    type: building.type,
+    position: building.position,
+  })
 }

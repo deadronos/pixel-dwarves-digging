@@ -20,6 +20,8 @@ export const STARTER_STONE_VEIN_LENGTH = 3
 export const STARTER_STONE_SUPPLY = 2
 export const STARTER_EMERGENCY_STONE = 1
 export const MAX_OPEN_ACCESS_REQUESTS = 3
+export const NO_PROGRESS_TICK_LIMIT = 20
+export const BOOTSTRAP_NO_PROGRESS_TICK_LIMIT = 3
 
 export const BIOME_IDS: readonly BiomeId[] = [
   'meadow',

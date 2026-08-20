@@ -309,6 +309,34 @@ describe('logistics helpers', () => {
     })
   })
 
+  it('reserves the last storage slot for an active haul', () => {
+    const state = makeStorageState()
+    state.world.buildings[0].storage = { capacity: 1, inventory: {} }
+    state.dwarves = [
+      {
+        ...state.dwarves[0],
+        carrying: 'dirt',
+        task: {
+          kind: 'haul',
+          target: { x: 0, y: 1 },
+          path: [],
+          progress: 0,
+          block: 'dirt',
+          buildingId: 'stockpile-1',
+        },
+      },
+      {
+        ...state.dwarves[0],
+        id: 'dwarf-2',
+        position: { x: 2, y: 1 },
+      },
+    ]
+
+    expect(
+      selectStorageDestination(state, 'stone', { x: 2, y: 1 }, 'dwarf-2'),
+    ).toBeNull()
+  })
+
   it('plans one remote outpost when expansion policy has enough stone', () => {
     const state = makeStorageState()
     state.constructionPolicy = 'expand'

@@ -119,6 +119,18 @@ describe('serialization', () => {
     expect(parseSave(serializeState(original))).toEqual({ state: original })
   })
 
+  it('round-trips a storage-full safety state', () => {
+    const original = makeState()
+    original.safety = {
+      phase: 'blocked',
+      emergencyStone: 0,
+      blockedReason: 'storage-full',
+      noProgressTicks: 20,
+    }
+
+    expect(parseSave(serializeState(original))).toEqual({ state: original })
+  })
+
   it('migrates a schema-three save without safety state into bootstrap recovery state', () => {
     const current = makeState()
     const { safety: _safety, ...legacyState } = current
@@ -173,6 +185,17 @@ describe('serialization', () => {
     }
     expect(
       parseSave(JSON.stringify({ schemaVersion: 4, state: invalidCell })),
+    ).toEqual({ error: 'Save file is missing required simulation data.' })
+
+    const invalidTask = makeState()
+    invalidTask.dwarves = [
+      {
+        ...invalidTask.dwarves[0],
+        task: { kind: 'haul', path: [], progress: 0 },
+      },
+    ]
+    expect(
+      parseSave(JSON.stringify({ schemaVersion: 4, state: invalidTask })),
     ).toEqual({ error: 'Save file is missing required simulation data.' })
   })
 

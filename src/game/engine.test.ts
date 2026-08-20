@@ -121,10 +121,47 @@ describe('stepSimulation', () => {
     expect(result.dwarves[0].task.target).toEqual({ x: 0, y: 1 })
   })
 
+  it('does not count assignment alone as watchdog progress', () => {
+    const result = stepSimulation(makeState(['.....', '..d..', '.....']), 1)
+
+    expect(result.dwarves[0].task.kind).toBe('dig')
+    expect(result.safety.noProgressTicks).toBe(1)
+  })
+
   it('reports completed when every solid block is air', () => {
     const initial = makeState(['.....', '.....', '.....'])
 
     expect(stepSimulation(initial, 1).completed).toBe(true)
+  })
+
+  it('does not report completion while a construction plan remains', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.id !== 'bridge-3',
+    )
+    state.world.buildings.push({
+      id: 'pending-ladder',
+      type: 'ladder',
+      position: { x: 3, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.constructionOrders = [
+      {
+        id: 'pending-ladder-order',
+        buildingId: 'pending-ladder',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'policy',
+      },
+    ]
+
+    expect(stepSimulation(state, 1).completed).toBe(false)
   })
 
   it('applies tool and movement upgrades to active dwarves', () => {
@@ -222,6 +259,36 @@ describe('stepSimulation', () => {
         target: { x: 1, y: 0 },
         status: 'open',
       }),
+    )
+  })
+
+  it('reopens a resolved access request when the target becomes unsafe again', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) =>
+        building.position.x !== state.dwarves[0].position.x ||
+        building.position.y !== state.dwarves[0].position.y,
+    )
+    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+    const created = stepSimulation(state, 1)
+    expect(created.accessRequests).toHaveLength(1)
+    const resolved = {
+      ...created,
+      dwarves: created.dwarves.map((dwarf) => ({
+        ...dwarf,
+        task: { kind: 'idle' as const, path: [], progress: 0 },
+        carrying: null,
+      })),
+      accessRequests: created.accessRequests.map((request) => ({
+        ...request,
+        status: 'resolved' as const,
+      })),
+    }
+
+    const result = stepSimulation(resolved, 1)
+
+    expect(result.accessRequests[0]).toEqual(
+      expect.objectContaining({ status: 'open' }),
     )
   })
 
@@ -408,7 +475,150 @@ describe('stepSimulation', () => {
       phase: 'blocked',
       emergencyStone: 0,
       blockedReason: 'waiting-for-stone',
+      noProgressTicks: 1,
     })
+  })
+
+  it('bounds a bootstrap deadlock instead of leaving the colony in bootstrap forever', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.dwarves = []
+    state.safety = { phase: 'bootstrap', emergencyStone: 1 }
+    state.world.cells[0] = { block: 'dirt', biome: 'meadow' }
+
+    const result = stepSimulation(state, 3)
+
+    expect(result.safety).toEqual({
+      phase: 'blocked',
+      emergencyStone: 1,
+      blockedReason: 'no-safe-work',
+      noProgressTicks: 3,
+    })
+  })
+
+  it('reports a storage deadlock separately from terrain access', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+    if (!stockpile?.storage) throw new Error('stockpile storage missing')
+    stockpile.storage = { capacity: 0, inventory: {} }
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'dirt',
+      biome: 'meadow',
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.accessRequests).toEqual([])
+    expect(result.safety).toEqual({
+      phase: 'blocked',
+      emergencyStone: 0,
+      blockedReason: 'storage-full',
+      noProgressTicks: 1,
+    })
+  })
+
+  it('reports missing materials for a non-access construction order', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.id !== 'bridge-3',
+    )
+    state.world.buildings.push({
+      id: 'unfunded-ladder',
+      type: 'ladder',
+      position: { x: 3, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.constructionOrders = [
+      {
+        id: 'unfunded-ladder-order',
+        buildingId: 'unfunded-ladder',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'policy',
+      },
+    ]
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.safety.blockedReason).toBe('waiting-for-material')
+  })
+
+  it('does not let a blocked state plan new expansion work', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.id !== 'bridge-4' && building.id !== 'bridge-5',
+    )
+    state.world.cells[4] = { block: 'stone', biome: 'meadow' }
+    state.world.cells[5] = { block: 'stone', biome: 'meadow' }
+    state.safety = {
+      phase: 'blocked',
+      emergencyStone: 0,
+      blockedReason: 'no-safe-work',
+    }
+    state.constructionPolicy = 'expand'
+    state.inventory.stone = 12
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.constructionOrders).toEqual([])
+  })
+
+  it('reports an unroutable access request instead of silently idling', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.dwarves = []
+    state.world.cells[0] = { block: 'dirt', biome: 'meadow' }
+    state.accessRequests = [
+      {
+        id: 'unroutable-access',
+        target: { x: 100, y: 100 },
+        failure: 'support',
+        priority: 10,
+        worldRevision: 0,
+        status: 'open',
+        blockedReason: 'no-builder-route',
+      },
+    ]
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.safety).toEqual({
+      phase: 'blocked',
+      emergencyStone: 0,
+      blockedReason: 'no-safe-work',
+      noProgressTicks: 1,
+    })
+  })
+
+  it('cancels a stale movement path into unsupported space while preserving cargo', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.id !== 'bridge-2',
+    )
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      carrying: 'dirt',
+      task: {
+        kind: 'haul',
+        target: { x: 2, y: 1 },
+        path: [{ x: 2, y: 1 }],
+        progress: 0,
+        block: 'dirt',
+      },
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].position).toEqual({ x: 1, y: 1 })
+    expect(result.dwarves[0].carrying).toBe('dirt')
+    expect(result.dwarves[0].task.purpose).toBe('recovery')
+    expect(result.dwarves[0].task.recoveryReason).toBe('storage-route')
   })
 
   it('caps open access requests when several dwarves see unsafe work together', () => {
@@ -490,7 +700,14 @@ describe('stepSimulation', () => {
   it('assigns a builder and completes a reserved outpost order', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.world.cells[0] = { block: 'stone', biome: 'meadow' }
+    state.world.cells[3] = { block: 'stone', biome: 'meadow' }
+    state.world.cells[4] = { block: 'stone', biome: 'meadow' }
     state.inventory.stone = 12
+    state.world.buildings = state.world.buildings.filter(
+      (building) =>
+        building.type !== 'bridge' ||
+        (building.position.x !== 3 && building.position.x !== 4),
+    )
     state.world.buildings.push({
       id: 'outpost-1',
       type: 'outpost',
@@ -563,6 +780,55 @@ describe('stepSimulation', () => {
     expect(result.dwarves[0].task.kind).toBe('build')
   })
 
+  it('keeps a multi-material order open until every material is delivered', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.id !== 'bridge-3',
+    )
+    state.world.buildings.push({
+      id: 'multi-ladder',
+      type: 'ladder',
+      position: { x: 3, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      position: { x: 2, y: 1 },
+      carrying: 'stone',
+      task: {
+        kind: 'build',
+        target: { x: 2, y: 1 },
+        path: [],
+        progress: 0,
+        block: 'stone',
+        buildingId: 'multi-ladder',
+        constructionOrderId: 'multi-order',
+      },
+    }
+    state.constructionOrders = [
+      {
+        id: 'multi-order',
+        buildingId: 'multi-ladder',
+        type: 'ladder',
+        required: { stone: 1, dirt: 1 },
+        reserved: { stone: 1 },
+        delivered: {},
+        progress: 0,
+        reason: 'policy',
+      },
+    ]
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.constructionOrders).toHaveLength(1)
+    expect(result.world.buildings).toContainEqual(
+      expect.objectContaining({ id: 'multi-ladder', construction: 'planned' }),
+    )
+  })
+
   it('does not assign one reserved construction unit to multiple dwarves', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.world.buildings.push({
@@ -633,6 +899,10 @@ describe('stepSimulation', () => {
     const result = stepSimulation(cancelled, 1)
 
     expect(result.inventory.stone).toBe(1)
+    expect(
+      result.world.buildings.find((building) => building.id === 'stockpile-1')
+        ?.storage?.inventory.stone,
+    ).toBe(1)
     expect(result.dwarves[0].carrying).toBeNull()
   })
 })

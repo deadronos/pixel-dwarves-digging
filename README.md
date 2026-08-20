@@ -47,7 +47,7 @@ The pure simulation core is tested independently of React or Three.js. It covers
 - src/components/WorldCanvas.tsx renders the world through an orthographic R3F canvas.
 - src/components/Hud.tsx, ControlBar.tsx, and Inspector.tsx provide the DOM HUD and controls.
 
-The simulation state is plain JSON-compatible data. Save schema 4 stores buildings, per-building inventories, construction orders, access requests, recovery state, bootstrap safety, and construction policy. Version 1 saves migrate their global inventory into a generated level-1 main stockpile, while version 2 and 3 saves receive the bedrock floor and safety defaults. Offline progression is intentionally deferred, but the tick counter and serialized run state are ready to support elapsed-time catch-up later.
+The simulation state is plain JSON-compatible data. Save schema 4 stores buildings, per-building inventories, construction orders, access requests, recovery state, bootstrap safety, and construction policy. Version 1 saves migrate their global inventory into a generated level-1 main stockpile, while version 2 and 3 saves receive the bedrock floor and safety defaults. The engine revalidates movement and construction paths, distinguishes storage deadlocks from terrain access failures, and exposes a bounded no-progress watchdog instead of leaving an idle colony silent. Offline progression is intentionally deferred, but the tick counter and serialized run state are ready to support elapsed-time catch-up later.
 
 ## Toolchain note
 

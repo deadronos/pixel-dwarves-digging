@@ -47,12 +47,15 @@ export type SafetyBlockReason =
   | 'waiting-for-stone'
   | 'waiting-for-material'
   | 'awaiting-recovery'
+  | 'storage-full'
   | 'no-safe-work'
 
 export type SafetyState = {
   phase: SafetyPhase
   emergencyStone: number
   blockedReason?: SafetyBlockReason
+  /** Number of simulation ticks without movement, mining, delivery, or assignment progress. */
+  noProgressTicks?: number
 }
 
 export type Cell = {
