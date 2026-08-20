@@ -7,7 +7,14 @@ function makeWorld(rows: string[]): World {
   const width = rows[0].length
   const cells: Cell[] = rows.flatMap((row) =>
     [...row].map((value) => ({
-      block: value === '.' ? 'air' : value === 'stone' ? 'stone' : 'dirt',
+      block:
+        value === '.'
+          ? 'air'
+          : value === 'b'
+            ? 'bedrock'
+            : value === 'stone'
+              ? 'stone'
+              : 'dirt',
       biome: 'meadow',
     })),
   )
@@ -95,5 +102,15 @@ describe('findPath', () => {
     const keys = targets.map(({ target }) => `${target.x}:${target.y}`)
 
     expect(new Set(keys).size).toBe(keys.length)
+  })
+
+  it('does not expose bedrock as a mining target', () => {
+    const world = makeWorld(['bbbbb', '.....', '.....'])
+
+    expect(
+      findReachableExposedSolids(world, { x: 1, y: 1 }).some(
+        ({ target }) => target.y === 0,
+      ),
+    ).toBe(false)
   })
 })

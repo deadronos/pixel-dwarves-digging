@@ -1,7 +1,8 @@
 import { canPlaceBuilding } from './buildings'
 import { BUILDING_DEFINITIONS } from './content'
-import { findPath } from './pathfinding'
+import { findPath, isSupported, simulateDigWorld } from './pathfinding'
 import {
+  type AccessFailure,
   cloneInventory,
   type Inventory,
   type MineableBlockType,
@@ -13,6 +14,12 @@ import {
 export type StorageDestination = {
   id: string
   position: Position
+}
+
+export type DigSafety = {
+  safe: boolean
+  failure?: AccessFailure
+  storage?: StorageDestination
 }
 
 function storageBuildings(world: World) {
@@ -76,6 +83,35 @@ export function selectStorageDestination(
   return selected
     ? { id: selected.building.id, position: selected.building.position }
     : null
+}
+
+export function assessDigSafety(
+  state: SimulationState,
+  stand: Position,
+  target: Position,
+): DigSafety {
+  const targetCell = state.world.cells[target.y * state.world.width + target.x]
+  if (
+    !targetCell ||
+    targetCell.block === 'air' ||
+    targetCell.block === 'bedrock'
+  ) {
+    return { safe: false, failure: 'support' }
+  }
+
+  const worldAfterDig = simulateDigWorld(state.world, target)
+  if (!isSupported(worldAfterDig, stand)) {
+    return { safe: false, failure: 'support' }
+  }
+
+  const storage = selectStorageDestination(
+    { ...state, world: worldAfterDig },
+    targetCell.block,
+    stand,
+  )
+  return storage
+    ? { safe: true, storage }
+    : { safe: false, failure: 'storage-route' }
 }
 
 export function depositCarriedMaterial(

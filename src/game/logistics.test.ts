@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { stepSimulation } from './engine'
 import {
+  assessDigSafety,
   getAggregateInventory,
   planExpansionOrder,
   selectStorageDestination,
@@ -100,6 +101,34 @@ function stepUntilCarrying(state: SimulationState): SimulationState {
 }
 
 describe('logistics helpers', () => {
+  it('marks a supported dig with a storage route as safe', () => {
+    const state = makeStorageState()
+
+    expect(assessDigSafety(state, { x: 1, y: 1 }, { x: 2, y: 1 })).toEqual({
+      safe: true,
+      storage: { id: 'stockpile-1', position: { x: 0, y: 1 } },
+    })
+  })
+
+  it('rejects a dig that removes the dwarf support below its feet', () => {
+    const state = makeStorageState()
+
+    expect(assessDigSafety(state, { x: 1, y: 1 }, { x: 1, y: 0 })).toEqual({
+      safe: false,
+      failure: 'support',
+    })
+  })
+
+  it('rejects mining when no storage building has capacity and a route', () => {
+    const state = makeStorageState()
+    state.world.buildings[0].storage = { capacity: 0, inventory: {} }
+
+    expect(assessDigSafety(state, { x: 1, y: 1 }, { x: 2, y: 1 })).toEqual({
+      safe: false,
+      failure: 'storage-route',
+    })
+  })
+
   it('does not count a mined block as stored until deposit', () => {
     const afterMining = stepUntilCarrying(makeStorageState())
     const stockpile = afterMining.world.buildings[0]
