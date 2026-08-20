@@ -11,6 +11,7 @@ import {
   getEmergencyReserveMaterial,
   MAX_OPEN_ACCESS_REQUESTS,
   MINEABLE_BLOCKS,
+  MINEABLE_BLOCK_SET,
   MINERAL_BLOCKS,
   NO_PROGRESS_TICK_LIMIT,
   STARTER_BOOTSTRAP_CLEAR_COUNT,
@@ -153,14 +154,14 @@ function chooseTarget(
       stand: path.at(-1) ?? dwarf.position,
       score: scoreTarget(state, target, path.length),
     }))
-    .filter(
-      (candidate) =>
-        assessDigSafety(state, candidate.stand, candidate.target).safe,
-    )
     .sort((first, second) => compareCandidates(first, second, dwarf.position))
 
-  const selected = candidates[0]
-  return selected ? { target: selected.target, path: selected.path } : null
+  for (const candidate of candidates) {
+    if (assessDigSafety(state, candidate.stand, candidate.target).safe) {
+      return { target: candidate.target, path: candidate.path }
+    }
+  }
+  return null
 }
 
 function findUnsafeTarget(
@@ -187,30 +188,23 @@ function findUnsafeTarget(
         !reserved.has(taskKey(target)) &&
         !isBootstrapProtectedTarget(state, target),
     )
-    .map(({ target, path }) => {
-      const safety = assessDigSafety(
-        state,
-        path.at(-1) ?? dwarf.position,
-        target,
-      )
-      return {
-        target,
-        path,
-        stand: path.at(-1) ?? dwarf.position,
-        score: scoreTarget(state, target, path.length),
-        failure: safety.failure,
-      }
-    })
-    .filter(
-      (
-        candidate,
-      ): candidate is typeof candidate & {
-        failure: AccessRequest['failure']
-      } => candidate.failure !== undefined,
-    )
+    .map(({ target, path }) => ({
+      target,
+      path,
+      stand: path.at(-1) ?? dwarf.position,
+      score: scoreTarget(state, target, path.length),
+    }))
     .sort((first, second) => compareCandidates(first, second, dwarf.position))
 
-  return candidates[0] ?? null
+  for (const candidate of candidates) {
+    const failure = assessDigSafety(
+      state,
+      candidate.stand,
+      candidate.target,
+    ).failure
+    if (failure) return { ...candidate, failure }
+  }
+  return null
 }
 
 function chooseAccessTarget(
@@ -232,10 +226,6 @@ function chooseAccessTarget(
         path,
         stand: path.at(-1) ?? dwarf.position,
       }))
-      .filter(
-        (candidate) =>
-          assessDigSafety(state, candidate.stand, candidate.target).safe,
-      )
       .sort(
         (first, second) =>
           distance(first.target, request.target) -
@@ -243,7 +233,11 @@ function chooseAccessTarget(
           first.path.length - second.path.length,
       )
 
-    if (candidates[0]) return { ...candidates[0], requestId: request.id }
+    for (const candidate of candidates) {
+      if (assessDigSafety(state, candidate.stand, candidate.target).safe) {
+        return { ...candidate, requestId: request.id }
+      }
+    }
   }
 
   return null
@@ -660,7 +654,7 @@ function updateSafetyState(state: SimulationState): SimulationState['safety'] {
     ) ||
       (storageCapacityExhausted && storageRouteUnavailable))
   const hasMineableSolids = state.world.cells.some((cell) =>
-    MINEABLE_BLOCKS.some((block) => block === cell.block),
+    MINEABLE_BLOCK_SET.has(cell.block),
   )
   const hasWaitingConstructionMaterial = state.constructionOrders.some(
     (order) => {
@@ -1271,7 +1265,7 @@ function stepOnce(state: SimulationState): SimulationState {
   }
 
   const hasSolids = nextState.world.cells.some((cell) =>
-    MINEABLE_BLOCKS.some((block) => block === cell.block),
+    MINEABLE_BLOCK_SET.has(cell.block),
   )
   const allDwarvesSettled = nextState.dwarves.every(
     (dwarf) => dwarf.task.kind === 'idle' && dwarf.carrying === null,

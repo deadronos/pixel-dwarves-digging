@@ -42,6 +42,31 @@ export type EmergencyLadderPlan = {
   path: Position[]
 }
 
+const digSafetyCache = new WeakMap<World, Map<string, DigSafety>>()
+
+function digSafetyKey(
+  state: SimulationState,
+  stand: Position,
+  target: Position,
+): string {
+  const reservations = state.dwarves
+    .filter(
+      (dwarf) =>
+        dwarf.carrying !== null &&
+        dwarf.task.kind === 'haul' &&
+        dwarf.task.target !== undefined,
+    )
+    .map((dwarf) => {
+      const targetKey = dwarf.task.target
+        ? `${dwarf.task.target.x}:${dwarf.task.target.y}`
+        : ''
+      return `${dwarf.id}:${dwarf.task.buildingId ?? ''}:${targetKey}`
+    })
+    .sort()
+    .join('|')
+  return `${stand.x}:${stand.y}|${target.x}:${target.y}|${reservations}`
+}
+
 export function isBootstrapActive(state: SimulationState): boolean {
   return state.safety.phase === 'bootstrap'
 }
@@ -358,7 +383,7 @@ export function selectStorageDestination(
     : null
 }
 
-export function assessDigSafety(
+function assessDigSafetyUncached(
   state: SimulationState,
   stand: Position,
   target: Position,
@@ -386,6 +411,26 @@ export function assessDigSafety(
   return storage
     ? { safe: true, storage }
     : { safe: false, failure: 'storage-route' }
+}
+
+export function assessDigSafety(
+  state: SimulationState,
+  stand: Position,
+  target: Position,
+): DigSafety {
+  let worldCache = digSafetyCache.get(state.world)
+  if (!worldCache) {
+    worldCache = new Map()
+    digSafetyCache.set(state.world, worldCache)
+  }
+
+  const key = digSafetyKey(state, stand, target)
+  const cached = worldCache.get(key)
+  if (cached) return cached
+
+  const result = assessDigSafetyUncached(state, stand, target)
+  worldCache.set(key, result)
+  return result
 }
 
 export function depositCarriedMaterial(

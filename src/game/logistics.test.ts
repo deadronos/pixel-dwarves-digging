@@ -256,6 +256,14 @@ describe('logistics helpers', () => {
     })
   })
 
+  it('reuses safety results for the same world and reservations', () => {
+    const state = makeStorageState()
+    const first = assessDigSafety(state, { x: 1, y: 1 }, { x: 2, y: 1 })
+    const second = assessDigSafety(state, { x: 1, y: 1 }, { x: 2, y: 1 })
+
+    expect(second).toBe(first)
+  })
+
   it('uses the virtually cleared target when checking the return route', () => {
     const state = makeStorageState()
     state.dwarves[0].position = { x: 3, y: 1 }

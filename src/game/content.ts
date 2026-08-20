@@ -57,6 +57,8 @@ export const MINEABLE_BLOCKS: readonly MineableBlockType[] = [
   'relic',
 ]
 
+export const MINEABLE_BLOCK_SET = new Set<BlockType>(MINEABLE_BLOCKS)
+
 export const COMMON_BUILDING_MATERIALS: readonly CommonBuildingMaterial[] =
   MINEABLE_BLOCKS.filter(
     (block): block is CommonBuildingMaterial => !MINERAL_BLOCKS.has(block),

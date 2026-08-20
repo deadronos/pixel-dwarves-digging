@@ -1,4 +1,4 @@
-import { MINEABLE_BLOCKS } from './content'
+import { MINEABLE_BLOCK_SET } from './content'
 import { getCell } from './generation'
 import {
   type BuildingState,
@@ -218,9 +218,7 @@ export function findReachableExposedSolids(
       const targetIndex = indexFor(target.x, target.y, world.width)
       if (
         exposed[targetIndex] ||
-        !MINEABLE_BLOCKS.some(
-          (block) => block === getCell(world, target.x, target.y).block,
-        )
+        !MINEABLE_BLOCK_SET.has(getCell(world, target.x, target.y).block)
       ) {
         continue
       }
