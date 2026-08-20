@@ -22,6 +22,10 @@ export type BlockType =
   | 'relic'
 
 export type MineableBlockType = Exclude<BlockType, 'air' | 'bedrock'>
+export type CommonBuildingMaterial = Exclude<
+  MineableBlockType,
+  'coal' | 'iron' | 'crystal' | 'relic'
+>
 
 export type BiomeId = 'meadow' | 'desert' | 'red-rock' | 'frozen' | 'mushroom'
 
@@ -38,6 +42,18 @@ export type BuildingConstruction =
 export type ConstructionPolicy = 'conserve' | 'balanced' | 'expand'
 export type AccessFailure = 'support' | 'return-route' | 'storage-route'
 export type AccessRequestStatus = 'open' | 'resolved' | 'blocked'
+export type SafetyPhase = 'bootstrap' | 'operational' | 'blocked'
+export type SafetyBlockReason =
+  | 'waiting-for-stone'
+  | 'waiting-for-material'
+  | 'awaiting-recovery'
+  | 'no-safe-work'
+
+export type SafetyState = {
+  phase: SafetyPhase
+  emergencyStone: number
+  blockedReason?: SafetyBlockReason
+}
 
 export type Cell = {
   block: BlockType
@@ -110,6 +126,10 @@ export type AccessRequest = {
   approach?: Position
   worldRevision: number
   status: AccessRequestStatus
+  blockedReason?:
+    | 'waiting-for-stone'
+    | 'waiting-for-material'
+    | 'no-builder-route'
 }
 
 export type TaskKind = 'idle' | 'dig' | 'haul' | 'build'
@@ -144,6 +164,7 @@ export type SimulationState = {
   constructionPolicy: ConstructionPolicy
   accessRequests: AccessRequest[]
   worldRevision: number
+  safety: SafetyState
   tick: number
   totalCleared: number
   completed: boolean

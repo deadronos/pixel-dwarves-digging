@@ -80,6 +80,7 @@ function makeBuildingState(): SimulationState {
     constructionPolicy: 'balanced',
     accessRequests: [],
     worldRevision: 0,
+    safety: { phase: 'operational', emergencyStone: 0 },
     tick: 0,
     totalCleared: 0,
     completed: false,

@@ -16,7 +16,7 @@ Every run is generated deterministically from a seed and run number. The map is 
 - Frozen: snow, packed soil, ice, stone, crystal.
 - Mushroom: mushroom caps, loam, clay, stone, rare relics.
 
-The colony begins with three dwarves, a surface start pocket, and a visible level-one main stockpile. The generator guarantees a reachable first task, supported starter ground, and mineral material in a normal run.
+The colony begins with three dwarves, a surface start pocket, and a visible level-one main stockpile. The generator guarantees a reachable first task, supported starter ground, a three-block side stone vein, and starter stockpile stone for the first access route.
 
 ## Autonomous colony rules
 
@@ -32,7 +32,7 @@ Dwarves operate on a fixed simulation tick. They:
 
 Dwarves only walk through supported air cells. Solid terrain, stockpile floors, outposts, and bridges provide horizontal support. Ladders provide vertical movement. If mining removes a dwarf's support, the dwarf falls to the nearest supported cell or becomes stranded until access is restored.
 
-The world has a permanent one-cell bedrock floor. It cannot be mined and does not count against clear completion. Before accepting a dig, a dwarf simulates the target becoming air and checks both support and a route to storage. Unsafe valuable targets create access requests instead of direct dig tasks. The colony first prefers a safe horizontal side tunnel or cardinal stair-step route; if an open shaft or gap needs infrastructure, builders reserve stone and construct an anchored ladder or bridge before deeper mining resumes.
+The world has a permanent one-cell bedrock floor. It cannot be mined and does not count against clear completion. New colonies begin with a short bootstrap phase that protects the foundation beneath the stockpile and starter pocket while establishing a haul loop. Before accepting a dig, a dwarf simulates the target becoming air and checks both support and a route to storage. Unsafe valuable targets create access requests instead of direct dig tasks. The colony first prefers a safe horizontal side tunnel or cardinal stair-step route; if an open shaft or gap needs infrastructure, builders reserve non-emergency stone and construct an anchored ladder or bridge before deeper mining resumes. Unfunded requests wait visibly for stone instead of deadlocking the planner.
 
 The player chooses:
 
@@ -63,7 +63,7 @@ Permanent upgrades:
 
 ## Saves
 
-The save envelope is versioned JSON schema 3. The app autosaves to local storage, supports explicit save, and can export/import a portable pixel-dwarves-save.json. Version 1 saves migrate their old global inventory into the main stockpile, while version 2 saves receive bedrock and access-planning defaults. Invalid or unsupported files produce a visible error instead of replacing the current run.
+The save envelope is versioned JSON schema 4. The app autosaves to local storage, supports explicit save, and can export/import a portable pixel-dwarves-save.json. Version 1 saves migrate their old global inventory into the main stockpile, while version 2 and 3 saves receive bedrock and bootstrap-recovery defaults. Invalid or unsupported files produce a visible error instead of replacing the current run.
 
 ## Current implementation
 

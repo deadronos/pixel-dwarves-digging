@@ -40,7 +40,13 @@ export default function Hud() {
         </div>
         <div className="run-status">
           <span className="status-chip">
-            {simulation.completed ? 'READY TO PRESTIGE' : 'DIGGING'}
+            {simulation.completed
+              ? 'READY TO PRESTIGE'
+              : simulation.safety.phase === 'blocked'
+                ? 'COLONY BLOCKED'
+                : simulation.safety.phase === 'bootstrap'
+                  ? 'BOOTSTRAP SAFETY'
+                  : 'DIGGING'}
           </span>
           <span className="save-state">{saveStatus}</span>
         </div>
@@ -75,6 +81,12 @@ export default function Hud() {
               ).length
             }{' '}
             access requests
+          </span>
+          <span>
+            safety: {simulation.safety.phase}
+            {simulation.safety.blockedReason
+              ? ` · ${simulation.safety.blockedReason.replaceAll('-', ' ')}`
+              : ''}
           </span>
         </div>
       </section>

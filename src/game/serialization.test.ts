@@ -37,6 +37,7 @@ function makeState(): SimulationState {
     constructionPolicy: 'balanced',
     accessRequests: [],
     worldRevision: 0,
+    safety: { phase: 'operational', emergencyStone: 0 },
     tick: 12,
     totalCleared: 3,
     completed: false,
@@ -116,6 +117,21 @@ describe('serialization', () => {
     ]
 
     expect(parseSave(serializeState(original))).toEqual({ state: original })
+  })
+
+  it('migrates a schema-three save without safety state into bootstrap recovery state', () => {
+    const current = makeState()
+    const { safety: _safety, ...legacyState } = current
+
+    const result = parseSave(
+      JSON.stringify({ schemaVersion: 3, state: legacyState }),
+    )
+
+    expect(result).toEqual({
+      state: expect.objectContaining({
+        safety: { phase: 'bootstrap', emergencyStone: 0 },
+      }),
+    })
   })
 
   it('rejects malformed or unsupported saves', () => {

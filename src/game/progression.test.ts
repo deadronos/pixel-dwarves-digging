@@ -35,6 +35,7 @@ function makeState(): SimulationState {
     constructionPolicy: 'balanced',
     accessRequests: [],
     worldRevision: 0,
+    safety: { phase: 'operational', emergencyStone: 0 },
     tick: 500,
     totalCleared: 120,
     completed: true,

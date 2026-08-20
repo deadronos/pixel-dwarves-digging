@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { BIOME_IDS, MINEABLE_BLOCKS, MINERAL_BLOCKS } from './content'
+import {
+  BIOME_IDS,
+  MINEABLE_BLOCKS,
+  MINERAL_BLOCKS,
+  STARTER_STONE_VEIN_LENGTH,
+} from './content'
 import { countSolids, generateWorld, getCell, isSolid } from './generation'
 
 describe('generateWorld', () => {
@@ -63,6 +68,16 @@ describe('generateWorld', () => {
     expect(
       world.cells.filter((cell) => cell.block === 'air').length,
     ).toBeGreaterThan(0)
+  })
+
+  it('guarantees a contiguous reachable starter stone vein beside the pocket', () => {
+    const world = generateWorld('starter-stone', 1)
+
+    for (let offset = 0; offset < STARTER_STONE_VEIN_LENGTH; offset += 1) {
+      expect(
+        getCell(world, world.start.x + 3 + offset, world.start.y).block,
+      ).toBe('stone')
+    }
   })
 
   it('places at least one mineral in a generated map', () => {

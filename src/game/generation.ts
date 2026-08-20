@@ -5,6 +5,8 @@ import {
   BUILDING_DEFINITIONS,
   MINEABLE_BLOCKS,
   MINERAL_BLOCKS,
+  STARTER_STONE_SUPPLY,
+  STARTER_STONE_VEIN_LENGTH,
 } from './content'
 import { createRng, hashSeed, randomBetween, randomInt } from './rng'
 import {
@@ -124,6 +126,16 @@ export function generateWorld(seed: string, runNumber: number): World {
   const stockpile = { x: startX - 1, y: start.y }
   carveStarterPocket(cells, surfaceHeights, biomes, start, stockpile)
 
+  for (let offset = 0; offset < STARTER_STONE_VEIN_LENGTH; offset += 1) {
+    const x = start.x + 3 + offset
+    if (x < MAP_WIDTH && start.y > BEDROCK_DEPTH) {
+      cells[indexFor(x, start.y, MAP_WIDTH)] = {
+        block: 'stone',
+        biome: biomes[x],
+      }
+    }
+  }
+
   if (!cells.some((cell) => MINERAL_BLOCKS.has(cell.block))) {
     const fallbackX = Math.floor(MAP_WIDTH * 0.6)
     const fallback = indexFor(fallbackX, 26, MAP_WIDTH)
@@ -141,7 +153,7 @@ export function generateWorld(seed: string, runNumber: number): World {
     construction: 'completed' as const,
     storage: {
       capacity: stockpileDefinition.capacity,
-      inventory: {},
+      inventory: { stone: STARTER_STONE_SUPPLY },
     },
   }
 

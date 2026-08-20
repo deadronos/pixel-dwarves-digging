@@ -121,6 +121,15 @@ export default function Inspector() {
             <dt>world floor</dt>
             <dd>bedrock</dd>
           </div>
+          <div>
+            <dt>safety</dt>
+            <dd>
+              {simulation.safety.phase}
+              {simulation.safety.blockedReason
+                ? ` · ${simulation.safety.blockedReason.replaceAll('-', ' ')}`
+                : ''}
+            </dd>
+          </div>
         </dl>
       </div>
 
