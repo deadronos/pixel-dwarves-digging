@@ -135,20 +135,13 @@ export function canPlaceBuilding(
     return false
   }
 
-  if (
-    world.buildings.some(
-      (building) =>
-        building.construction !== 'planned' && overlaps(building, footprint),
-    )
-  ) {
+  if (world.buildings.some((building) => overlaps(building, footprint))) {
     return false
   }
 
   const occupied = new Set(
     world.buildings.flatMap((building) =>
-      building.construction === 'completed'
-        ? cellsFor(building).map((cell) => `${cell.x}:${cell.y}`)
-        : [],
+      cellsFor(building).map((cell) => `${cell.x}:${cell.y}`),
     ),
   )
   if (
@@ -220,6 +213,10 @@ export function reserveConstructionMaterials(
 ): SimulationState {
   const order = state.constructionOrders.find(({ id }) => id === orderId)
   if (!order) return state
+  const building = state.world.buildings.find(
+    ({ id }) => id === order.buildingId,
+  )
+  if (!building || building.construction === 'completed') return state
 
   const inventory = { ...state.inventory }
   const reserved = { ...order.reserved }
@@ -279,4 +276,21 @@ export function completeConstruction(
       ({ id }) => id !== orderId,
     ),
   }
+}
+
+export function canCompleteConstruction(
+  world: World,
+  buildingId: string,
+): boolean {
+  const building = world.buildings.find(({ id }) => id === buildingId)
+  if (!building || building.construction === 'completed') return false
+
+  const placementWorld = {
+    ...world,
+    buildings: world.buildings.filter(({ id }) => id !== buildingId),
+  }
+  return canPlaceBuilding(placementWorld, {
+    type: building.type,
+    position: building.position,
+  })
 }

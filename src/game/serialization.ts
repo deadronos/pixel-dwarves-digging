@@ -287,9 +287,16 @@ function normalizeSafety(
       safety.phase === 'blocked') &&
     typeof safety.emergencyStone === 'number'
   ) {
+    const noProgressTicks =
+      typeof safety.noProgressTicks === 'number' &&
+      Number.isInteger(safety.noProgressTicks) &&
+      safety.noProgressTicks >= 0
+        ? safety.noProgressTicks
+        : undefined
     return {
       phase: safety.phase,
       emergencyStone: Math.max(0, safety.emergencyStone),
+      ...(noProgressTicks === undefined ? {} : { noProgressTicks }),
       ...(typeof safety.blockedReason === 'string'
         ? {
             blockedReason:
@@ -396,6 +403,8 @@ function isSimulationState(value: unknown): value is SimulationState {
     isRecord(safety) &&
     ['bootstrap', 'operational', 'blocked'].includes(safety.phase as string) &&
     isNonNegativeInteger(safety.emergencyStone) &&
+    (safety.noProgressTicks === undefined ||
+      isNonNegativeInteger(safety.noProgressTicks)) &&
     (safety.blockedReason === undefined ||
       [
         'waiting-for-stone',

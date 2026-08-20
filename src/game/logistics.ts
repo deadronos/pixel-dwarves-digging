@@ -165,6 +165,11 @@ export function planAccessConstructionOrder(
   state: SimulationState,
   request: AccessRequest,
 ): SimulationState {
+  // A missing storage route is a capacity/logistics failure, not a terrain
+  // access failure. Building ladders here can create an infinite loop of
+  // infrastructure that never makes the mined material deliverable.
+  if (request.failure === 'storage-route') return state
+
   if (
     request.status !== 'open' ||
     state.constructionOrders.some(
@@ -285,6 +290,13 @@ export function getAvailableCapacity(
         storedCount(building.storage?.inventory ?? {}),
       0,
     )
+}
+
+export function hasReachableStorage(state: SimulationState): boolean {
+  return state.dwarves.some(
+    (dwarf) =>
+      selectStorageDestination(state, 'stone', dwarf.position) !== null,
+  )
 }
 
 export function selectStorageDestination(

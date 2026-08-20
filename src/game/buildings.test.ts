@@ -173,6 +173,17 @@ describe('building helpers', () => {
     ).toBe(true)
   })
 
+  it('rejects planned footprints that overlap another planned building', () => {
+    const state = makeBuildingState()
+
+    expect(
+      canPlaceBuilding(state.world, {
+        type: 'outpost',
+        position: { x: 5, y: 2 },
+      }),
+    ).toBe(false)
+  })
+
   it('reserves and consumes construction stone exactly once', () => {
     const state = makeBuildingState()
     const reserved = reserveConstructionMaterials(state, 'outpost-order')

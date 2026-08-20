@@ -32,6 +32,7 @@ describe('createGameStore', () => {
     expect(state.safety).toEqual({
       phase: 'bootstrap',
       emergencyStone: 1,
+      noProgressTicks: 0,
     })
     expect(state.inventory.stone).toBe(2)
     expect(stockpile?.storage?.inventory.stone).toBe(2)
