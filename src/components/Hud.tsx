@@ -9,7 +9,10 @@ export default function Hud() {
   const speed = useGameStore((state) => state.speed)
   const saveStatus = useGameStore((state) => state.saveStatus)
   const remaining = useMemo(
-    () => simulation.world.cells.filter((cell) => cell.block !== 'air').length,
+    () =>
+      simulation.world.cells.filter((cell) =>
+        MINEABLE_BLOCKS.some((block) => block === cell.block),
+      ).length,
     [simulation.world.cells],
   )
   const inventory = useMemo(
@@ -65,6 +68,14 @@ export default function Hud() {
         <div className="inventory-summary">
           <span>remaining</span>
           <strong>{remaining.toLocaleString()}</strong>
+          <span>
+            {
+              simulation.accessRequests.filter(
+                (request) => request.status === 'open',
+              ).length
+            }{' '}
+            access requests
+          </span>
         </div>
       </section>
     </header>

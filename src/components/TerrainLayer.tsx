@@ -2,7 +2,7 @@ import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import type { InstancedMesh } from 'three'
 import { Matrix4 } from 'three'
 import { BLOCK_COLORS, MINEABLE_BLOCKS } from '../game/content'
-import type { World } from '../game/types'
+import type { BlockType, World } from '../game/types'
 
 type TerrainLayerProps = {
   world: World
@@ -13,7 +13,7 @@ const BlockInstances = memo(function BlockInstances({
   block,
 }: {
   world: World
-  block: (typeof MINEABLE_BLOCKS)[number]
+  block: BlockType
 }) {
   const meshRef = useRef<InstancedMesh>(null)
   const matrix = useMemo(() => new Matrix4(), [])
@@ -59,6 +59,7 @@ const TerrainLayer = memo(function TerrainLayer({ world }: TerrainLayerProps) {
       {MINEABLE_BLOCKS.map((block) => (
         <BlockInstances key={block} world={world} block={block} />
       ))}
+      <BlockInstances world={world} block="bedrock" />
       <mesh
         position={[world.width / 2, world.height / 2, -0.2]}
         scale={[world.width, world.height, 1]}
