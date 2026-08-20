@@ -40,7 +40,7 @@ export default function WorldCanvas({ world, dwarves }: WorldCanvasProps) {
       <Canvas
         orthographic
         camera={{ position: [0, 0, 100], zoom: 9 }}
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         gl={{ antialias: false }}
         onCreated={({ gl }) => gl.setClearColor('#161916')}
       >
