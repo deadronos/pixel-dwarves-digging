@@ -75,7 +75,7 @@ function blockForDepth(
 
 function carveStarterPocket(
   cells: Cell[],
-  surfaceHeights: number[],
+  _surfaceHeights: number[],
   biomes: BiomeId[],
   start: Position,
   stockpile: Position,
@@ -84,16 +84,15 @@ function carveStarterPocket(
     if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return
     cells[indexFor(x, y, MAP_WIDTH)] = { block, biome: biomes[x] }
   }
+  const starterBlock: BlockType = biomes[start.x] === 'desert' ? 'sand' : 'dirt'
 
   for (let x = start.x - 2; x <= start.x + 2; x += 1) {
+    set(x, start.y - 1, starterBlock)
     for (let y = start.y; y <= start.y + 1; y += 1) {
       set(x, y, 'air')
     }
   }
 
-  const starterBlock: BlockType = biomes[start.x] === 'desert' ? 'sand' : 'dirt'
-  set(start.x, surfaceHeights[start.x], starterBlock)
-  set(start.x + 1, surfaceHeights[start.x + 1], starterBlock)
   set(stockpile.x, stockpile.y, 'air')
 }
 

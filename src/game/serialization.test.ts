@@ -143,9 +143,74 @@ describe('serialization', () => {
     })
   })
 
+  it('rejects semantically invalid nested save records', () => {
+    const invalidBuilding = makeState()
+    invalidBuilding.world.buildings = [
+      {
+        id: 'invalid-building',
+        type: 'not-real' as never,
+        position: { x: 0, y: 0 },
+        width: -1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+    ]
+    expect(
+      parseSave(JSON.stringify({ schemaVersion: 4, state: invalidBuilding })),
+    ).toEqual({ error: 'Save file is missing required simulation data.' })
+
+    const invalidDwarf = makeState()
+    invalidDwarf.dwarves = [{} as never]
+    expect(
+      parseSave(JSON.stringify({ schemaVersion: 4, state: invalidDwarf })),
+    ).toEqual({ error: 'Save file is missing required simulation data.' })
+
+    const invalidCell = makeState()
+    invalidCell.world.cells[0] = {
+      block: 'not-real' as never,
+      biome: 'meadow',
+    }
+    expect(
+      parseSave(JSON.stringify({ schemaVersion: 4, state: invalidCell })),
+    ).toEqual({ error: 'Save file is missing required simulation data.' })
+  })
+
+  it('rejects construction orders that reference missing buildings', () => {
+    const state = makeState()
+    state.constructionOrders = [
+      {
+        id: 'missing-building-order',
+        buildingId: 'missing-building',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+      },
+    ]
+
+    expect(parseSave(JSON.stringify({ schemaVersion: 4, state }))).toEqual({
+      error: 'Save file is missing required simulation data.',
+    })
+  })
+
   it('migrates a version-one global inventory into the main stockpile', () => {
     const current = makeState()
-    const { buildings: _buildings, ...legacyWorld } = current.world
+    const { buildings: _buildings, ...legacyWorld } = {
+      ...current.world,
+      width: 4,
+      height: 3,
+      cells: Array.from({ length: 12 }, (_, index) => ({
+        block: index === 0 ? ('bedrock' as const) : ('air' as const),
+        biome: 'meadow' as const,
+      })),
+      surfaceHeights: [1, 1, 1, 1],
+      biomes: ['meadow', 'meadow', 'meadow', 'meadow'] as const,
+      start: { x: 1, y: 1 },
+      stockpile: { x: 0, y: 1 },
+    }
     const legacyPayload = JSON.stringify({
       schemaVersion: 1,
       state: {

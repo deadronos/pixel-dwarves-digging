@@ -317,6 +317,14 @@ function chooseBuildOrder(
   stand: Position
   material: keyof Inventory
 } | null {
+  const activeClaims = (orderId: string, material: keyof Inventory) =>
+    state.dwarves.filter(
+      (candidate) =>
+        candidate.task.kind === 'build' &&
+        candidate.task.constructionOrderId === orderId &&
+        candidate.carrying === material,
+    ).length
+
   const candidates = state.constructionOrders
     .filter((order) => {
       if (
@@ -330,7 +338,9 @@ function chooseBuildOrder(
         const required = order.required[key] ?? 0
         const delivered = order.delivered[key] ?? 0
         const reserved = order.reserved[key] ?? 0
-        return delivered < required && reserved > 0
+        return (
+          delivered < required && reserved - activeClaims(order.id, key) > 0
+        )
       })
     })
     .flatMap((order) => {
@@ -340,7 +350,9 @@ function chooseBuildOrder(
         const required = order.required[key] ?? 0
         const delivered = order.delivered[key] ?? 0
         const reserved = order.reserved[key] ?? 0
-        return delivered < required && reserved > 0
+        return (
+          delivered < required && reserved - activeClaims(order.id, key) > 0
+        )
       })
       if (!material) return []
       const building = state.world.buildings.find(
@@ -766,14 +778,23 @@ function advanceDwarf(
     )
     const material = task.block
     if (!order || !material || dwarf.carrying !== material) {
-      return unchanged(
-        {
+      const inventory =
+        material && dwarf.carrying === material
+          ? {
+              ...state.inventory,
+              [material]: state.inventory[material] + 1,
+            }
+          : undefined
+      return {
+        dwarf: {
           ...dwarf,
           carrying: null,
           task: { kind: 'idle', path: [], progress: 0 },
         },
-        state.world,
-      )
+        world: state.world,
+        minedBlock: null,
+        inventory,
+      }
     }
 
     const delivered = (order.delivered[material] ?? 0) + 1

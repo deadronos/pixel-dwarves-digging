@@ -5,7 +5,10 @@ import {
   MINERAL_BLOCKS,
   STARTER_STONE_VEIN_LENGTH,
 } from './content'
+import { stepSimulation } from './engine'
 import { countSolids, generateWorld, getCell, isSolid } from './generation'
+import { findReachableExposedSolids } from './pathfinding'
+import { createInitialSimulation } from './state'
 
 describe('generateWorld', () => {
   it('generates identical terrain for the same seed and run', () => {
@@ -103,5 +106,32 @@ describe('generateWorld', () => {
     world.cells[0] = { ...world.cells[0], block: 'bedrock' }
 
     expect(countSolids(world)).toBe(0)
+  })
+
+  it('keeps the generated bootstrap route playable across deterministic seeds', () => {
+    for (let index = 0; index < 200; index += 1) {
+      const seed = `review-${index}`
+      const initial = createInitialSimulation(seed)
+      const reachable = findReachableExposedSolids(
+        initial.world,
+        initial.world.start,
+      )
+
+      expect(
+        reachable.some(
+          ({ target }) =>
+            getCell(initial.world, target.x, target.y).block === 'stone',
+        ),
+        `${seed} should expose a reachable starter stone block`,
+      ).toBe(true)
+
+      if (index < 5) {
+        const result = stepSimulation(initial, 300)
+        expect(
+          result.totalCleared,
+          `${seed} should clear starter work within 300 ticks`,
+        ).toBeGreaterThan(0)
+      }
+    }
   })
 })
