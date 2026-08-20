@@ -1,4 +1,7 @@
 node_modules/
 dist/
 .worktrees/
+.superpowers/
+.playwright-cli/
+output/
 .DS_Store

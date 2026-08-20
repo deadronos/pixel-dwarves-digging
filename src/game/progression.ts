@@ -1,3 +1,4 @@
+import { STARTER_EMERGENCY_STONE, STARTER_STONE_SUPPLY } from './content'
 import { generateWorld } from './generation'
 import {
   cloneInventory,
@@ -32,6 +33,7 @@ function createDwarves(
   return Array.from({ length: count }, (_, index) => ({
     id: `dwarf-${index + 1}`,
     position: { ...world.start },
+    movement: 'grounded' as const,
     task: { kind: 'idle' as const, path: [], progress: 0 },
     carrying: null,
   }))
@@ -61,7 +63,11 @@ export function startPrestige(
     ...state,
     world,
     dwarves: createDwarves(state, world),
-    inventory: { ...EMPTY_INVENTORY },
+    inventory: { ...EMPTY_INVENTORY, stone: STARTER_STONE_SUPPLY },
+    constructionOrders: [],
+    accessRequests: [],
+    worldRevision: 0,
+    safety: { phase: 'bootstrap', emergencyStone: STARTER_EMERGENCY_STONE },
     tick: 0,
     totalCleared: 0,
     completed: false,

@@ -1,6 +1,7 @@
 import { OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import type { DwarfState, World } from '../game/types'
+import BuildingLayer from './BuildingLayer'
 import DwarfLayer from './DwarfLayer'
 import TerrainLayer from './TerrainLayer'
 
@@ -14,6 +15,7 @@ function WorldScene({ world, dwarves }: WorldCanvasProps) {
     <>
       <group position={[-world.width / 2, -world.height / 2, 0]}>
         <TerrainLayer world={world} />
+        <BuildingLayer world={world} />
         <DwarfLayer dwarves={dwarves} />
       </group>
       <OrbitControls

@@ -16,6 +16,8 @@ type DwarfLayerProps = {
 function DwarfActor({ dwarf, index }: { dwarf: DwarfState; index: number }) {
   const color = DWARF_COLORS[index % DWARF_COLORS.length]
   const isWorking = dwarf.task.kind !== 'idle'
+  const isRecovery =
+    dwarf.task.purpose === 'recovery' || dwarf.movement === 'stranded'
 
   return (
     <group position={[dwarf.position.x + 0.5, dwarf.position.y + 0.5, 1]}>
@@ -27,7 +29,12 @@ function DwarfActor({ dwarf, index }: { dwarf: DwarfState; index: number }) {
         <boxGeometry args={[0.36, 0.25, 0.12]} />
         <meshBasicMaterial color="#f0d5a0" />
       </mesh>
-      {isWorking ? (
+      {isRecovery ? (
+        <mesh position={[0, 0.82, 0]}>
+          <boxGeometry args={[0.14, 0.14, 0.12]} />
+          <meshBasicMaterial color="#cf6f68" />
+        </mesh>
+      ) : isWorking ? (
         <mesh position={[0, 0.82, 0]}>
           <boxGeometry args={[0.14, 0.14, 0.12]} />
           <meshBasicMaterial color="#dfbd62" />

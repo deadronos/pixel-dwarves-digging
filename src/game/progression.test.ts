@@ -17,6 +17,7 @@ function makeState(): SimulationState {
       biomes: ['meadow', 'meadow', 'meadow', 'meadow'],
       start: { x: 1, y: 1 },
       stockpile: { x: 1, y: 1 },
+      buildings: [],
     },
     dwarves: [],
     inventory: { ...EMPTY_INVENTORY },
@@ -30,6 +31,11 @@ function makeState(): SimulationState {
         relic: false,
       },
     },
+    constructionOrders: [],
+    constructionPolicy: 'balanced',
+    accessRequests: [],
+    worldRevision: 0,
+    safety: { phase: 'operational', emergencyStone: 0 },
     tick: 500,
     totalCleared: 120,
     completed: true,
@@ -55,6 +61,8 @@ describe('startPrestige', () => {
     expect(result.completed).toBe(false)
     expect(result.totalCleared).toBe(0)
     expect(result.dwarves.length).toBe(4)
+    expect(result.accessRequests).toEqual([])
+    expect(result.worldRevision).toBe(0)
   })
 
   it('allows a relic discovery to grant an early-prestige reward', () => {

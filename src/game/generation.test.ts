@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { BIOME_IDS, MINERAL_BLOCKS } from './content'
-import { generateWorld, getCell, isSolid } from './generation'
+import {
+  BIOME_IDS,
+  MINEABLE_BLOCKS,
+  MINERAL_BLOCKS,
+  STARTER_STONE_VEIN_LENGTH,
+} from './content'
+import { countSolids, generateWorld, getCell, isSolid } from './generation'
 
 describe('generateWorld', () => {
   it('generates identical terrain for the same seed and run', () => {
@@ -43,6 +48,38 @@ describe('generateWorld', () => {
     ).toBe(true)
   })
 
+  it('creates a deterministic visible level-one stockpile in the starter pocket', () => {
+    const world = generateWorld('starter-stockpile', 3)
+    const stockpile = world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+
+    expect(stockpile).toEqual(
+      expect.objectContaining({
+        type: 'stockpile',
+        level: 1,
+        construction: 'completed',
+        width: 3,
+        height: 2,
+        storage: expect.objectContaining({ capacity: 120 }),
+      }),
+    )
+    expect(stockpile?.position).toEqual({ x: 11, y: world.start.y })
+    expect(
+      world.cells.filter((cell) => cell.block === 'air').length,
+    ).toBeGreaterThan(0)
+  })
+
+  it('guarantees a contiguous reachable starter stone vein beside the pocket', () => {
+    const world = generateWorld('starter-stone', 1)
+
+    for (let offset = 0; offset < STARTER_STONE_VEIN_LENGTH; offset += 1) {
+      expect(
+        getCell(world, world.start.x + 3 + offset, world.start.y).block,
+      ).toBe('stone')
+    }
+  })
+
   it('places at least one mineral in a generated map', () => {
     const world = generateWorld('mineral-pocket', 8)
     const mineralCount = world.cells.filter((cell) =>
@@ -50,5 +87,21 @@ describe('generateWorld', () => {
     ).length
 
     expect(mineralCount).toBeGreaterThan(0)
+  })
+
+  it('generates an indestructible bedrock floor beneath the mineable world', () => {
+    const world = generateWorld('bedrock-floor', 1)
+
+    expect(getCell(world, 0, 0).block).toBe('bedrock')
+    expect(isSolid('bedrock')).toBe(true)
+    expect(MINEABLE_BLOCKS).not.toContain('bedrock')
+  })
+
+  it('does not count bedrock as remaining clearable terrain', () => {
+    const world = generateWorld('bedrock-count', 1)
+    world.cells = world.cells.map((cell) => ({ ...cell, block: 'air' }))
+    world.cells[0] = { ...world.cells[0], block: 'bedrock' }
+
+    expect(countSolids(world)).toBe(0)
   })
 })

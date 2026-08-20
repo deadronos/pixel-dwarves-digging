@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { BLOCK_LABELS } from '../game/content'
 import type { SimulationSpeed } from '../game/state'
 import { useGameStore } from '../game/state'
+import type { ConstructionPolicy } from '../game/types'
 
 function downloadSave(payload: string) {
   const blob = new Blob([payload], { type: 'application/json' })
@@ -17,11 +18,17 @@ export default function ControlBar() {
   const paused = useGameStore((state) => state.paused)
   const speed = useGameStore((state) => state.speed)
   const policy = useGameStore((state) => state.simulation.policy)
+  const constructionPolicy = useGameStore(
+    (state) => state.simulation.constructionPolicy,
+  )
   const saveError = useGameStore((state) => state.saveError)
   const setPaused = useGameStore((state) => state.setPaused)
   const setSpeed = useGameStore((state) => state.setSpeed)
   const setPolicy = useGameStore((state) => state.setPolicy)
   const setMaterialPriority = useGameStore((state) => state.setMaterialPriority)
+  const setConstructionPolicy = useGameStore(
+    (state) => state.setConstructionPolicy,
+  )
   const saveLocally = useGameStore((state) => state.saveLocally)
   const exportSave = useGameStore((state) => state.exportSave)
   const importSave = useGameStore((state) => state.importSave)
@@ -79,6 +86,23 @@ export default function ControlBar() {
           <option value="nearest">nearest exposed</option>
           <option value="ore-first">ore first</option>
           <option value="deepest-first">deepest first</option>
+        </select>
+      </div>
+
+      <div className="control-group">
+        <label className="control-label" htmlFor="construction-policy">
+          BUILD
+        </label>
+        <select
+          id="construction-policy"
+          value={constructionPolicy}
+          onChange={(event) =>
+            setConstructionPolicy(event.target.value as ConstructionPolicy)
+          }
+        >
+          <option value="conserve">essential routes</option>
+          <option value="balanced">routes + outposts</option>
+          <option value="expand">expand logistics</option>
         </select>
       </div>
 

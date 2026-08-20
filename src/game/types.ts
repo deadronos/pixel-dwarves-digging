@@ -3,6 +3,7 @@ export const MAP_HEIGHT = 80
 
 export type BlockType =
   | 'air'
+  | 'bedrock'
   | 'grass'
   | 'dirt'
   | 'sand'
@@ -20,13 +21,38 @@ export type BlockType =
   | 'crystal'
   | 'relic'
 
-export type MineableBlockType = Exclude<BlockType, 'air'>
+export type MineableBlockType = Exclude<BlockType, 'air' | 'bedrock'>
+export type CommonBuildingMaterial = Exclude<
+  MineableBlockType,
+  'coal' | 'iron' | 'crystal' | 'relic'
+>
 
 export type BiomeId = 'meadow' | 'desert' | 'red-rock' | 'frozen' | 'mushroom'
 
 export type Position = {
   x: number
   y: number
+}
+
+export type BuildingType = 'stockpile' | 'outpost' | 'bridge' | 'ladder'
+export type BuildingConstruction =
+  | 'completed'
+  | 'planned'
+  | 'under-construction'
+export type ConstructionPolicy = 'conserve' | 'balanced' | 'expand'
+export type AccessFailure = 'support' | 'return-route' | 'storage-route'
+export type AccessRequestStatus = 'open' | 'resolved' | 'blocked'
+export type SafetyPhase = 'bootstrap' | 'operational' | 'blocked'
+export type SafetyBlockReason =
+  | 'waiting-for-stone'
+  | 'waiting-for-material'
+  | 'awaiting-recovery'
+  | 'no-safe-work'
+
+export type SafetyState = {
+  phase: SafetyPhase
+  emergencyStone: number
+  blockedReason?: SafetyBlockReason
 }
 
 export type Cell = {
@@ -43,7 +69,9 @@ export type World = {
   surfaceHeights: number[]
   biomes: BiomeId[]
   start: Position
+  /** @deprecated Use the primary stockpile building position. */
   stockpile: Position
+  buildings: BuildingState[]
 }
 
 export type Inventory = Record<MineableBlockType, number>
@@ -62,7 +90,49 @@ export type PolicyState = {
   materialPriority: MaterialPriority
 }
 
-export type TaskKind = 'idle' | 'dig' | 'haul'
+export type StorageState = {
+  capacity: number
+  inventory: Partial<Inventory>
+}
+
+export type BuildingState = {
+  id: string
+  type: BuildingType
+  position: Position
+  width: number
+  height: number
+  level: number
+  construction: BuildingConstruction
+  storage?: StorageState
+}
+
+export type ConstructionOrder = {
+  id: string
+  buildingId: string
+  type: Exclude<BuildingType, 'stockpile'>
+  required: Partial<Inventory>
+  reserved: Partial<Inventory>
+  delivered: Partial<Inventory>
+  progress: number
+  reason: 'access' | 'outpost' | 'capacity' | 'policy'
+  accessRequestId?: string
+}
+
+export type AccessRequest = {
+  id: string
+  target: Position
+  failure: AccessFailure
+  priority: number
+  approach?: Position
+  worldRevision: number
+  status: AccessRequestStatus
+  blockedReason?:
+    | 'waiting-for-stone'
+    | 'waiting-for-material'
+    | 'no-builder-route'
+}
+
+export type TaskKind = 'idle' | 'dig' | 'haul' | 'build'
 
 export type TaskState = {
   kind: TaskKind
@@ -70,11 +140,17 @@ export type TaskState = {
   path: Position[]
   progress: number
   block?: MineableBlockType
+  buildingId?: string
+  constructionOrderId?: string
+  purpose?: 'ordinary' | 'access' | 'recovery'
+  accessRequestId?: string
+  recoveryReason?: 'stranded' | 'storage-route'
 }
 
 export type DwarfState = {
   id: string
   position: Position
+  movement: 'grounded' | 'falling' | 'stranded'
   task: TaskState
   carrying: MineableBlockType | null
 }
@@ -84,6 +160,11 @@ export type SimulationState = {
   dwarves: DwarfState[]
   inventory: Inventory
   policy: PolicyState
+  constructionOrders: ConstructionOrder[]
+  constructionPolicy: ConstructionPolicy
+  accessRequests: AccessRequest[]
+  worldRevision: number
+  safety: SafetyState
   tick: number
   totalCleared: number
   completed: boolean

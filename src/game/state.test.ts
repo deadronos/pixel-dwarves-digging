@@ -11,6 +11,28 @@ describe('createGameStore', () => {
     expect(state.simulation.dwarves).toHaveLength(3)
   })
 
+  it('starts with empty access planning state and no active task purpose', () => {
+    const state = createGameStore('access-state-seed').getState().simulation
+
+    expect(state.accessRequests).toEqual([])
+    expect(state.worldRevision).toBe(0)
+    expect(state.dwarves[0].task.purpose).toBeUndefined()
+  })
+
+  it('starts with bootstrap protection and a reserved emergency stone block', () => {
+    const state = createGameStore('bootstrap-state-seed').getState().simulation
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+
+    expect(state.safety).toEqual({
+      phase: 'bootstrap',
+      emergencyStone: 1,
+    })
+    expect(state.inventory.stone).toBe(2)
+    expect(stockpile?.storage?.inventory.stone).toBe(2)
+  })
+
   it('advances only when unpaused', () => {
     const store = createGameStore('pause-test')
     store.getState().setPaused(true)
@@ -38,6 +60,16 @@ describe('createGameStore', () => {
     store.getState().setPolicy({ workPreference: 'ore-first' })
 
     expect(store.getState().simulation.policy.workPreference).toBe('ore-first')
+    expect(store.getState().simulation.world).toBe(worldBefore)
+  })
+
+  it('updates construction policy without replacing the world', () => {
+    const store = createGameStore('construction-policy-test')
+    const worldBefore = store.getState().simulation.world
+
+    store.getState().setConstructionPolicy('expand')
+
+    expect(store.getState().simulation.constructionPolicy).toBe('expand')
     expect(store.getState().simulation.world).toBe(worldBefore)
   })
 

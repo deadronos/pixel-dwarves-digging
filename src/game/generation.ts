@@ -1,4 +1,13 @@
-import { BIOME_DEFINITIONS, BIOME_IDS, MINERAL_BLOCKS } from './content'
+import {
+  BEDROCK_DEPTH,
+  BIOME_DEFINITIONS,
+  BIOME_IDS,
+  BUILDING_DEFINITIONS,
+  MINEABLE_BLOCKS,
+  MINERAL_BLOCKS,
+  STARTER_STONE_SUPPLY,
+  STARTER_STONE_VEIN_LENGTH,
+} from './content'
 import { createRng, hashSeed, randomBetween, randomInt } from './rng'
 import {
   type BiomeId,
@@ -77,7 +86,7 @@ function carveStarterPocket(
   }
 
   for (let x = start.x - 2; x <= start.x + 2; x += 1) {
-    for (let y = start.y; y <= start.y + 2; y += 1) {
+    for (let y = start.y; y <= start.y + 1; y += 1) {
       set(x, y, 'air')
     }
   }
@@ -102,7 +111,11 @@ export function generateWorld(seed: string, runNumber: number): World {
       const surface = surfaceHeights[x]
       const biome = biomes[x]
       const block =
-        y <= surface ? blockForDepth(random, biome, surface - y, x, y) : 'air'
+        y < BEDROCK_DEPTH
+          ? 'bedrock'
+          : y <= surface
+            ? blockForDepth(random, biome, surface - y, x, y)
+            : 'air'
       return { block, biome }
     },
   )
@@ -113,10 +126,35 @@ export function generateWorld(seed: string, runNumber: number): World {
   const stockpile = { x: startX - 1, y: start.y }
   carveStarterPocket(cells, surfaceHeights, biomes, start, stockpile)
 
+  for (let offset = 0; offset < STARTER_STONE_VEIN_LENGTH; offset += 1) {
+    const x = start.x + 3 + offset
+    if (x < MAP_WIDTH && start.y > BEDROCK_DEPTH) {
+      cells[indexFor(x, start.y, MAP_WIDTH)] = {
+        block: 'stone',
+        biome: biomes[x],
+      }
+    }
+  }
+
   if (!cells.some((cell) => MINERAL_BLOCKS.has(cell.block))) {
     const fallbackX = Math.floor(MAP_WIDTH * 0.6)
     const fallback = indexFor(fallbackX, 26, MAP_WIDTH)
     cells[fallback] = { block: 'iron', biome: biomes[fallbackX] }
+  }
+
+  const stockpileDefinition = BUILDING_DEFINITIONS.stockpile
+  const stockpileBuilding = {
+    id: 'stockpile-1',
+    type: 'stockpile' as const,
+    position: stockpile,
+    width: stockpileDefinition.width,
+    height: stockpileDefinition.height,
+    level: 1,
+    construction: 'completed' as const,
+    storage: {
+      capacity: stockpileDefinition.capacity,
+      inventory: { stone: STARTER_STONE_SUPPLY },
+    },
   }
 
   return {
@@ -129,12 +167,14 @@ export function generateWorld(seed: string, runNumber: number): World {
     biomes,
     start,
     stockpile,
+    buildings: [stockpileBuilding],
   }
 }
 
 export function countSolids(world: World): number {
   return world.cells.reduce(
-    (total, cell) => total + (isSolid(cell.block) ? 1 : 0),
+    (total, cell) =>
+      total + (MINEABLE_BLOCKS.some((block) => block === cell.block) ? 1 : 0),
     0,
   )
 }

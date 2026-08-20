@@ -1,5 +1,11 @@
+import { MINEABLE_BLOCKS } from './content'
 import { getCell } from './generation'
-import { indexFor, type Position, type World } from './types'
+import {
+  type BuildingState,
+  indexFor,
+  type Position,
+  type World,
+} from './types'
 
 const DIRECTIONS: Position[] = [
   { x: 0, y: 1 },
@@ -25,11 +31,65 @@ function isInBounds(world: World, position: Position): boolean {
   )
 }
 
+function buildingAt(world: World, position: Position): BuildingState | null {
+  return (
+    world.buildings.find(
+      (building) =>
+        building.construction === 'completed' &&
+        position.x >= building.position.x &&
+        position.x < building.position.x + building.width &&
+        position.y >= building.position.y &&
+        position.y < building.position.y + building.height,
+    ) ?? null
+  )
+}
+
+function hasFloor(world: World, position: Position): boolean {
+  const building = buildingAt(world, position)
+  return building !== null && building.type !== 'ladder'
+}
+
+function hasLadder(world: World, position: Position): boolean {
+  return buildingAt(world, position)?.type === 'ladder'
+}
+
+export function isSupported(world: World, position: Position): boolean {
+  if (!isInBounds(world, position)) return false
+  if (hasFloor(world, position) || hasLadder(world, position)) return true
+  if (position.y === 0) return false
+
+  const below = getCell(world, position.x, position.y - 1)
+  if (below.block !== 'air') return true
+  return hasFloor(world, { x: position.x, y: position.y - 1 })
+}
+
 function isWalkable(world: World, position: Position): boolean {
   return (
     isInBounds(world, position) &&
-    getCell(world, position.x, position.y).block === 'air'
+    getCell(world, position.x, position.y).block === 'air' &&
+    isSupported(world, position)
   )
+}
+
+export function simulateDigWorld(world: World, target: Position): World {
+  const targetIndex = indexFor(target.x, target.y, world.width)
+  return {
+    ...world,
+    cells: world.cells.map((cell, index) =>
+      index === targetIndex ? { ...cell, block: 'air' as const } : cell,
+    ),
+  }
+}
+
+export function canMoveBetween(
+  world: World,
+  from: Position,
+  to: Position,
+): boolean {
+  if (!isWalkable(world, from) || !isWalkable(world, to)) return false
+  const vertical = from.x === to.x && from.y !== to.y
+  if (!vertical) return true
+  return hasLadder(world, from) || hasLadder(world, to)
 }
 
 function positionFor(index: number, width: number): Position {
@@ -62,7 +122,7 @@ function createSearch(world: World, from: Position): SearchResult | null {
         x: current.x + direction.x,
         y: current.y + direction.y,
       }
-      if (!isWalkable(world, next)) continue
+      if (!canMoveBetween(world, current, next)) continue
 
       const nextIndex = indexFor(next.x, next.y, world.width)
       if (distance[nextIndex] !== -1) continue
@@ -125,7 +185,9 @@ export function findReachableExposedSolids(
       const targetIndex = indexFor(target.x, target.y, world.width)
       if (
         exposed[targetIndex] ||
-        getCell(world, target.x, target.y).block === 'air'
+        !MINEABLE_BLOCKS.some(
+          (block) => block === getCell(world, target.x, target.y).block,
+        )
       ) {
         continue
       }
@@ -145,7 +207,9 @@ export function findPath(
   from: Position,
   to: Position,
 ): Position[] | null {
-  if (from.x === to.x && from.y === to.y) return []
+  if (from.x === to.x && from.y === to.y) {
+    return isWalkable(world, from) ? [] : null
+  }
   if (!isWalkable(world, from) || !isWalkable(world, to)) return null
 
   const search = createSearch(world, from)

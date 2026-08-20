@@ -1,4 +1,5 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
+import { STARTER_EMERGENCY_STONE, STARTER_STONE_SUPPLY } from './content'
 import { stepSimulation } from './engine'
 import { generateWorld, randomStarterSeed } from './generation'
 import {
@@ -9,6 +10,7 @@ import {
 } from './progression'
 import { parseSave, serializeState } from './serialization'
 import {
+  type ConstructionPolicy,
   cloneInventory,
   EMPTY_INVENTORY,
   type PolicyState,
@@ -17,7 +19,8 @@ import {
   type UpgradeLevels,
 } from './types'
 
-export const GAME_STORAGE_KEY = 'pixel-dwarves-digging/save-v1'
+export const GAME_STORAGE_KEY = 'pixel-dwarves-digging/save-v2'
+export const LEGACY_GAME_STORAGE_KEY = 'pixel-dwarves-digging/save-v1'
 export const SIMULATION_TICK_MS = 100
 export type SimulationSpeed = 1 | 2 | 4
 
@@ -40,6 +43,7 @@ export type GameStore = {
     material: keyof PolicyState['materialPriority'],
     enabled: boolean,
   ) => void
+  setConstructionPolicy: (policy: ConstructionPolicy) => void
   tickSimulation: () => void
   startSimulation: () => void
   stopSimulation: () => void
@@ -60,6 +64,7 @@ function createDwarves(
   return Array.from({ length: count }, (_, index) => ({
     id: `dwarf-${index + 1}`,
     position: { ...world.start },
+    movement: 'grounded' as const,
     task: { kind: 'idle' as const, path: [], progress: 0 },
     carrying: null,
   }))
@@ -71,16 +76,24 @@ export function createInitialSimulation(
   upgrades: UpgradeLevels = DEFAULT_UPGRADES,
   prestigeCurrency = 0,
   policy: PolicyState = DEFAULT_POLICY,
+  constructionPolicy: ConstructionPolicy = 'balanced',
 ): SimulationState {
   const world = generateWorld(seed, runNumber)
+  const inventory = cloneInventory(EMPTY_INVENTORY)
+  inventory.stone = STARTER_STONE_SUPPLY
   return {
     world,
     dwarves: createDwarves(world, 3 + upgrades.extraBunks),
-    inventory: cloneInventory(EMPTY_INVENTORY),
+    inventory,
     policy: {
       ...policy,
       materialPriority: { ...policy.materialPriority },
     },
+    constructionOrders: [],
+    constructionPolicy,
+    accessRequests: [],
+    worldRevision: 0,
+    safety: { phase: 'bootstrap', emergencyStone: STARTER_EMERGENCY_STONE },
     tick: 0,
     totalCleared: 0,
     completed: false,
@@ -136,6 +149,10 @@ export function createGameStore(
           },
         },
       })),
+    setConstructionPolicy: (constructionPolicy) =>
+      set((current) => ({
+        simulation: { ...current.simulation, constructionPolicy },
+      })),
     tickSimulation: () => {
       const current = get()
       if (current.paused) return
@@ -159,7 +176,9 @@ export function createGameStore(
     },
     loadLocalSave: () => {
       if (typeof window === 'undefined' || !window.localStorage) return false
-      const payload = window.localStorage.getItem(GAME_STORAGE_KEY)
+      const payload =
+        window.localStorage.getItem(GAME_STORAGE_KEY) ??
+        window.localStorage.getItem(LEGACY_GAME_STORAGE_KEY)
       if (!payload) return false
       return get().importSave(payload)
     },
@@ -187,6 +206,7 @@ export function createGameStore(
           current.upgrades,
           current.prestigeCurrency,
           current.policy,
+          current.constructionPolicy,
         ),
         saveStatus: 'NEW RUN',
         saveError: null,
