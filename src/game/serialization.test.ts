@@ -59,6 +59,65 @@ describe('serialization', () => {
     expect(parseSave(serializeState(original))).toEqual({ state: original })
   })
 
+  it('migrates a schema-two world to schema three with a bedrock floor', () => {
+    const current = makeState()
+    const {
+      accessRequests: _accessRequests,
+      worldRevision: _worldRevision,
+      ...legacyState
+    } = current
+    const result = parseSave(
+      JSON.stringify({ schemaVersion: 2, state: legacyState }),
+    )
+
+    expect(result).toEqual({
+      state: expect.objectContaining({
+        accessRequests: [],
+        worldRevision: 0,
+        world: expect.objectContaining({
+          cells: [
+            expect.objectContaining({ block: 'bedrock' }),
+            expect.objectContaining({ block: 'bedrock' }),
+            expect.objectContaining({ block: 'air' }),
+            expect.objectContaining({ block: 'stone' }),
+          ],
+        }),
+      }),
+    })
+  })
+
+  it('round-trips access and recovery state in schema three', () => {
+    const original = makeState()
+    original.accessRequests = [
+      {
+        id: 'access-1-0',
+        target: { x: 1, y: 0 },
+        failure: 'support',
+        priority: 20,
+        worldRevision: 2,
+        status: 'open',
+      },
+    ]
+    original.worldRevision = 2
+    original.dwarves = [
+      {
+        id: 'dwarf-1',
+        position: { x: 0, y: 1 },
+        movement: 'stranded',
+        task: {
+          kind: 'idle',
+          path: [],
+          progress: 0,
+          purpose: 'recovery',
+          recoveryReason: 'stranded',
+        },
+        carrying: null,
+      },
+    ]
+
+    expect(parseSave(serializeState(original))).toEqual({ state: original })
+  })
+
   it('rejects malformed or unsupported saves', () => {
     expect(parseSave('{ nope')).toEqual({
       error: 'Save file is not valid JSON.',

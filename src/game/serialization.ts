@@ -8,7 +8,7 @@ import {
   type SimulationState,
 } from './types'
 
-export const SAVE_VERSION = 2
+export const SAVE_VERSION = 3
 
 export type SaveParseResult = { state: SimulationState } | { error: string }
 
@@ -48,6 +48,8 @@ function isSimulationState(value: unknown): value is SimulationState {
     typeof value.discoveredRelics === 'number' &&
     typeof value.completed === 'boolean' &&
     Array.isArray(value.constructionOrders) &&
+    Array.isArray(value.accessRequests) &&
+    typeof value.worldRevision === 'number' &&
     (value.constructionPolicy === 'conserve' ||
       value.constructionPolicy === 'balanced' ||
       value.constructionPolicy === 'expand')
@@ -65,6 +67,8 @@ function migrateV1State(value: unknown): SimulationState | null {
       world: { ...world, buildings: [] },
       constructionOrders: [],
       constructionPolicy: 'balanced',
+      accessRequests: [],
+      worldRevision: 0,
     })
   ) {
     return null
@@ -107,7 +111,43 @@ function migrateV1State(value: unknown): SimulationState | null {
     inventory,
     constructionOrders: [],
     constructionPolicy: 'balanced',
+    accessRequests: [],
+    worldRevision: 0,
   }
+}
+
+function normalizeV3State(
+  value: unknown,
+  addBedrockFloor: boolean,
+): SimulationState | null {
+  if (!isRecord(value)) return null
+  const world = value.world
+  if (
+    !isRecord(world) ||
+    typeof world.width !== 'number' ||
+    !Array.isArray(world.cells)
+  ) {
+    return null
+  }
+
+  const width = world.width
+  if (typeof width !== 'number') return null
+  const cells = world.cells.map((cell, index) =>
+    addBedrockFloor && Math.floor(index / width) === 0 && isRecord(cell)
+      ? { ...cell, block: 'bedrock' as const }
+      : cell,
+  )
+  const normalized = {
+    ...value,
+    world: { ...world, cells },
+    accessRequests: Array.isArray(value.accessRequests)
+      ? value.accessRequests
+      : [],
+    worldRevision:
+      typeof value.worldRevision === 'number' ? value.worldRevision : 0,
+  }
+
+  return isSimulationState(normalized) ? normalized : null
 }
 
 export function parseSave(payload: string): SaveParseResult {
@@ -124,18 +164,20 @@ export function parseSave(payload: string): SaveParseResult {
 
   if (parsed.schemaVersion === 1) {
     const migrated = migrateV1State(parsed.state)
-    return migrated
-      ? { state: migrated }
+    const normalized = normalizeV3State(migrated, true)
+    return normalized
+      ? { state: normalized }
       : { error: 'Save file is missing required simulation data.' }
   }
 
-  if (parsed.schemaVersion !== SAVE_VERSION) {
+  if (parsed.schemaVersion !== 2 && parsed.schemaVersion !== SAVE_VERSION) {
     return { error: 'Save version is not supported.' }
   }
 
-  if (!isSimulationState(parsed.state)) {
+  const normalized = normalizeV3State(parsed.state, parsed.schemaVersion === 2)
+  if (!normalized) {
     return { error: 'Save file is missing required simulation data.' }
   }
 
-  return { state: parsed.state }
+  return { state: normalized }
 }
