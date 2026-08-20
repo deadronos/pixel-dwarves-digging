@@ -99,6 +99,7 @@ export type ConstructionOrder = {
   delivered: Partial<Inventory>
   progress: number
   reason: 'access' | 'outpost' | 'capacity' | 'policy'
+  accessRequestId?: string
 }
 
 export type AccessRequest = {

@@ -204,6 +204,49 @@ describe('stepSimulation', () => {
     expect(result.dwarves[0].task.target).toEqual({ x: 2, y: 1 })
   })
 
+  it('creates one deduplicated access request for unsafe valuable work', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) =>
+        building.position.x !== state.dwarves[0].position.x ||
+        building.position.y !== state.dwarves[0].position.y,
+    )
+    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+
+    const result = stepSimulation(state, 2)
+
+    expect(result.accessRequests).toHaveLength(1)
+    expect(result.accessRequests[0]).toEqual(
+      expect.objectContaining({
+        target: { x: 1, y: 0 },
+        status: 'open',
+      }),
+    )
+  })
+
+  it('assigns a safe side dig as access work before the unsafe target', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+    if (!stockpile) throw new Error('stockpile missing')
+    stockpile.position = { x: 0, y: 1 }
+    state.world.stockpile = { x: 0, y: 1 }
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.type === 'stockpile' || building.position.x !== 1,
+    )
+    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'dirt',
+      biome: 'meadow',
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].task.target).toEqual({ x: 2, y: 1 })
+    expect(result.dwarves[0].task.purpose).toBe('access')
+  })
+
   it('does not clear a target when storage is unreachable or full', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.world.cells[1 * state.world.width + 2] = {
