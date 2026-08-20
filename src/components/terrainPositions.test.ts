@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import type { Cell } from '../game/types'
 import {
   createTerrainPositions,
   updateTerrainPositions,
 } from './terrainPositions'
-import type { Cell } from '../game/types'
 
 const air = (): Cell => ({ block: 'air', biome: 'meadow' })
 const stone = (): Cell => ({ block: 'stone', biome: 'meadow' })

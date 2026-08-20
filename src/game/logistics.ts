@@ -5,11 +5,7 @@ import {
   getEmergencyReserveMaterial,
   STARTER_PROTECTED_RADIUS,
 } from './content'
-import {
-  findAdjacentPaths,
-  findPath,
-  isSupported,
-} from './pathfinding'
+import { findAdjacentPaths, findPath, isSupported } from './pathfinding'
 import {
   type AccessFailure,
   type AccessRequest,

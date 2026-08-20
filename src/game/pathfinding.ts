@@ -110,10 +110,7 @@ export function canMoveBetween(
   to: Position,
   cleared?: Position,
 ): boolean {
-  if (
-    !isWalkable(world, from, cleared) ||
-    !isWalkable(world, to, cleared)
-  ) {
+  if (!isWalkable(world, from, cleared) || !isWalkable(world, to, cleared)) {
     return false
   }
   const vertical = from.x === to.x && from.y !== to.y
@@ -242,10 +239,7 @@ export function findPath(
   if (from.x === to.x && from.y === to.y) {
     return isWalkable(world, from, cleared) ? [] : null
   }
-  if (
-    !isWalkable(world, from, cleared) ||
-    !isWalkable(world, to, cleared)
-  ) {
+  if (!isWalkable(world, from, cleared) || !isWalkable(world, to, cleared)) {
     return null
   }
 

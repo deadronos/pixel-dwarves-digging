@@ -3,7 +3,6 @@ import {
   BIOME_DEFINITIONS,
   BIOME_IDS,
   BUILDING_DEFINITIONS,
-  MINEABLE_BLOCKS,
   MINEABLE_BLOCK_SET,
   MINERAL_BLOCKS,
   STARTER_STONE_SUPPLY,
@@ -173,8 +172,7 @@ export function generateWorld(seed: string, runNumber: number): World {
 
 export function countSolids(world: World): number {
   return world.cells.reduce(
-    (total, cell) =>
-      total + (MINEABLE_BLOCK_SET.has(cell.block) ? 1 : 0),
+    (total, cell) => total + (MINEABLE_BLOCK_SET.has(cell.block) ? 1 : 0),
     0,
   )
 }
