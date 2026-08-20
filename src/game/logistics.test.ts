@@ -142,6 +142,39 @@ describe('logistics helpers', () => {
     )
   })
 
+  it('plans a ladder from common material when no stone is available', () => {
+    const state = makeStorageState()
+    state.inventory.dirt = 1
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'air',
+      biome: 'meadow',
+    }
+    state.world.buildings.push({
+      id: 'bridge-anchor',
+      type: 'bridge',
+      position: { x: 1, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    })
+    const request = {
+      id: 'access-dirt-ladder',
+      target: { x: 2, y: 2 },
+      failure: 'support' as const,
+      priority: 20,
+      worldRevision: 0,
+      status: 'open' as const,
+    }
+
+    const planned = planAccessConstructionOrder(
+      { ...state, accessRequests: [request] },
+      request,
+    )
+
+    expect(planned.constructionOrders[0]?.required).toEqual({ dirt: 1 })
+  })
+
   it('protects the starter foundation while leaving the side tunnel available', () => {
     const state = makeStorageState()
     state.safety = { phase: 'bootstrap', emergencyStone: 1 }

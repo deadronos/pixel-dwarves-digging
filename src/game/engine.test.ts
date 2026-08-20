@@ -330,6 +330,41 @@ describe('stepSimulation', () => {
     expect(result.dwarves[0].task.kind).toBe('haul')
   })
 
+  it('uses carried dirt to place an anchored emergency ladder before recovery', () => {
+    const state = makeState(['ddddd', '..d..', '....d'])
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+    if (!stockpile) throw new Error('stockpile missing')
+    state.world.buildings = [
+      { ...stockpile, position: { x: 1, y: 2 }, width: 1, height: 1 },
+    ]
+    state.world.stockpile = { x: 1, y: 2 }
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      position: { x: 3, y: 1 },
+      carrying: 'dirt',
+      task: {
+        kind: 'haul',
+        path: [],
+        progress: 0,
+        block: 'dirt',
+        purpose: 'recovery',
+        recoveryReason: 'storage-route',
+      },
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.world.buildings).toContainEqual(
+      expect.objectContaining({
+        type: 'ladder',
+        construction: 'completed',
+      }),
+    )
+    expect(result.dwarves[0].carrying).toBeNull()
+  })
+
   it('leaves bootstrap only after the starter haul loop has cleared enough work', () => {
     const state = makeState(['.....', '..d..', '.....'])
     state.safety = { phase: 'bootstrap', emergencyStone: 1 }
@@ -392,6 +427,30 @@ describe('stepSimulation', () => {
     expect(
       result.accessRequests.filter((request) => request.status === 'open'),
     ).toHaveLength(3)
+  })
+
+  it('trims a legacy pile of open access requests to the active frontier', () => {
+    const state = makeState(['ddddd', '.....', '.....'])
+    state.dwarves = []
+    state.accessRequests = Array.from({ length: 5 }, (_, index) => ({
+      id: `legacy-access-${index}`,
+      target: { x: index, y: 0 },
+      failure: 'support' as const,
+      priority: index,
+      worldRevision: 0,
+      status: 'open' as const,
+    }))
+
+    const result = stepSimulation(state, 1)
+
+    expect(
+      result.accessRequests.filter((request) => request.status === 'open'),
+    ).toHaveLength(3)
+    expect(result.accessRequests.map((request) => request.id)).toEqual([
+      'legacy-access-2',
+      'legacy-access-3',
+      'legacy-access-4',
+    ])
   })
 
   it('marks a dwarf stranded instead of assigning new mining work', () => {
@@ -471,5 +530,36 @@ describe('stepSimulation', () => {
         construction: 'completed',
       }),
     )
+  })
+
+  it('assigns common material to a ladder construction order', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.inventory.dirt = 1
+    state.world.buildings.push({
+      id: 'ladder-1',
+      type: 'ladder',
+      position: { x: 3, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.constructionOrders = [
+      {
+        id: 'ladder-order',
+        buildingId: 'ladder-1',
+        type: 'ladder',
+        required: { dirt: 1 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+      },
+    ]
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].carrying).toBe('dirt')
+    expect(result.dwarves[0].task.kind).toBe('build')
   })
 })

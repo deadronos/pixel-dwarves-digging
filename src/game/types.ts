@@ -22,6 +22,10 @@ export type BlockType =
   | 'relic'
 
 export type MineableBlockType = Exclude<BlockType, 'air' | 'bedrock'>
+export type CommonBuildingMaterial = Exclude<
+  MineableBlockType,
+  'coal' | 'iron' | 'crystal' | 'relic'
+>
 
 export type BiomeId = 'meadow' | 'desert' | 'red-rock' | 'frozen' | 'mushroom'
 
@@ -41,6 +45,7 @@ export type AccessRequestStatus = 'open' | 'resolved' | 'blocked'
 export type SafetyPhase = 'bootstrap' | 'operational' | 'blocked'
 export type SafetyBlockReason =
   | 'waiting-for-stone'
+  | 'waiting-for-material'
   | 'awaiting-recovery'
   | 'no-safe-work'
 
@@ -121,7 +126,10 @@ export type AccessRequest = {
   approach?: Position
   worldRevision: number
   status: AccessRequestStatus
-  blockedReason?: 'waiting-for-stone' | 'no-builder-route'
+  blockedReason?:
+    | 'waiting-for-stone'
+    | 'waiting-for-material'
+    | 'no-builder-route'
 }
 
 export type TaskKind = 'idle' | 'dig' | 'haul' | 'build'

@@ -40,7 +40,7 @@
 - [ ] Run the focused generation/logistics tests and verify the new assertions fail.
 - [ ] Carve the starter vein after the starter pocket is created without placing it on bedrock or inside the stockpile footprint.
 - [ ] Add `isBootstrapProtectedTarget` and `isBootstrapActive` helpers; use the starter safety state and stockpile geometry to protect only the early downward/foundation cells.
-- [ ] Add `getAvailableConstructionMaterial` that excludes reserved emergency stone from ordinary construction.
+- [ ] Add `getAvailableConstructionMaterial` that excludes the reserved emergency common block from ordinary construction.
 - [ ] Run focused tests and confirm they pass.
 - [ ] Commit with `feat: guarantee a safe starter mining loop`.
 
@@ -54,9 +54,10 @@
 - Test: `src/game/engine.test.ts`
 
 - [ ] Add failing tests asserting an unfunded access request remains visible with `waiting-for-stone` and creates no construction order, then becomes actionable once stone is available.
+- [ ] Add failing tests asserting a ladder can use a common terrain block, emergency recovery can consume carried common material, and legacy open-request piles are trimmed to the active frontier.
 - [ ] Add a failing test asserting more than the configured maximum does not create more open access requests.
 - [ ] Run the focused tests and verify the expected failures.
-- [ ] Add an optional access-request blocked reason, gate access construction on available non-reserved stone, clear the reason when funding becomes possible, and cap request creation after deduplication.
+- [ ] Add an optional access-request blocked reason, gate ladders on available non-reserved common material, keep bridges/outposts stone-only, clear the reason when funding becomes possible, and cap/trim request creation after deduplication.
 - [ ] Keep access preparation ahead of ordinary mining only when it is safe and actionable; preserve safe work when an access request is waiting for material.
 - [ ] Run focused tests and confirm they pass.
 - [ ] Commit with `feat: gate access construction on available materials`.
@@ -70,10 +71,10 @@
 - Test: `src/game/engine.test.ts`
 - Test: `src/game/logistics.test.ts`
 
-- [ ] Add failing tests for a cut-off dwarf carrying stone restoring a storage route with one valid anchored ladder, a cut-off dwarf using the emergency reserve, and a cut-off dwarf carrying dirt retaining it when no ladder can be placed.
+- [ ] Add failing tests for a cut-off dwarf carrying stone or another common block restoring a storage route with one valid anchored ladder, a cut-off dwarf using the emergency reserve, and a cut-off dwarf carrying ore retaining it when no ladder can be placed.
 - [ ] Run the focused tests and verify they fail for the missing rescue behavior.
 - [ ] Implement a pure emergency-site search that tests candidate ladder cells against `canPlaceBuilding` and a simulated storage route.
-- [ ] Implement emergency ladder placement that consumes carried stone first, otherwise one reserved emergency stone, creates a completed ladder only at a valid site, and marks the dwarf grounded with recovery work.
+- [ ] Implement emergency ladder placement that consumes carried common material first, otherwise one reserved emergency common block, creates a completed ladder only at a valid site, and marks the dwarf grounded with recovery work.
 - [ ] Invoke rescue before ordinary recovery idling; leave impossible recovery tasks untouched and prevent new mining assignment.
 - [ ] Run focused tests and confirm they pass.
 - [ ] Commit with `feat: let cut-off dwarves restore access`.

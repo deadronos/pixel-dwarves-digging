@@ -1,5 +1,10 @@
 import { canPlaceBuilding, getPrimaryStockpile } from './buildings'
-import { BUILDING_DEFINITIONS, STARTER_PROTECTED_RADIUS } from './content'
+import {
+  BUILDING_DEFINITIONS,
+  COMMON_BUILDING_MATERIALS,
+  getEmergencyReserveMaterial,
+  STARTER_PROTECTED_RADIUS,
+} from './content'
 import {
   findAdjacentPaths,
   findPath,
@@ -10,6 +15,7 @@ import {
   type AccessFailure,
   type AccessRequest,
   type BuildingType,
+  type CommonBuildingMaterial,
   type ConstructionOrder,
   cloneInventory,
   type Inventory,
@@ -65,7 +71,8 @@ export function getAvailableConstructionMaterial(
   state: SimulationState,
   material: keyof Inventory,
 ): number {
-  const reserve = material === 'stone' ? state.safety.emergencyStone : 0
+  const reserveMaterial = getEmergencyReserveMaterial(state.inventory)
+  const reserve = material === reserveMaterial ? state.safety.emergencyStone : 0
   const promised = state.constructionOrders.reduce(
     (total, order) =>
       total +
@@ -78,6 +85,17 @@ export function getAvailableConstructionMaterial(
     0,
   )
   return Math.max(0, (state.inventory[material] ?? 0) - reserve - promised)
+}
+
+export function chooseCommonConstructionMaterial(
+  state: SimulationState,
+  amount: number,
+): CommonBuildingMaterial | null {
+  return (
+    COMMON_BUILDING_MATERIALS.find(
+      (material) => getAvailableConstructionMaterial(state, material) >= amount,
+    ) ?? null
+  )
 }
 
 export function findEmergencyLadderPlan(
@@ -167,9 +185,14 @@ export function planAccessConstructionOrder(
     ) {
       continue
     }
-    if (
-      getAvailableConstructionMaterial(state, 'stone') < (definition.stone ?? 0)
-    ) {
+    const requiredAmount = definition.stone ?? 0
+    const material =
+      candidate.type === 'ladder'
+        ? chooseCommonConstructionMaterial(state, requiredAmount)
+        : getAvailableConstructionMaterial(state, 'stone') >= requiredAmount
+          ? 'stone'
+          : null
+    if (!material) {
       return {
         ...state,
         accessRequests: state.accessRequests.map((current) =>
@@ -185,7 +208,7 @@ export function planAccessConstructionOrder(
       id: `${buildingId}-order`,
       buildingId,
       type: candidate.type,
-      required: { stone: definition.stone },
+      required: { [material]: requiredAmount },
       reserved: {},
       delivered: {},
       progress: 0,

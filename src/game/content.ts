@@ -1,4 +1,10 @@
-import type { BiomeId, BlockType, MineableBlockType } from './types'
+import type {
+  BiomeId,
+  BlockType,
+  CommonBuildingMaterial,
+  Inventory,
+  MineableBlockType,
+} from './types'
 
 export const BUILDING_DEFINITIONS = {
   stockpile: { width: 3, height: 2, capacity: 120 },
@@ -48,6 +54,21 @@ export const MINEABLE_BLOCKS: readonly MineableBlockType[] = [
   'crystal',
   'relic',
 ]
+
+export const COMMON_BUILDING_MATERIALS: readonly CommonBuildingMaterial[] =
+  MINEABLE_BLOCKS.filter(
+    (block): block is CommonBuildingMaterial => !MINERAL_BLOCKS.has(block),
+  )
+
+export function getEmergencyReserveMaterial(
+  inventory: Partial<Inventory>,
+): CommonBuildingMaterial | null {
+  return (
+    COMMON_BUILDING_MATERIALS.find(
+      (material) => (inventory[material] ?? 0) > 0,
+    ) ?? null
+  )
+}
 
 export type BiomeDefinition = {
   label: string

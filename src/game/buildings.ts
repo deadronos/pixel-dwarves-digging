@@ -1,4 +1,4 @@
-import { BUILDING_DEFINITIONS } from './content'
+import { BUILDING_DEFINITIONS, getEmergencyReserveMaterial } from './content'
 import type {
   BuildingState,
   BuildingType,
@@ -226,7 +226,8 @@ export function reserveConstructionMaterials(
   let world = state.world
   for (const [material, amount] of Object.entries(order.required)) {
     const key = material as keyof typeof inventory
-    const reserve = key === 'stone' ? state.safety.emergencyStone : 0
+    const reserveMaterial = getEmergencyReserveMaterial(state.inventory)
+    const reserve = key === reserveMaterial ? state.safety.emergencyStone : 0
     const available = Math.max(0, inventory[key] - reserve)
     const needed = Math.max(0, (amount ?? 0) - (reserved[key] ?? 0))
     const taken = Math.min(available, needed)
