@@ -1,9 +1,18 @@
 import { completeConstruction, reserveConstructionMaterials } from './buildings'
-import { DIG_DURATION, MINEABLE_BLOCKS, MINERAL_BLOCKS } from './content'
+import {
+  DIG_DURATION,
+  MAX_OPEN_ACCESS_REQUESTS,
+  MINEABLE_BLOCKS,
+  MINERAL_BLOCKS,
+  STARTER_BOOTSTRAP_CLEAR_COUNT,
+} from './content'
 import { getCell } from './generation'
 import {
   assessDigSafety,
   depositCarriedMaterial,
+  findEmergencyLadderPlan,
+  getAvailableConstructionMaterial,
+  isBootstrapProtectedTarget,
   planAccessConstructionOrder,
   planExpansionOrder,
   selectStorageDestination,
@@ -34,6 +43,7 @@ type AdvanceResult = {
   depositedBlock?: MineableBlockType | null
   inventory?: SimulationState['inventory']
   constructionOrders?: SimulationState['constructionOrders']
+  safety?: SimulationState['safety']
 }
 
 const reachableWorkCache = new WeakMap<
@@ -118,7 +128,11 @@ function chooseTarget(
   )
 
   const candidates = reachableTargets(state.world, dwarf.position)
-    .filter(({ target }) => !reserved.has(taskKey(target)))
+    .filter(
+      ({ target }) =>
+        !reserved.has(taskKey(target)) &&
+        !isBootstrapProtectedTarget(state, target),
+    )
     .map(({ target, path }) => ({
       target,
       path,
@@ -154,7 +168,11 @@ function findUnsafeTarget(
   )
 
   const candidates = reachableTargets(state.world, dwarf.position)
-    .filter(({ target }) => !reserved.has(taskKey(target)))
+    .filter(
+      ({ target }) =>
+        !reserved.has(taskKey(target)) &&
+        !isBootstrapProtectedTarget(state, target),
+    )
     .map(({ target, path }) => {
       const safety = assessDigSafety(
         state,
@@ -231,8 +249,12 @@ function resolveAccessRequests(state: SimulationState): SimulationState {
 
 function planAccessRequests(state: SimulationState): SimulationState {
   let next = resolveAccessRequests(state)
+  let openRequestCount = next.accessRequests.filter(
+    (request) => request.status === 'open',
+  ).length
 
   for (const dwarf of next.dwarves) {
+    if (openRequestCount >= MAX_OPEN_ACCESS_REQUESTS) break
     if (dwarf.task.kind !== 'idle' || dwarf.carrying) continue
     const unsafe = findUnsafeTarget(next, dwarf)
     if (!unsafe) continue
@@ -255,6 +277,7 @@ function planAccessRequests(state: SimulationState): SimulationState {
         },
       ],
     }
+    openRequestCount += 1
   }
 
   for (const request of next.accessRequests) {
@@ -337,6 +360,108 @@ function recoveryTask(dwarf: DwarfState, reason: 'stranded' | 'storage-route') {
       }
 }
 
+function attemptEmergencyRecovery(
+  state: SimulationState,
+  dwarf: DwarfState,
+): AdvanceResult | null {
+  const usesCarriedStone = dwarf.carrying === 'stone'
+  const usesReserve = !usesCarriedStone && state.safety.emergencyStone > 0
+  if (!usesCarriedStone && !usesReserve) return null
+
+  const plan = findEmergencyLadderPlan(
+    state,
+    dwarf.position,
+    dwarf.carrying ?? 'stone',
+  )
+  if (!plan) return null
+
+  const inventory = usesReserve
+    ? { ...state.inventory, stone: Math.max(0, state.inventory.stone - 1) }
+    : undefined
+  const task = {
+    kind: 'haul' as const,
+    target: plan.destination.position,
+    path: plan.path,
+    progress: 0,
+    ...(dwarf.carrying ? { block: dwarf.carrying } : {}),
+    buildingId: plan.destination.id,
+    purpose: 'recovery' as const,
+    recoveryReason:
+      dwarf.movement === 'stranded'
+        ? ('stranded' as const)
+        : ('storage-route' as const),
+  }
+
+  return {
+    dwarf: {
+      ...dwarf,
+      movement: 'grounded',
+      carrying: usesCarriedStone ? null : dwarf.carrying,
+      task,
+    },
+    world: plan.world,
+    minedBlock: null,
+    inventory,
+    safety: usesReserve
+      ? { ...state.safety, emergencyStone: state.safety.emergencyStone - 1 }
+      : state.safety,
+  }
+}
+
+function updateSafetyState(state: SimulationState): SimulationState['safety'] {
+  if (
+    state.safety.phase === 'bootstrap' &&
+    state.totalCleared < STARTER_BOOTSTRAP_CLEAR_COUNT
+  ) {
+    return state.safety
+  }
+
+  const hasSafeWork = state.dwarves.some(
+    (dwarf) =>
+      dwarf.task.kind === 'idle' && chooseTarget(state, dwarf) !== null,
+  )
+  const hasBuildWork = state.constructionOrders.some((order) => {
+    const required = order.required.stone ?? 0
+    const delivered = order.delivered.stone ?? 0
+    return delivered < required && (order.reserved.stone ?? 0) > 0
+  })
+  const hasWaitingAccess = state.accessRequests.some(
+    (request) =>
+      request.status === 'open' &&
+      request.blockedReason === 'waiting-for-stone',
+  )
+  const hasRecovery = state.dwarves.some(
+    (dwarf) =>
+      dwarf.task.purpose === 'recovery' || dwarf.movement === 'stranded',
+  )
+
+  if (
+    !hasSafeWork &&
+    !hasBuildWork &&
+    hasWaitingAccess &&
+    getAvailableConstructionMaterial(state, 'stone') === 0
+  ) {
+    return {
+      phase: 'blocked',
+      emergencyStone: state.safety.emergencyStone,
+      blockedReason: 'waiting-for-stone',
+    }
+  }
+
+  if (hasRecovery && !hasSafeWork && !hasBuildWork) {
+    return {
+      phase: 'blocked',
+      emergencyStone: state.safety.emergencyStone,
+      blockedReason: 'awaiting-recovery',
+    }
+  }
+
+  return {
+    phase: 'operational',
+    emergencyStone: state.safety.emergencyStone,
+  }
+}
+
 function settleDwarf(world: World, dwarf: DwarfState): DwarfState {
   if (isSupported(world, dwarf.position)) {
     return { ...dwarf, movement: 'grounded' }
@@ -369,7 +494,9 @@ function advanceDwarf(
     return unchanged(dwarf, state.world)
   }
   if (dwarf.movement === 'stranded') {
-    return unchanged(dwarf, state.world)
+    return (
+      attemptEmergencyRecovery(state, dwarf) ?? unchanged(dwarf, state.world)
+    )
   }
 
   const task = dwarf.task
@@ -402,9 +529,12 @@ function advanceDwarf(
           state.world,
         )
       }
-      return unchanged(
-        { ...dwarf, task: recoveryTask(dwarf, 'storage-route') },
-        state.world,
+      return (
+        attemptEmergencyRecovery(state, dwarf) ??
+        unchanged(
+          { ...dwarf, task: recoveryTask(dwarf, 'storage-route') },
+          state.world,
+        )
       )
     }
 
@@ -542,16 +672,19 @@ function advanceDwarf(
         state.world,
       )
     }
-    return unchanged(
-      {
-        ...dwarf,
-        task: {
-          ...task,
-          purpose: 'recovery',
-          recoveryReason: 'storage-route',
+    return (
+      attemptEmergencyRecovery(state, dwarf) ??
+      unchanged(
+        {
+          ...dwarf,
+          task: {
+            ...task,
+            purpose: 'recovery',
+            recoveryReason: 'storage-route',
+          },
         },
-      },
-      state.world,
+        state.world,
+      )
     )
   }
 
@@ -689,16 +822,19 @@ function advanceDwarf(
         task.block,
       )
       if (!depositedWorld) {
-        return unchanged(
-          {
-            ...dwarf,
-            task: {
-              ...task,
-              purpose: 'recovery',
-              recoveryReason: 'storage-route',
+        return (
+          attemptEmergencyRecovery(state, dwarf) ??
+          unchanged(
+            {
+              ...dwarf,
+              task: {
+                ...task,
+                purpose: 'recovery',
+                recoveryReason: 'storage-route',
+              },
             },
-          },
-          state.world,
+            state.world,
+          )
         )
       }
       return {
@@ -713,16 +849,26 @@ function advanceDwarf(
       }
     }
 
-    return unchanged(
-      {
-        ...dwarf,
-        task: {
-          ...task,
-          purpose: 'recovery',
-          recoveryReason: 'storage-route',
+    if (!dwarf.carrying) {
+      return unchanged(
+        { ...dwarf, task: { kind: 'idle', path: [], progress: 0 } },
+        state.world,
+      )
+    }
+
+    return (
+      attemptEmergencyRecovery(state, dwarf) ??
+      unchanged(
+        {
+          ...dwarf,
+          task: {
+            ...task,
+            purpose: 'recovery',
+            recoveryReason: 'storage-route',
+          },
         },
-      },
-      state.world,
+        state.world,
+      )
     )
   }
 
@@ -761,6 +907,7 @@ function stepOnce(state: SimulationState): SimulationState {
       nextState.worldRevision += 1
     }
     if (advanced.inventory) nextState.inventory = advanced.inventory
+    if (advanced.safety) nextState.safety = advanced.safety
     if (advanced.constructionOrders) {
       nextState.constructionOrders = advanced.constructionOrders
     }
@@ -780,7 +927,11 @@ function stepOnce(state: SimulationState): SimulationState {
   const allDwarvesSettled = nextState.dwarves.every(
     (dwarf) => dwarf.task.kind === 'idle' && dwarf.carrying === null,
   )
-  return { ...nextState, completed: !hasSolids && allDwarvesSettled }
+  return {
+    ...nextState,
+    safety: updateSafetyState(nextState),
+    completed: !hasSolids && allDwarvesSettled,
+  }
 }
 
 export function stepSimulation(

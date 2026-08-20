@@ -1,5 +1,5 @@
 import { canPlaceBuilding, getPrimaryStockpile } from './buildings'
-import { BUILDING_DEFINITIONS } from './content'
+import { BUILDING_DEFINITIONS, STARTER_PROTECTED_RADIUS } from './content'
 import {
   findAdjacentPaths,
   findPath,
@@ -28,6 +28,104 @@ export type DigSafety = {
   safe: boolean
   failure?: AccessFailure
   storage?: StorageDestination
+}
+
+export type EmergencyLadderPlan = {
+  position: Position
+  world: World
+  destination: StorageDestination
+  path: Position[]
+}
+
+export function isBootstrapActive(state: SimulationState): boolean {
+  return state.safety.phase === 'bootstrap'
+}
+
+export function isBootstrapProtectedTarget(
+  state: SimulationState,
+  target: Position,
+): boolean {
+  if (!isBootstrapActive(state)) return false
+
+  const start = state.world.start
+  const stockpile = getPrimaryStockpile(state.world)
+  const underStarterPocket =
+    target.y < start.y &&
+    Math.abs(target.x - start.x) <= STARTER_PROTECTED_RADIUS
+  const underStockpile =
+    stockpile !== null &&
+    target.y === stockpile.position.y - 1 &&
+    target.x >= stockpile.position.x &&
+    target.x < stockpile.position.x + stockpile.width
+
+  return underStarterPocket || underStockpile
+}
+
+export function getAvailableConstructionMaterial(
+  state: SimulationState,
+  material: keyof Inventory,
+): number {
+  const reserve = material === 'stone' ? state.safety.emergencyStone : 0
+  const promised = state.constructionOrders.reduce(
+    (total, order) =>
+      total +
+      Math.max(
+        0,
+        (order.required[material] ?? 0) -
+          (order.delivered[material] ?? 0) -
+          (order.reserved[material] ?? 0),
+      ),
+    0,
+  )
+  return Math.max(0, (state.inventory[material] ?? 0) - reserve - promised)
+}
+
+export function findEmergencyLadderPlan(
+  state: SimulationState,
+  from: Position,
+  block: MineableBlockType,
+): EmergencyLadderPlan | null {
+  const candidates = [
+    from,
+    { x: from.x, y: from.y + 1 },
+    { x: from.x, y: from.y - 1 },
+    { x: from.x - 1, y: from.y },
+    { x: from.x + 1, y: from.y },
+  ]
+
+  for (const position of candidates) {
+    if (!canPlaceBuilding(state.world, { type: 'ladder', position })) {
+      continue
+    }
+
+    const buildingId = `emergency-ladder-${position.x}-${position.y}-${state.worldRevision}`
+    const world: World = {
+      ...state.world,
+      buildings: [
+        ...state.world.buildings,
+        {
+          id: buildingId,
+          type: 'ladder',
+          position,
+          width: BUILDING_DEFINITIONS.ladder.width,
+          height: BUILDING_DEFINITIONS.ladder.height,
+          level: 1,
+          construction: 'completed',
+        },
+      ],
+    }
+    const destination = selectStorageDestination(
+      { ...state, world },
+      block,
+      from,
+    )
+    if (!destination) continue
+    const path = findPath(world, from, destination.position)
+    if (!path) continue
+    return { position, world, destination, path }
+  }
+
+  return null
 }
 
 function accessSiteCandidates(request: AccessRequest): Array<{
@@ -69,6 +167,18 @@ export function planAccessConstructionOrder(
     ) {
       continue
     }
+    if (
+      getAvailableConstructionMaterial(state, 'stone') < (definition.stone ?? 0)
+    ) {
+      return {
+        ...state,
+        accessRequests: state.accessRequests.map((current) =>
+          current.id === request.id
+            ? { ...current, blockedReason: 'waiting-for-stone' as const }
+            : current,
+        ),
+      }
+    }
 
     const buildingId = `${request.id}-${candidate.type}-${candidate.position.x}-${candidate.position.y}`
     const order: ConstructionOrder = {
@@ -99,11 +209,23 @@ export function planAccessConstructionOrder(
           },
         ],
       },
+      accessRequests: state.accessRequests.map((current) =>
+        current.id === request.id
+          ? { ...current, blockedReason: undefined }
+          : current,
+      ),
       constructionOrders: [...state.constructionOrders, order],
     }
   }
 
-  return state
+  return {
+    ...state,
+    accessRequests: state.accessRequests.map((current) =>
+      current.id === request.id
+        ? { ...current, blockedReason: 'no-builder-route' as const }
+        : current,
+    ),
+  }
 }
 
 function storageBuildings(world: World) {
@@ -237,7 +359,9 @@ export function planExpansionOrder(state: SimulationState): SimulationState {
   }
 
   const requiredStone = BUILDING_DEFINITIONS.outpost.stone
-  if (state.inventory.stone < requiredStone) return state
+  if (getAvailableConstructionMaterial(state, 'stone') < requiredStone) {
+    return state
+  }
 
   for (let x = state.world.start.x + 3; x < state.world.width - 1; x += 1) {
     const position = { x, y: state.world.start.y }

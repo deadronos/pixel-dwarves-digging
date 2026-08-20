@@ -3,6 +3,8 @@ import { stepSimulation } from './engine'
 import {
   assessDigSafety,
   getAggregateInventory,
+  getAvailableConstructionMaterial,
+  isBootstrapProtectedTarget,
   planAccessConstructionOrder,
   planExpansionOrder,
   selectStorageDestination,
@@ -77,6 +79,7 @@ function makeStorageState(): SimulationState {
     constructionPolicy: 'balanced',
     accessRequests: [],
     worldRevision: 0,
+    safety: { phase: 'operational', emergencyStone: 0 },
     tick: 0,
     totalCleared: 0,
     completed: false,
@@ -104,6 +107,7 @@ function stepUntilCarrying(state: SimulationState): SimulationState {
 describe('logistics helpers', () => {
   it('plans an anchored reachable ladder for an access request', () => {
     const state = makeStorageState()
+    state.inventory.stone = 1
     state.world.cells[1 * state.world.width + 2] = {
       block: 'air',
       biome: 'meadow',
@@ -136,6 +140,78 @@ describe('logistics helpers', () => {
         accessRequestId: request.id,
       }),
     )
+  })
+
+  it('protects the starter foundation while leaving the side tunnel available', () => {
+    const state = makeStorageState()
+    state.safety = { phase: 'bootstrap', emergencyStone: 1 }
+
+    expect(isBootstrapProtectedTarget(state, { x: 1, y: 0 })).toBe(true)
+    expect(isBootstrapProtectedTarget(state, { x: 2, y: 1 })).toBe(false)
+  })
+
+  it('keeps reserved emergency stone out of ordinary construction material', () => {
+    const state = makeStorageState()
+    state.inventory.stone = 2
+    state.safety = { phase: 'bootstrap', emergencyStone: 1 }
+
+    expect(getAvailableConstructionMaterial(state, 'stone')).toBe(1)
+
+    state.constructionOrders = [
+      {
+        id: 'promised-ladder-order',
+        buildingId: 'promised-ladder',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+      },
+    ]
+    expect(getAvailableConstructionMaterial(state, 'stone')).toBe(0)
+  })
+
+  it('keeps an unfunded access request visible without creating an order', () => {
+    const state = makeStorageState()
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'air',
+      biome: 'meadow',
+    }
+    state.world.buildings.push({
+      id: 'bridge-anchor',
+      type: 'bridge',
+      position: { x: 1, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    })
+    const request = {
+      id: 'access-waiting',
+      target: { x: 2, y: 2 },
+      failure: 'support' as const,
+      priority: 20,
+      worldRevision: 0,
+      status: 'open' as const,
+    }
+    state.accessRequests = [request]
+
+    const planned = planAccessConstructionOrder(state, request)
+
+    expect(planned.constructionOrders).toEqual([])
+    expect(planned.accessRequests[0].blockedReason).toBe('waiting-for-stone')
+
+    const fundedInput = {
+      ...planned,
+      inventory: { ...planned.inventory, stone: 1 },
+    }
+    const funded = planAccessConstructionOrder(
+      fundedInput,
+      fundedInput.accessRequests[0],
+    )
+    expect(funded.constructionOrders).toHaveLength(1)
+    expect(funded.accessRequests[0].blockedReason).toBeUndefined()
   })
 
   it('marks a supported dig with a storage route as safe', () => {

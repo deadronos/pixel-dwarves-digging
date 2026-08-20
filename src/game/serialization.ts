@@ -1,4 +1,4 @@
-import { BUILDING_DEFINITIONS } from './content'
+import { BUILDING_DEFINITIONS, STARTER_BOOTSTRAP_CLEAR_COUNT } from './content'
 import {
   type BuildingState,
   cloneInventory,
@@ -8,7 +8,7 @@ import {
   type SimulationState,
 } from './types'
 
-export const SAVE_VERSION = 3
+export const SAVE_VERSION = 4
 
 export type SaveParseResult = { state: SimulationState } | { error: string }
 
@@ -22,6 +22,45 @@ export function serializeState(state: SimulationState): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function normalizeSafety(
+  value: Record<string, unknown>,
+): SimulationState['safety'] {
+  const safety = value.safety
+  if (
+    isRecord(safety) &&
+    (safety.phase === 'bootstrap' ||
+      safety.phase === 'operational' ||
+      safety.phase === 'blocked') &&
+    typeof safety.emergencyStone === 'number'
+  ) {
+    return {
+      phase: safety.phase,
+      emergencyStone: Math.max(0, safety.emergencyStone),
+      ...(typeof safety.blockedReason === 'string'
+        ? {
+            blockedReason:
+              safety.blockedReason as SimulationState['safety']['blockedReason'],
+          }
+        : {}),
+    }
+  }
+
+  const inventory = value.inventory
+  const stone =
+    isRecord(inventory) && typeof inventory.stone === 'number'
+      ? inventory.stone
+      : 0
+  const totalCleared =
+    typeof value.totalCleared === 'number' ? value.totalCleared : 0
+  return {
+    phase:
+      totalCleared >= STARTER_BOOTSTRAP_CLEAR_COUNT
+        ? 'operational'
+        : 'bootstrap',
+    emergencyStone: Math.min(1, Math.max(0, stone)),
+  }
 }
 
 function isSimulationState(value: unknown): value is SimulationState {
@@ -50,6 +89,11 @@ function isSimulationState(value: unknown): value is SimulationState {
     Array.isArray(value.constructionOrders) &&
     Array.isArray(value.accessRequests) &&
     typeof value.worldRevision === 'number' &&
+    isRecord(value.safety) &&
+    (value.safety.phase === 'bootstrap' ||
+      value.safety.phase === 'operational' ||
+      value.safety.phase === 'blocked') &&
+    typeof value.safety.emergencyStone === 'number' &&
     (value.constructionPolicy === 'conserve' ||
       value.constructionPolicy === 'balanced' ||
       value.constructionPolicy === 'expand')
@@ -69,6 +113,7 @@ function migrateV1State(value: unknown): SimulationState | null {
       constructionPolicy: 'balanced',
       accessRequests: [],
       worldRevision: 0,
+      safety: { phase: 'bootstrap', emergencyStone: 0 },
     })
   ) {
     return null
@@ -113,6 +158,7 @@ function migrateV1State(value: unknown): SimulationState | null {
     constructionPolicy: 'balanced',
     accessRequests: [],
     worldRevision: 0,
+    safety: { phase: 'bootstrap', emergencyStone: 0 },
   }
 }
 
@@ -145,6 +191,7 @@ function normalizeV3State(
       : [],
     worldRevision:
       typeof value.worldRevision === 'number' ? value.worldRevision : 0,
+    safety: normalizeSafety(value),
   }
 
   return isSimulationState(normalized) ? normalized : null
@@ -170,7 +217,11 @@ export function parseSave(payload: string): SaveParseResult {
       : { error: 'Save file is missing required simulation data.' }
   }
 
-  if (parsed.schemaVersion !== 2 && parsed.schemaVersion !== SAVE_VERSION) {
+  if (
+    parsed.schemaVersion !== 2 &&
+    parsed.schemaVersion !== 3 &&
+    parsed.schemaVersion !== SAVE_VERSION
+  ) {
     return { error: 'Save version is not supported.' }
   }
 

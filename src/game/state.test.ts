@@ -19,6 +19,20 @@ describe('createGameStore', () => {
     expect(state.dwarves[0].task.purpose).toBeUndefined()
   })
 
+  it('starts with bootstrap protection and a reserved emergency stone block', () => {
+    const state = createGameStore('bootstrap-state-seed').getState().simulation
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+
+    expect(state.safety).toEqual({
+      phase: 'bootstrap',
+      emergencyStone: 1,
+    })
+    expect(state.inventory.stone).toBe(2)
+    expect(stockpile?.storage?.inventory.stone).toBe(2)
+  })
+
   it('advances only when unpaused', () => {
     const store = createGameStore('pause-test')
     store.getState().setPaused(true)

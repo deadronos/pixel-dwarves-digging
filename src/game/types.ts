@@ -38,6 +38,17 @@ export type BuildingConstruction =
 export type ConstructionPolicy = 'conserve' | 'balanced' | 'expand'
 export type AccessFailure = 'support' | 'return-route' | 'storage-route'
 export type AccessRequestStatus = 'open' | 'resolved' | 'blocked'
+export type SafetyPhase = 'bootstrap' | 'operational' | 'blocked'
+export type SafetyBlockReason =
+  | 'waiting-for-stone'
+  | 'awaiting-recovery'
+  | 'no-safe-work'
+
+export type SafetyState = {
+  phase: SafetyPhase
+  emergencyStone: number
+  blockedReason?: SafetyBlockReason
+}
 
 export type Cell = {
   block: BlockType
@@ -110,6 +121,7 @@ export type AccessRequest = {
   approach?: Position
   worldRevision: number
   status: AccessRequestStatus
+  blockedReason?: 'waiting-for-stone' | 'no-builder-route'
 }
 
 export type TaskKind = 'idle' | 'dig' | 'haul' | 'build'
@@ -144,6 +156,7 @@ export type SimulationState = {
   constructionPolicy: ConstructionPolicy
   accessRequests: AccessRequest[]
   worldRevision: number
+  safety: SafetyState
   tick: number
   totalCleared: number
   completed: boolean

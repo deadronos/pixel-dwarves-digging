@@ -8,6 +8,12 @@ export const BUILDING_DEFINITIONS = {
 } as const
 
 export const BEDROCK_DEPTH = 1
+export const STARTER_BOOTSTRAP_CLEAR_COUNT = 4
+export const STARTER_PROTECTED_RADIUS = 2
+export const STARTER_STONE_VEIN_LENGTH = 3
+export const STARTER_STONE_SUPPLY = 2
+export const STARTER_EMERGENCY_STONE = 1
+export const MAX_OPEN_ACCESS_REQUESTS = 3
 
 export const BIOME_IDS: readonly BiomeId[] = [
   'meadow',

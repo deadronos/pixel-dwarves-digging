@@ -1,4 +1,5 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
+import { STARTER_EMERGENCY_STONE, STARTER_STONE_SUPPLY } from './content'
 import { stepSimulation } from './engine'
 import { generateWorld, randomStarterSeed } from './generation'
 import {
@@ -78,10 +79,12 @@ export function createInitialSimulation(
   constructionPolicy: ConstructionPolicy = 'balanced',
 ): SimulationState {
   const world = generateWorld(seed, runNumber)
+  const inventory = cloneInventory(EMPTY_INVENTORY)
+  inventory.stone = STARTER_STONE_SUPPLY
   return {
     world,
     dwarves: createDwarves(world, 3 + upgrades.extraBunks),
-    inventory: cloneInventory(EMPTY_INVENTORY),
+    inventory,
     policy: {
       ...policy,
       materialPriority: { ...policy.materialPriority },
@@ -90,6 +93,7 @@ export function createInitialSimulation(
     constructionPolicy,
     accessRequests: [],
     worldRevision: 0,
+    safety: { phase: 'bootstrap', emergencyStone: STARTER_EMERGENCY_STONE },
     tick: 0,
     totalCleared: 0,
     completed: false,

@@ -1,3 +1,4 @@
+import { STARTER_EMERGENCY_STONE, STARTER_STONE_SUPPLY } from './content'
 import { generateWorld } from './generation'
 import {
   cloneInventory,
@@ -62,10 +63,11 @@ export function startPrestige(
     ...state,
     world,
     dwarves: createDwarves(state, world),
-    inventory: { ...EMPTY_INVENTORY },
+    inventory: { ...EMPTY_INVENTORY, stone: STARTER_STONE_SUPPLY },
     constructionOrders: [],
     accessRequests: [],
     worldRevision: 0,
+    safety: { phase: 'bootstrap', emergencyStone: STARTER_EMERGENCY_STONE },
     tick: 0,
     totalCleared: 0,
     completed: false,
