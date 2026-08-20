@@ -1,3 +1,4 @@
+import { MINEABLE_BLOCKS } from './content'
 import { getCell } from './generation'
 import {
   type BuildingState,
@@ -68,6 +69,16 @@ function isWalkable(world: World, position: Position): boolean {
     getCell(world, position.x, position.y).block === 'air' &&
     isSupported(world, position)
   )
+}
+
+export function simulateDigWorld(world: World, target: Position): World {
+  const targetIndex = indexFor(target.x, target.y, world.width)
+  return {
+    ...world,
+    cells: world.cells.map((cell, index) =>
+      index === targetIndex ? { ...cell, block: 'air' as const } : cell,
+    ),
+  }
 }
 
 export function canMoveBetween(
@@ -174,7 +185,9 @@ export function findReachableExposedSolids(
       const targetIndex = indexFor(target.x, target.y, world.width)
       if (
         exposed[targetIndex] ||
-        getCell(world, target.x, target.y).block === 'air'
+        !MINEABLE_BLOCKS.some(
+          (block) => block === getCell(world, target.x, target.y).block,
+        )
       ) {
         continue
       }

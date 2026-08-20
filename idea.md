@@ -32,6 +32,8 @@ Dwarves operate on a fixed simulation tick. They:
 
 Dwarves only walk through supported air cells. Solid terrain, stockpile floors, outposts, and bridges provide horizontal support. Ladders provide vertical movement. If mining removes a dwarf's support, the dwarf falls to the nearest supported cell or becomes stranded until access is restored.
 
+The world has a permanent one-cell bedrock floor. It cannot be mined and does not count against clear completion. Before accepting a dig, a dwarf simulates the target becoming air and checks both support and a route to storage. Unsafe valuable targets create access requests instead of direct dig tasks. The colony first prefers a safe horizontal side tunnel or cardinal stair-step route; if an open shaft or gap needs infrastructure, builders reserve stone and construct an anchored ladder or bridge before deeper mining resumes.
+
 The player chooses:
 
 - Work preference: nearest exposed, ore first, or deepest first.
@@ -61,13 +63,14 @@ Permanent upgrades:
 
 ## Saves
 
-The save envelope is versioned JSON schema 2. The app autosaves to local storage, supports explicit save, and can export/import a portable pixel-dwarves-save.json. Version 1 saves migrate their old global inventory into the main stockpile. Invalid or unsupported files produce a visible error instead of replacing the current run.
+The save envelope is versioned JSON schema 3. The app autosaves to local storage, supports explicit save, and can export/import a portable pixel-dwarves-save.json. Version 1 saves migrate their old global inventory into the main stockpile, while version 2 saves receive bedrock and access-planning defaults. Invalid or unsupported files produce a visible error instead of replacing the current run.
 
 ## Current implementation
 
 - React 19 + TypeScript 7 + Vite.
 - React Three Fiber orthographic viewport with instanced pixel blocks.
 - Deterministic terrain generation and bounded grid pathfinding.
+- Indestructible bedrock, post-dig safety checks, access-first stair-step excavation, and recoverable haul routes.
 - Visible stockpile, per-building storage, grounded movement, falling, bridges, ladders, autonomous construction, and outpost expansion.
 - Autonomous dwarf dig/haul/build simulation.
 - Versioned serialization, local save, export/import, and prestige.

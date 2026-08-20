@@ -7,6 +7,8 @@ export const BUILDING_DEFINITIONS = {
   ladder: { width: 1, height: 1, stone: 1 },
 } as const
 
+export const BEDROCK_DEPTH = 1
+
 export const BIOME_IDS: readonly BiomeId[] = [
   'meadow',
   'desert',
@@ -95,6 +97,7 @@ export const BIOME_DEFINITIONS: Record<BiomeId, BiomeDefinition> = {
 
 export const BLOCK_LABELS: Record<BlockType, string> = {
   air: 'Air',
+  bedrock: 'Bedrock',
   grass: 'Grass',
   dirt: 'Dirt',
   sand: 'Sand',
@@ -115,6 +118,7 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
 
 export const BLOCK_COLORS: Record<BlockType, string> = {
   air: '#20251f',
+  bedrock: '#171b1a',
   grass: '#6f9464',
   dirt: '#87644c',
   sand: '#c8a36b',
@@ -135,6 +139,7 @@ export const BLOCK_COLORS: Record<BlockType, string> = {
 
 export const DIG_DURATION: Record<BlockType, number> = {
   air: 0,
+  bedrock: 0,
   grass: 3,
   dirt: 5,
   sand: 4,

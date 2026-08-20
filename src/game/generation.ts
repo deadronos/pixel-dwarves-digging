@@ -1,7 +1,9 @@
 import {
+  BEDROCK_DEPTH,
   BIOME_DEFINITIONS,
   BIOME_IDS,
   BUILDING_DEFINITIONS,
+  MINEABLE_BLOCKS,
   MINERAL_BLOCKS,
 } from './content'
 import { createRng, hashSeed, randomBetween, randomInt } from './rng'
@@ -107,7 +109,11 @@ export function generateWorld(seed: string, runNumber: number): World {
       const surface = surfaceHeights[x]
       const biome = biomes[x]
       const block =
-        y <= surface ? blockForDepth(random, biome, surface - y, x, y) : 'air'
+        y < BEDROCK_DEPTH
+          ? 'bedrock'
+          : y <= surface
+            ? blockForDepth(random, biome, surface - y, x, y)
+            : 'air'
       return { block, biome }
     },
   )
@@ -155,7 +161,8 @@ export function generateWorld(seed: string, runNumber: number): World {
 
 export function countSolids(world: World): number {
   return world.cells.reduce(
-    (total, cell) => total + (isSolid(cell.block) ? 1 : 0),
+    (total, cell) =>
+      total + (MINEABLE_BLOCKS.some((block) => block === cell.block) ? 1 : 0),
     0,
   )
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { BIOME_IDS, MINERAL_BLOCKS } from './content'
-import { generateWorld, getCell, isSolid } from './generation'
+import { BIOME_IDS, MINEABLE_BLOCKS, MINERAL_BLOCKS } from './content'
+import { countSolids, generateWorld, getCell, isSolid } from './generation'
 
 describe('generateWorld', () => {
   it('generates identical terrain for the same seed and run', () => {
@@ -72,5 +72,21 @@ describe('generateWorld', () => {
     ).length
 
     expect(mineralCount).toBeGreaterThan(0)
+  })
+
+  it('generates an indestructible bedrock floor beneath the mineable world', () => {
+    const world = generateWorld('bedrock-floor', 1)
+
+    expect(getCell(world, 0, 0).block).toBe('bedrock')
+    expect(isSolid('bedrock')).toBe(true)
+    expect(MINEABLE_BLOCKS).not.toContain('bedrock')
+  })
+
+  it('does not count bedrock as remaining clearable terrain', () => {
+    const world = generateWorld('bedrock-count', 1)
+    world.cells = world.cells.map((cell) => ({ ...cell, block: 'air' }))
+    world.cells[0] = { ...world.cells[0], block: 'bedrock' }
+
+    expect(countSolids(world)).toBe(0)
   })
 })

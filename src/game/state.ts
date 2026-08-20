@@ -88,6 +88,8 @@ export function createInitialSimulation(
     },
     constructionOrders: [],
     constructionPolicy,
+    accessRequests: [],
+    worldRevision: 0,
     tick: 0,
     totalCleared: 0,
     completed: false,

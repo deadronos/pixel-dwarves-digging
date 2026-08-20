@@ -1,7 +1,16 @@
-import { canPlaceBuilding } from './buildings'
+import { canPlaceBuilding, getPrimaryStockpile } from './buildings'
 import { BUILDING_DEFINITIONS } from './content'
-import { findPath } from './pathfinding'
 import {
+  findAdjacentPaths,
+  findPath,
+  isSupported,
+  simulateDigWorld,
+} from './pathfinding'
+import {
+  type AccessFailure,
+  type AccessRequest,
+  type BuildingType,
+  type ConstructionOrder,
   cloneInventory,
   type Inventory,
   type MineableBlockType,
@@ -13,6 +22,88 @@ import {
 export type StorageDestination = {
   id: string
   position: Position
+}
+
+export type DigSafety = {
+  safe: boolean
+  failure?: AccessFailure
+  storage?: StorageDestination
+}
+
+function accessSiteCandidates(request: AccessRequest): Array<{
+  type: Exclude<BuildingType, 'stockpile' | 'outpost'>
+  position: Position
+}> {
+  const { x, y } = request.target
+  return [
+    { type: 'ladder', position: { x, y: y - 1 } },
+    { type: 'ladder', position: { x, y: y + 1 } },
+    { type: 'ladder', position: { x: x - 1, y } },
+    { type: 'ladder', position: { x: x + 1, y } },
+    { type: 'bridge', position: { x: x - 1, y } },
+    { type: 'bridge', position: { x: x + 1, y } },
+  ]
+}
+
+export function planAccessConstructionOrder(
+  state: SimulationState,
+  request: AccessRequest,
+): SimulationState {
+  if (
+    request.status !== 'open' ||
+    state.constructionOrders.some(
+      (order) => order.accessRequestId === request.id,
+    )
+  ) {
+    return state
+  }
+
+  const stockpile = getPrimaryStockpile(state.world)
+  if (!stockpile) return state
+
+  for (const candidate of accessSiteCandidates(request)) {
+    const definition = BUILDING_DEFINITIONS[candidate.type]
+    if (!canPlaceBuilding(state.world, candidate)) continue
+    if (
+      !findAdjacentPaths(state.world, stockpile.position, candidate.position)[0]
+    ) {
+      continue
+    }
+
+    const buildingId = `${request.id}-${candidate.type}-${candidate.position.x}-${candidate.position.y}`
+    const order: ConstructionOrder = {
+      id: `${buildingId}-order`,
+      buildingId,
+      type: candidate.type,
+      required: { stone: definition.stone },
+      reserved: {},
+      delivered: {},
+      progress: 0,
+      reason: 'access',
+      accessRequestId: request.id,
+    }
+    return {
+      ...state,
+      world: {
+        ...state.world,
+        buildings: [
+          ...state.world.buildings,
+          {
+            id: buildingId,
+            type: candidate.type,
+            position: candidate.position,
+            width: definition.width,
+            height: definition.height,
+            level: 1,
+            construction: 'planned',
+          },
+        ],
+      },
+      constructionOrders: [...state.constructionOrders, order],
+    }
+  }
+
+  return state
 }
 
 function storageBuildings(world: World) {
@@ -76,6 +167,35 @@ export function selectStorageDestination(
   return selected
     ? { id: selected.building.id, position: selected.building.position }
     : null
+}
+
+export function assessDigSafety(
+  state: SimulationState,
+  stand: Position,
+  target: Position,
+): DigSafety {
+  const targetCell = state.world.cells[target.y * state.world.width + target.x]
+  if (
+    !targetCell ||
+    targetCell.block === 'air' ||
+    targetCell.block === 'bedrock'
+  ) {
+    return { safe: false, failure: 'support' }
+  }
+
+  const worldAfterDig = simulateDigWorld(state.world, target)
+  if (!isSupported(worldAfterDig, stand)) {
+    return { safe: false, failure: 'support' }
+  }
+
+  const storage = selectStorageDestination(
+    { ...state, world: worldAfterDig },
+    targetCell.block,
+    stand,
+  )
+  return storage
+    ? { safe: true, storage }
+    : { safe: false, failure: 'storage-route' }
 }
 
 export function depositCarriedMaterial(

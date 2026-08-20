@@ -74,6 +74,8 @@ function makeState(rows: string[]): SimulationState {
     },
     constructionOrders: [],
     constructionPolicy: 'balanced',
+    accessRequests: [],
+    worldRevision: 0,
     tick: 0,
     totalCleared: 0,
     completed: false,
@@ -172,6 +174,137 @@ describe('stepSimulation', () => {
 
     expect(result.dwarves[0].position).toEqual({ x: 2, y: 1 })
     expect(result.dwarves[0].movement).toBe('falling')
+  })
+
+  it('does not assign the only-support block below a dwarf as a dig', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) =>
+        building.position.x !== state.dwarves[0].position.x ||
+        building.position.y !== state.dwarves[0].position.y,
+    )
+    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].task.kind).toBe('idle')
+    expect(result.world.cells[1].block).toBe('dirt')
+  })
+
+  it('chooses safe work over a deeper unsafe target', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'dirt',
+      biome: 'meadow',
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].task.target).toEqual({ x: 2, y: 1 })
+  })
+
+  it('creates one deduplicated access request for unsafe valuable work', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) =>
+        building.position.x !== state.dwarves[0].position.x ||
+        building.position.y !== state.dwarves[0].position.y,
+    )
+    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+
+    const result = stepSimulation(state, 2)
+
+    expect(result.accessRequests).toHaveLength(1)
+    expect(result.accessRequests[0]).toEqual(
+      expect.objectContaining({
+        target: { x: 1, y: 0 },
+        status: 'open',
+      }),
+    )
+  })
+
+  it('assigns a safe side dig as access work before the unsafe target', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+    if (!stockpile) throw new Error('stockpile missing')
+    stockpile.position = { x: 0, y: 1 }
+    state.world.stockpile = { x: 0, y: 1 }
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.type === 'stockpile' || building.position.x !== 1,
+    )
+    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'dirt',
+      biome: 'meadow',
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].task.target).toEqual({ x: 2, y: 1 })
+    expect(result.dwarves[0].task.purpose).toBe('access')
+  })
+
+  it('does not clear a target when storage is unreachable or full', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'dirt',
+      biome: 'meadow',
+    }
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+    if (!stockpile?.storage) throw new Error('stockpile storage missing')
+    stockpile.storage = { capacity: 0, inventory: {} }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.world.cells[1 * result.world.width + 2].block).toBe('dirt')
+    expect(result.dwarves[0].task.kind).toBe('idle')
+  })
+
+  it('keeps carried material in recovery when storage cannot accept it', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+    if (!stockpile?.storage) throw new Error('stockpile storage missing')
+    stockpile.storage = { capacity: 0, inventory: {} }
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      carrying: 'dirt',
+      task: {
+        kind: 'haul',
+        target: { x: 1, y: 1 },
+        path: [],
+        progress: 0,
+        block: 'dirt',
+        buildingId: 'stockpile-1',
+      },
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].carrying).toBe('dirt')
+    expect(result.dwarves[0].task.purpose).toBe('recovery')
+    expect(result.dwarves[0].task.recoveryReason).toBe('storage-route')
+  })
+
+  it('marks a dwarf stranded instead of assigning new mining work', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = []
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      position: { x: 2, y: 2 },
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].movement).toBe('stranded')
+    expect(result.dwarves[0].task.purpose).toBe('recovery')
+    expect(result.dwarves[0].task.recoveryReason).toBe('stranded')
   })
 
   it('reserves different exposed targets for dwarves assigned in one tick', () => {

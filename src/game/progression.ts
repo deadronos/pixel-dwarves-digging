@@ -64,6 +64,8 @@ export function startPrestige(
     dwarves: createDwarves(state, world),
     inventory: { ...EMPTY_INVENTORY },
     constructionOrders: [],
+    accessRequests: [],
+    worldRevision: 0,
     tick: 0,
     totalCleared: 0,
     completed: false,

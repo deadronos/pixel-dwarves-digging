@@ -20,7 +20,7 @@ Open the local Vite URL. The simulation starts with three dwarves on a determini
 - import restores a JSON save after schema validation.
 - new run creates a new seed while preserving prestige upgrades.
 - reset clears all progress after confirmation.
-- full clear becomes available when the map has no solid blocks left.
+- full clear becomes available when the map has no mineable blocks left; the permanent bedrock floor remains.
 - relic reset becomes available after a relic discovery.
 
 The terrain viewport can be panned and zoomed with the pointer.
@@ -32,7 +32,7 @@ The terrain viewport can be panned and zoomed with the pointer.
     npm test -- --run
     npm run build
 
-The pure simulation core is tested independently of React or Three.js. It covers deterministic terrain, biome bands, grounded support-aware reachability, bridges and ladders, physical storage, autonomous dig/haul/build tasks, outpost planning, policy scoring, prestige, save migration, and the Zustand simulation store.
+The pure simulation core is tested independently of React or Three.js. It covers deterministic terrain, bedrock, biome bands, grounded support-aware reachability, safe post-dig routes, access-first stair-step mining, bridges and ladders, physical storage, autonomous dig/haul/build tasks, recovery behavior, outpost planning, policy scoring, prestige, save migration, and the Zustand simulation store.
 
 ## Architecture
 
@@ -40,14 +40,14 @@ The pure simulation core is tested independently of React or Three.js. It covers
 - src/game/buildings.ts defines building footprints, storage, support, and construction completion.
 - src/game/logistics.ts selects physical storage destinations, aggregates carried material, and plans expansion orders.
 - src/game/pathfinding.ts handles bounded grounded paths, ladders, bridges, and exposed work.
-- src/game/engine.ts advances dwarves through grounded movement, falling, digging, hauling, building, and completion.
+- src/game/engine.ts advances dwarves through grounded movement, falling, safe digging, access requests, hauling, building, recovery, and completion.
 - src/game/progression.ts handles prestige rewards and permanent upgrades.
 - src/game/serialization.ts defines the versioned JSON save envelope.
 - src/game/state.ts owns the fixed simulation timer, UI actions, and local persistence.
 - src/components/WorldCanvas.tsx renders the world through an orthographic R3F canvas.
 - src/components/Hud.tsx, ControlBar.tsx, and Inspector.tsx provide the DOM HUD and controls.
 
-The simulation state is plain JSON-compatible data. Save schema 2 stores buildings, per-building inventories, construction orders, and construction policy. Version 1 saves migrate their global inventory into a generated level-1 main stockpile. Offline progression is intentionally deferred, but the tick counter and serialized run state are ready to support elapsed-time catch-up later.
+The simulation state is plain JSON-compatible data. Save schema 3 stores buildings, per-building inventories, construction orders, access requests, recovery state, and construction policy. Version 1 saves migrate their global inventory into a generated level-1 main stockpile, and version 2 saves receive the bedrock floor and access defaults. Offline progression is intentionally deferred, but the tick counter and serialized run state are ready to support elapsed-time catch-up later.
 
 ## Toolchain note
 

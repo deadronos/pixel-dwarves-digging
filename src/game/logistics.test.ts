@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { stepSimulation } from './engine'
 import {
+  assessDigSafety,
   getAggregateInventory,
+  planAccessConstructionOrder,
   planExpansionOrder,
   selectStorageDestination,
 } from './logistics'
@@ -73,6 +75,8 @@ function makeStorageState(): SimulationState {
     },
     constructionOrders: [],
     constructionPolicy: 'balanced',
+    accessRequests: [],
+    worldRevision: 0,
     tick: 0,
     totalCleared: 0,
     completed: false,
@@ -98,8 +102,74 @@ function stepUntilCarrying(state: SimulationState): SimulationState {
 }
 
 describe('logistics helpers', () => {
+  it('plans an anchored reachable ladder for an access request', () => {
+    const state = makeStorageState()
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'air',
+      biome: 'meadow',
+    }
+    state.world.buildings.push({
+      id: 'bridge-anchor',
+      type: 'bridge',
+      position: { x: 1, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    })
+    const request = {
+      id: 'access-2-2',
+      target: { x: 2, y: 2 },
+      failure: 'support' as const,
+      priority: 20,
+      worldRevision: 0,
+      status: 'open' as const,
+    }
+    state.accessRequests = [request]
+
+    const planned = planAccessConstructionOrder(state, request)
+
+    expect(planned.constructionOrders).toContainEqual(
+      expect.objectContaining({
+        type: 'ladder',
+        reason: 'access',
+        accessRequestId: request.id,
+      }),
+    )
+  })
+
+  it('marks a supported dig with a storage route as safe', () => {
+    const state = makeStorageState()
+
+    expect(assessDigSafety(state, { x: 1, y: 1 }, { x: 2, y: 1 })).toEqual({
+      safe: true,
+      storage: { id: 'stockpile-1', position: { x: 0, y: 1 } },
+    })
+  })
+
+  it('rejects a dig that removes the dwarf support below its feet', () => {
+    const state = makeStorageState()
+
+    expect(assessDigSafety(state, { x: 1, y: 1 }, { x: 1, y: 0 })).toEqual({
+      safe: false,
+      failure: 'support',
+    })
+  })
+
+  it('rejects mining when no storage building has capacity and a route', () => {
+    const state = makeStorageState()
+    state.world.buildings[0].storage = { capacity: 0, inventory: {} }
+
+    expect(assessDigSafety(state, { x: 1, y: 1 }, { x: 2, y: 1 })).toEqual({
+      safe: false,
+      failure: 'storage-route',
+    })
+  })
+
   it('does not count a mined block as stored until deposit', () => {
-    const afterMining = stepUntilCarrying(makeStorageState())
+    const state = makeStorageState()
+    state.world.cells[1] = { block: 'bedrock', biome: 'meadow' }
+    const afterMining = stepUntilCarrying(state)
     const stockpile = afterMining.world.buildings[0]
 
     expect(afterMining.dwarves[0].carrying).toBe('dirt')
