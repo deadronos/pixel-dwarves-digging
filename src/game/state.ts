@@ -134,6 +134,7 @@ export function createGameStore(
               ...(policy.materialPriority ?? {}),
             },
           },
+          saveStatus: 'DIRTY',
         },
       })),
     setMaterialPriority: (material, enabled) =>
@@ -147,18 +148,21 @@ export function createGameStore(
               [material]: enabled,
             },
           },
+          saveStatus: 'DIRTY',
         },
       })),
     setConstructionPolicy: (constructionPolicy) =>
       set((current) => ({
         simulation: { ...current.simulation, constructionPolicy },
+        saveStatus: 'DIRTY',
       })),
     tickSimulation: () => {
       const current = get()
       if (current.paused) return
       const simulation = stepSimulation(current.simulation, current.speed)
-      set({ simulation })
-      if (simulation.tick % 20 === 0) writeLocalSave(simulation)
+      const autosaved = simulation.tick % 20 === 0
+      set({ simulation, saveStatus: autosaved ? 'SAVED' : 'DIRTY' })
+      if (autosaved) writeLocalSave(simulation)
     },
     startSimulation: () => {
       if (intervalId) return
@@ -229,10 +233,12 @@ export function createGameStore(
     },
     buyUpgrade: (upgrade) => {
       const simulation = purchaseUpgrade(get().simulation, upgrade)
-      set({ simulation, saveError: null })
+      set({ simulation, saveError: null, saveStatus: 'SAVED' })
       writeLocalSave(simulation)
     },
   }))
+
+  store.getState().loadLocalSave()
 
   return store
 }

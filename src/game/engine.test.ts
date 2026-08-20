@@ -513,7 +513,7 @@ describe('stepSimulation', () => {
       },
     ]
 
-    const assigned = stepSimulation(state, 1)
+    const assigned = stepSimulation(state, 2)
     expect(assigned.dwarves[0].task.kind).toBe('build')
     expect(assigned.dwarves[0].carrying).toBe('stone')
 
@@ -561,5 +561,78 @@ describe('stepSimulation', () => {
 
     expect(result.dwarves[0].carrying).toBe('dirt')
     expect(result.dwarves[0].task.kind).toBe('build')
+  })
+
+  it('does not assign one reserved construction unit to multiple dwarves', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings.push({
+      id: 'ladder-one-unit',
+      type: 'ladder',
+      position: { x: 3, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.constructionOrders = [
+      {
+        id: 'ladder-one-unit-order',
+        buildingId: 'ladder-one-unit',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: { stone: 1 },
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+      },
+    ]
+    state.dwarves = [0, 1, 2].map((index) => ({
+      ...state.dwarves[0],
+      id: `builder-${index}`,
+    }))
+
+    const result = stepSimulation(state, 1)
+
+    expect(
+      result.dwarves.filter((dwarf) => dwarf.task.kind === 'build'),
+    ).toHaveLength(1)
+    expect(
+      result.dwarves.filter((dwarf) => dwarf.carrying === 'stone'),
+    ).toHaveLength(1)
+  })
+
+  it('returns carried construction material when its order disappears', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings.push({
+      id: 'ladder-cancelled',
+      type: 'ladder',
+      position: { x: 3, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.constructionOrders = [
+      {
+        id: 'ladder-cancelled-order',
+        buildingId: 'ladder-cancelled',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: { stone: 1 },
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+      },
+    ]
+
+    const assigned = stepSimulation(state, 2)
+    const cancelled = {
+      ...assigned,
+      constructionOrders: [],
+    }
+    const result = stepSimulation(cancelled, 1)
+
+    expect(result.inventory.stone).toBe(1)
+    expect(result.dwarves[0].carrying).toBeNull()
   })
 })

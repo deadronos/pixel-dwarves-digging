@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest'
-import { createGameStore } from './state'
+import { beforeEach, describe, expect, it } from 'vitest'
+import { createGameStore, GAME_STORAGE_KEY } from './state'
+
+beforeEach(() => {
+  window.localStorage.clear()
+})
 
 describe('createGameStore', () => {
   it('starts a deterministic run with default policies', () => {
@@ -82,5 +86,27 @@ describe('createGameStore', () => {
 
     expect(store.getState().importSave(exported)).toBe(true)
     expect(store.getState().simulation.world.seed).toBe('save-test')
+  })
+
+  it('restores the latest local save when a fresh store starts', () => {
+    const saved = createGameStore('saved-seed')
+    saved.getState().saveLocally()
+
+    const fresh = createGameStore('fresh-seed')
+
+    expect(fresh.getState().simulation.world.seed).toBe('saved-seed')
+    expect(window.localStorage.getItem(GAME_STORAGE_KEY)).toContain(
+      'saved-seed',
+    )
+  })
+
+  it('marks the save dirty after the simulation advances', () => {
+    const store = createGameStore('dirty-save-seed')
+    store.getState().saveLocally()
+    expect(store.getState().saveStatus).toBe('SAVED')
+
+    store.getState().tickSimulation()
+
+    expect(store.getState().saveStatus).toBe('DIRTY')
   })
 })
