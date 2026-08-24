@@ -312,9 +312,7 @@ function canPlanAdditionalDepot(world: World): boolean {
     (building) =>
       building.type === 'depot' && building.construction === 'completed',
   ).length
-  const maxDepots = Math.ceil(
-    completedStorageCapacity(world) / baseCapacity,
-  )
+  const maxDepots = Math.ceil(completedStorageCapacity(world) / baseCapacity)
   return completedDepotCount < maxDepots
 }
 

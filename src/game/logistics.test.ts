@@ -500,13 +500,16 @@ describe('logistics helpers', () => {
   it('plans an overflow depot on an alternate perimeter cell', () => {
     const state = makeStorageState()
     state.world.height = 5
-    state.world.cells = Array.from({ length: state.world.width * 5 }, (_, index) => {
-      const y = Math.floor(index / state.world.width)
-      return {
-        block: y === 0 ? ('stone' as const) : ('air' as const),
-        biome: 'meadow' as const,
-      }
-    })
+    state.world.cells = Array.from(
+      { length: state.world.width * 5 },
+      (_, index) => {
+        const y = Math.floor(index / state.world.width)
+        return {
+          block: y === 0 ? ('stone' as const) : ('air' as const),
+          biome: 'meadow' as const,
+        }
+      },
+    )
     state.world.stockpile = { x: 1, y: 1 }
     state.world.buildings[0] = {
       ...state.world.buildings[0],
