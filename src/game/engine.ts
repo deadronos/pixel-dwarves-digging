@@ -599,6 +599,8 @@ function attemptEmergencyRecovery(
   )
   if (!plan) return null
 
+  const strandedRecovery =
+    dwarf.movement === 'stranded' || dwarf.task.recoveryReason === 'stranded'
   const inventory = usesReserve
     ? {
         ...state.inventory,
@@ -614,10 +616,9 @@ function attemptEmergencyRecovery(
     ...(retainedCarriedMaterial ? { block: retainedCarriedMaterial } : {}),
     buildingId: plan.destination.id,
     purpose: 'recovery' as const,
-    recoveryReason:
-      dwarf.movement === 'stranded'
-        ? ('stranded' as const)
-        : ('storage-route' as const),
+    recoveryReason: strandedRecovery
+      ? ('stranded' as const)
+      : ('storage-route' as const),
   }
 
   return {
@@ -818,6 +819,15 @@ function advanceDwarf(
   }
 
   const task = dwarf.task
+  if (
+    task.kind === 'idle' &&
+    task.purpose === 'recovery' &&
+    task.recoveryReason === 'stranded'
+  ) {
+    return (
+      attemptEmergencyRecovery(state, dwarf) ?? unchanged(dwarf, state.world)
+    )
+  }
 
   if (task.kind === 'idle') {
     if (dwarf.carrying) {

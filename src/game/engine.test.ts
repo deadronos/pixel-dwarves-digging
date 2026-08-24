@@ -395,6 +395,42 @@ describe('stepSimulation', () => {
     expect(result.dwarves[0].movement).toBe('falling')
   })
 
+  it('retries emergency recovery for a grounded stranded task', () => {
+    const state = makeState(['#####', '.....', '.....'])
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      position: { x: 2, y: 1 },
+      movement: 'grounded',
+      task: {
+        kind: 'idle',
+        path: [],
+        progress: 0,
+        purpose: 'recovery',
+        recoveryReason: 'stranded',
+      },
+    }
+    state.inventory.dirt = 1
+    state.safety = { phase: 'operational', emergencyStone: 1 }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.world.buildings).toContainEqual(
+      expect.objectContaining({
+        type: 'ladder',
+        position: { x: 2, y: 2 },
+        construction: 'completed',
+      }),
+    )
+    expect(result.dwarves[0].task).toEqual(
+      expect.objectContaining({
+        kind: 'haul',
+        purpose: 'recovery',
+        recoveryReason: 'stranded',
+      }),
+    )
+    expect(result.safety.emergencyStone).toBe(0)
+  })
+
   it('does not assign the only-support block below a dwarf as a dig', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.world.buildings = state.world.buildings.filter(
