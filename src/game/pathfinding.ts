@@ -1,11 +1,6 @@
 import { MINEABLE_BLOCK_SET } from './content'
 import { getCell } from './generation'
-import {
-  type BuildingState,
-  indexFor,
-  type Position,
-  type World,
-} from './types'
+import { indexFor, type Position, type World } from './types'
 
 const DIRECTIONS: Position[] = [
   { x: 0, y: 1 },
@@ -22,6 +17,15 @@ type SearchResult = {
   distance: Int32Array
 }
 
+type NavigationIndex = {
+  floors: Uint8Array
+  ladders: Uint8Array
+}
+
+const navigationIndexCache = new WeakMap<World, NavigationIndex>()
+const searchCache = new WeakMap<World, Map<string, SearchResult | null>>()
+const pathCache = new WeakMap<World, Map<string, Position[] | null>>()
+
 function isInBounds(world: World, position: Position): boolean {
   return (
     position.x >= 0 &&
@@ -31,26 +35,58 @@ function isInBounds(world: World, position: Position): boolean {
   )
 }
 
-function buildingAt(world: World, position: Position): BuildingState | null {
-  return (
-    world.buildings.find(
-      (building) =>
-        building.construction === 'completed' &&
-        position.x >= building.position.x &&
-        position.x < building.position.x + building.width &&
-        position.y >= building.position.y &&
-        position.y < building.position.y + building.height,
-    ) ?? null
-  )
+function createNavigationIndex(world: World): NavigationIndex {
+  const floors = new Uint8Array(world.width * world.height)
+  const ladders = new Uint8Array(world.width * world.height)
+
+  for (const building of world.buildings) {
+    if (building.construction !== 'completed') continue
+    for (
+      let y = building.position.y;
+      y < building.position.y + building.height;
+      y += 1
+    ) {
+      for (
+        let x = building.position.x;
+        x < building.position.x + building.width;
+        x += 1
+      ) {
+        if (!isInBounds(world, { x, y })) continue
+        const index = indexFor(x, y, world.width)
+        if (building.type === 'ladder') {
+          ladders[index] = 1
+        } else {
+          floors[index] = 1
+        }
+      }
+    }
+  }
+
+  return { floors, ladders }
+}
+
+function navigationIndex(world: World): NavigationIndex {
+  const cached = navigationIndexCache.get(world)
+  if (cached) return cached
+  const created = createNavigationIndex(world)
+  navigationIndexCache.set(world, created)
+  return created
 }
 
 function hasFloor(world: World, position: Position): boolean {
-  const building = buildingAt(world, position)
-  return building !== null && building.type !== 'ladder'
+  return (
+    navigationIndex(world).floors[
+      indexFor(position.x, position.y, world.width)
+    ] === 1
+  )
 }
 
 function hasLadder(world: World, position: Position): boolean {
-  return buildingAt(world, position)?.type === 'ladder'
+  return (
+    navigationIndex(world).ladders[
+      indexFor(position.x, position.y, world.width)
+    ] === 1
+  )
 }
 
 function isCleared(position: Position, cleared?: Position): boolean {
@@ -122,7 +158,7 @@ function positionFor(index: number, width: number): Position {
   return { x: index % width, y: Math.floor(index / width) }
 }
 
-function createSearch(
+function createSearchUncached(
   world: World,
   from: Position,
   cleared?: Position,
@@ -152,7 +188,11 @@ function createSearch(
         x: current.x + direction.x,
         y: current.y + direction.y,
       }
-      if (!canMoveBetween(world, current, next, cleared)) continue
+      if (!isWalkable(world, next, cleared)) continue
+      const vertical = current.x === next.x && current.y !== next.y
+      if (vertical && !hasLadder(world, current) && !hasLadder(world, next)) {
+        continue
+      }
 
       const nextIndex = indexFor(next.x, next.y, world.width)
       if (distance[nextIndex] !== -1) continue
@@ -165,6 +205,37 @@ function createSearch(
   }
 
   return { fromIndex, queue, count: tail, previous, distance }
+}
+
+function overrideKey(cleared?: Position): string {
+  return cleared ? `${cleared.x}:${cleared.y}` : '-'
+}
+
+function searchKey(from: Position, cleared?: Position): string {
+  return `${from.x}:${from.y}|${overrideKey(cleared)}`
+}
+
+function getSearch(
+  world: World,
+  from: Position,
+  cleared?: Position,
+): SearchResult | null {
+  let cache = searchCache.get(world)
+  if (!cache) {
+    cache = new Map()
+    searchCache.set(world, cache)
+  }
+
+  const key = searchKey(from, cleared)
+  if (cache.has(key)) return cache.get(key) ?? null
+
+  const search = createSearchUncached(world, from, cleared)
+  cache.set(key, search)
+  return search
+}
+
+function pathKey(from: Position, to: Position, cleared?: Position): string {
+  return `${from.x}:${from.y}|${to.x}:${to.y}|${overrideKey(cleared)}`
 }
 
 function reconstructPath(
@@ -195,7 +266,7 @@ export function findReachableExposedSolids(
   world: World,
   from: Position,
 ): ReachableExposedSolid[] {
-  const search = createSearch(world, from)
+  const search = getSearch(world, from)
   if (!search) return []
 
   const exposed = new Uint8Array(world.width * world.height)
@@ -236,17 +307,32 @@ export function findPath(
   to: Position,
   cleared?: Position,
 ): Position[] | null {
+  let cache = pathCache.get(world)
+  if (!cache) {
+    cache = new Map()
+    pathCache.set(world, cache)
+  }
+
+  const key = pathKey(from, to, cleared)
+  if (cache.has(key)) return cache.get(key) ?? null
+
+  let path: Position[] | null
   if (from.x === to.x && from.y === to.y) {
-    return isWalkable(world, from, cleared) ? [] : null
-  }
-  if (!isWalkable(world, from, cleared) || !isWalkable(world, to, cleared)) {
-    return null
+    path = isWalkable(world, from, cleared) ? [] : null
+  } else if (
+    !isWalkable(world, from, cleared) ||
+    !isWalkable(world, to, cleared)
+  ) {
+    path = null
+  } else {
+    const search = getSearch(world, from, cleared)
+    path = search
+      ? reconstructPath(search, indexFor(to.x, to.y, world.width), world.width)
+      : null
   }
 
-  const search = createSearch(world, from, cleared)
-  if (!search) return null
-
-  return reconstructPath(search, indexFor(to.x, to.y, world.width), world.width)
+  cache.set(key, path)
+  return path
 }
 
 export function findAdjacentPaths(

@@ -9,6 +9,8 @@ An autonomous 2D side-on pixel excavation simulation built with React 19, TypeSc
 
 Open the local Vite URL. The simulation starts with three dwarves on a deterministic 160 × 80 terrain slice and advances on a fixed 10-tick-per-second simulation loop.
 
+The simulation targets less than 100 ms of work per tick so the 1×/2×/4× controls retain headroom for rendering and input.
+
 ## Controls
 
 - pause / resume and 1×, 2×, 4× control simulation speed.
