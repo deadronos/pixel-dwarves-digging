@@ -7,6 +7,8 @@ import {
   isBootstrapProtectedTarget,
   planAccessConstructionOrder,
   planExpansionOrder,
+  planOverflowDepotOrder,
+  recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
 import { EMPTY_INVENTORY, type SimulationState } from './types'
@@ -393,6 +395,29 @@ describe('logistics helpers', () => {
     })
   })
 
+  it('redirects a full stockpile haul to a physical overflow depot', () => {
+    const state = makeStorageState()
+    state.world.buildings[0].storage = {
+      capacity: 120,
+      inventory: { stone: 120 },
+    }
+    state.world.buildings.push({
+      id: 'depot-1',
+      type: 'depot',
+      position: { x: 4, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+      storage: { capacity: 24, inventory: {} },
+    })
+
+    expect(selectStorageDestination(state, 'stone', { x: 3, y: 1 })).toEqual({
+      id: 'depot-1',
+      position: { x: 4, y: 1 },
+    })
+  })
+
   it('reserves the last storage slot for an active haul', () => {
     const state = makeStorageState()
     state.world.buildings[0].storage = { capacity: 1, inventory: {} }
@@ -425,6 +450,10 @@ describe('logistics helpers', () => {
     const state = makeStorageState()
     state.constructionPolicy = 'expand'
     state.inventory.stone = 12
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'air',
+      biome: 'meadow',
+    }
 
     const planned = planExpansionOrder(state)
 
@@ -436,5 +465,69 @@ describe('logistics helpers', () => {
         construction: 'planned',
       }),
     )
+  })
+
+  it('does not plan an outpost when its construction site is unreachable', () => {
+    const state = makeStorageState()
+    state.constructionPolicy = 'expand'
+    state.inventory.stone = 12
+
+    expect(planExpansionOrder(state).constructionOrders).toEqual([])
+  })
+
+  it('plans a reachable overflow depot when storage is nearly full', () => {
+    const state = makeStorageState()
+    state.inventory.stone = 4
+    state.world.buildings[0].storage = {
+      capacity: 120,
+      inventory: { stone: 116, dirt: 4 },
+    }
+
+    const planned = planOverflowDepotOrder(state)
+
+    expect(planned.constructionOrders).toContainEqual(
+      expect.objectContaining({
+        type: 'depot',
+        reason: 'capacity',
+        required: { stone: 4 },
+      }),
+    )
+    expect(planned.world.buildings).toContainEqual(
+      expect.objectContaining({ type: 'depot', construction: 'planned' }),
+    )
+  })
+
+  it('recovers an unreachable planned outpost without losing its reservation', () => {
+    const state = makeStorageState()
+    state.inventory.stone = 0
+    state.world.buildings.push({
+      id: 'outpost-stale',
+      type: 'outpost',
+      position: { x: 4, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.constructionOrders = [
+      {
+        id: 'outpost-stale-order',
+        buildingId: 'outpost-stale',
+        type: 'outpost',
+        required: { stone: 4 },
+        reserved: { stone: 4 },
+        delivered: {},
+        progress: 0,
+        reason: 'outpost',
+      },
+    ]
+
+    const recovered = recoverStaleOutpostOrders(state)
+
+    expect(recovered.world.buildings).not.toContainEqual(
+      expect.objectContaining({ id: 'outpost-stale' }),
+    )
+    expect(recovered.constructionOrders).toEqual([])
+    expect(recovered.inventory.stone).toBe(4)
   })
 })

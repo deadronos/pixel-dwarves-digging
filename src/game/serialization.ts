@@ -39,6 +39,7 @@ const BLOCK_TYPES = new Set(['air', 'bedrock', ...MINEABLE_BLOCKS])
 const BUILDING_TYPES: readonly BuildingType[] = [
   'stockpile',
   'outpost',
+  'depot',
   'bridge',
   'ladder',
 ]
@@ -266,7 +267,7 @@ function isConstructionOrder(value: unknown): boolean {
     isRecord(value) &&
     typeof value.id === 'string' &&
     typeof value.buildingId === 'string' &&
-    ['outpost', 'bridge', 'ladder'].includes(value.type as string) &&
+    ['outpost', 'depot', 'bridge', 'ladder'].includes(value.type as string) &&
     isInventoryRecord(value.required, true) &&
     isInventoryRecord(value.reserved, true) &&
     isInventoryRecord(value.delivered, true) &&

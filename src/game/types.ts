@@ -34,7 +34,12 @@ export type Position = {
   y: number
 }
 
-export type BuildingType = 'stockpile' | 'outpost' | 'bridge' | 'ladder'
+export type BuildingType =
+  | 'stockpile'
+  | 'outpost'
+  | 'depot'
+  | 'bridge'
+  | 'ladder'
 export type BuildingConstruction =
   | 'completed'
   | 'planned'

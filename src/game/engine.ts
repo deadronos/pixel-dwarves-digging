@@ -26,6 +26,8 @@ import {
   isBootstrapProtectedTarget,
   planAccessConstructionOrder,
   planExpansionOrder,
+  planOverflowDepotOrder,
+  recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
 import {
@@ -38,6 +40,7 @@ import {
 } from './pathfinding'
 import {
   type AccessRequest,
+  type ConstructionOrder,
   cloneInventory,
   type DwarfState,
   type Inventory,
@@ -442,12 +445,14 @@ function chooseBuildOrder(
         ? [{ orderId: order.id, reason: order.reason, material, ...route }]
         : []
     })
-    .sort(
-      (first, second) =>
-        Number(first.reason !== 'access') -
-          Number(second.reason !== 'access') ||
-        first.path.length - second.path.length,
-    )
+    .sort((first, second) => {
+      const rank = (reason: ConstructionOrder['reason']) =>
+        reason === 'access' ? 0 : reason === 'capacity' ? 1 : 2
+      return (
+        rank(first.reason) - rank(second.reason) ||
+        first.path.length - second.path.length
+      )
+    })
 
   return candidates[0] ?? null
 }
@@ -879,11 +884,11 @@ function advanceDwarf(
           })
         )
       })
-      .sort(
-        (first, second) =>
-          Number(first.reason !== 'access') -
-          Number(second.reason !== 'access'),
-      )[0]
+      .sort((first, second) => {
+        const rank = (reason: ConstructionOrder['reason']) =>
+          reason === 'access' ? 0 : reason === 'capacity' ? 1 : 2
+        return rank(first.reason) - rank(second.reason)
+      })[0]
     if (orderNeedingMaterials) {
       const reservedState = reserveConstructionMaterials(
         state,
@@ -1225,10 +1230,16 @@ function advanceDwarf(
 function stepOnce(state: SimulationState): SimulationState {
   if (state.completed) return { ...state, tick: state.tick + 1 }
 
+  const recoveredState = recoverStaleOutpostOrders(state)
+  const requestedState =
+    state.safety.phase === 'blocked'
+      ? reopenResolvedAccessRequests(recoveredState)
+      : planAccessRequests(recoveredState)
+  const capacityState = planOverflowDepotOrder(requestedState)
   const plannedState =
     state.safety.phase === 'blocked'
-      ? reopenResolvedAccessRequests(state)
-      : planExpansionOrder(planAccessRequests(state))
+      ? capacityState
+      : planExpansionOrder(capacityState)
 
   const nextState: SimulationState = {
     ...plannedState,

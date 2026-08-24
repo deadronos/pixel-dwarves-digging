@@ -42,6 +42,9 @@ export default function Inspector() {
   const outpostCount = simulation.world.buildings.filter(
     (building) => building.type === 'outpost',
   ).length
+  const depotCount = simulation.world.buildings.filter(
+    (building) => building.type === 'depot',
+  ).length
   const openAccessRequests = simulation.accessRequests.filter(
     (request) => request.status === 'open',
   ).length
@@ -104,6 +107,10 @@ export default function Inspector() {
           <div>
             <dt>outposts</dt>
             <dd>{outpostCount}</dd>
+          </div>
+          <div>
+            <dt>depots</dt>
+            <dd>{depotCount}</dd>
           </div>
           <div>
             <dt>building</dt>
