@@ -1109,7 +1109,12 @@ function advanceDwarf(
 
   if (task.kind === 'dig' && task.target) {
     const target = task.target
-    if (distance(dwarf.position, target) !== 1) {
+    const adjacent =
+      Math.max(
+        Math.abs(dwarf.position.x - target.x),
+        Math.abs(dwarf.position.y - target.y),
+      ) === 1
+    if (!adjacent) {
       return invalidateTask(state, dwarf)
     }
     const targetCell =

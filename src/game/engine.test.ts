@@ -222,6 +222,20 @@ describe('stepSimulation', () => {
     expect(moved.dwarves[0].task.kind).toBe('dig')
   })
 
+  it('completes a diagonal dig instead of invalidating it', () => {
+    const state = makeState(['#####', '.....', '..d..'])
+    state.world.cells = state.world.cells.map((cell, index) =>
+      index < state.world.width ? { ...cell, block: 'bedrock' as const } : cell,
+    )
+
+    const result = stepSimulation(state, 6)
+
+    expect(result.totalCleared).toBe(1)
+    expect(result.world.cells[2 * result.world.width + 2].block).toBe('air')
+    expect(result.dwarves[0].carrying).toBe('dirt')
+    expect(result.dwarves[0].task.kind).toBe('haul')
+  })
+
   it('lands a dwarf after a one-cell emergency support drop', () => {
     const result = stepSimulation(makeEmergencyDropState(1), 6)
 
