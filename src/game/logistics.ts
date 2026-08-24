@@ -1,14 +1,20 @@
-import { canPlaceBuilding, getPrimaryStockpile } from './buildings'
+import {
+  canPlaceBuilding,
+  getPrimaryStockpile,
+  returnMaterialToStorage,
+} from './buildings'
 import {
   BUILDING_DEFINITIONS,
   COMMON_BUILDING_MATERIALS,
   getEmergencyReserveMaterial,
+  OVERFLOW_DEPOT_TRIGGER_CAPACITY,
   STARTER_PROTECTED_RADIUS,
 } from './content'
 import { findAdjacentPaths, findPath, isSupported } from './pathfinding'
 import {
   type AccessFailure,
   type AccessRequest,
+  type BuildingState,
   type BuildingType,
   type CommonBuildingMaterial,
   type ConstructionOrder,
@@ -282,6 +288,86 @@ function storageBuildings(world: World) {
   )
 }
 
+function completedBaseStockpileCapacity(world: World): number {
+  return world.buildings
+    .filter(
+      (building) =>
+        building.type === 'stockpile' && building.construction === 'completed',
+    )
+    .reduce((total, building) => total + (building.storage?.capacity ?? 0), 0)
+}
+
+function completedStorageCapacity(world: World): number {
+  return storageBuildings(world).reduce(
+    (total, building) => total + (building.storage?.capacity ?? 0),
+    0,
+  )
+}
+
+function canPlanAdditionalDepot(world: World): boolean {
+  const baseCapacity = completedBaseStockpileCapacity(world)
+  if (baseCapacity === 0) return false
+
+  const completedDepotCount = world.buildings.filter(
+    (building) =>
+      building.type === 'depot' && building.construction === 'completed',
+  ).length
+  const maxDepots = Math.ceil(completedStorageCapacity(world) / baseCapacity)
+  return completedDepotCount < maxDepots
+}
+
+function storagePerimeterCandidates(
+  building: Pick<BuildingState, 'position' | 'width' | 'height'>,
+): Position[] {
+  const candidates: Position[] = []
+  for (
+    let x = building.position.x;
+    x < building.position.x + building.width;
+    x += 1
+  ) {
+    candidates.push(
+      { x, y: building.position.y - 1 },
+      { x, y: building.position.y + building.height },
+    )
+  }
+  for (
+    let y = building.position.y;
+    y < building.position.y + building.height;
+    y += 1
+  ) {
+    candidates.push(
+      { x: building.position.x - 1, y },
+      { x: building.position.x + building.width, y },
+    )
+  }
+  return candidates.filter(
+    (candidate, index, all) =>
+      all.findIndex(
+        (other) => other.x === candidate.x && other.y === candidate.y,
+      ) === index,
+  )
+}
+
+function hasReachableConstructionSite(
+  state: SimulationState,
+  position: Position,
+): boolean {
+  const sources = [
+    ...state.dwarves.map((dwarf) => dwarf.position),
+    ...storageBuildings(state.world).map((building) => building.position),
+  ]
+  return sources.some(
+    (source) => findAdjacentPaths(state.world, source, position).length > 0,
+  )
+}
+
+function hasActiveBuilder(state: SimulationState, buildingId: string): boolean {
+  return state.dwarves.some(
+    (dwarf) =>
+      dwarf.task.kind === 'build' && dwarf.task.buildingId === buildingId,
+  )
+}
+
 function storedCount(inventory: Partial<Inventory>): number {
   return Object.values(inventory).reduce(
     (total, amount) => total + (amount ?? 0),
@@ -480,11 +566,15 @@ export function depositCarriedMaterial(
 }
 
 export function planExpansionOrder(state: SimulationState): SimulationState {
-  if (state.constructionPolicy !== 'expand') return state
+  if (state.constructionPolicy === 'conserve') return state
   if (
     state.world.buildings.some((building) => building.type === 'outpost') ||
     state.constructionOrders.some((order) => order.type === 'outpost')
   ) {
+    return state
+  }
+
+  if (state.constructionOrders.some((order) => order.reason === 'capacity')) {
     return state
   }
 
@@ -496,6 +586,7 @@ export function planExpansionOrder(state: SimulationState): SimulationState {
   for (let x = state.world.start.x + 3; x < state.world.width - 1; x += 1) {
     const position = { x, y: state.world.start.y }
     if (!canPlaceBuilding(state.world, { type: 'outpost', position })) continue
+    if (!hasReachableConstructionSite(state, position)) continue
 
     const buildingId = `outpost-${state.world.buildings.length + 1}`
     const orderId = `${buildingId}-order`
@@ -533,4 +624,127 @@ export function planExpansionOrder(state: SimulationState): SimulationState {
   }
 
   return state
+}
+
+export function planOverflowDepotOrder(
+  state: SimulationState,
+): SimulationState {
+  if (getAvailableCapacity(state.world) > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
+    return state
+  }
+  if (
+    !canPlanAdditionalDepot(state.world) ||
+    state.constructionOrders.some((order) => order.type === 'depot')
+  ) {
+    return state
+  }
+
+  const definition = BUILDING_DEFINITIONS.depot
+  if (getAvailableConstructionMaterial(state, 'stone') < definition.stone) {
+    return state
+  }
+
+  const storage = storageBuildings(state.world)
+  const candidates = storage.flatMap(storagePerimeterCandidates)
+
+  for (const position of candidates) {
+    if (!canPlaceBuilding(state.world, { type: 'depot', position })) continue
+    if (!hasReachableConstructionSite(state, position)) continue
+
+    const buildingId = `depot-${state.world.buildings.length + 1}`
+    return {
+      ...state,
+      world: {
+        ...state.world,
+        buildings: [
+          ...state.world.buildings,
+          {
+            id: buildingId,
+            type: 'depot',
+            position,
+            width: definition.width,
+            height: definition.height,
+            level: 1,
+            construction: 'planned',
+          },
+        ],
+      },
+      constructionOrders: [
+        ...state.constructionOrders,
+        {
+          id: `${buildingId}-order`,
+          buildingId,
+          type: 'depot',
+          required: { stone: definition.stone },
+          reserved: {},
+          delivered: {},
+          progress: 0,
+          reason: 'capacity',
+        },
+      ],
+    }
+  }
+
+  return state
+}
+
+function returnOrderMaterials(
+  state: SimulationState,
+  order: ConstructionOrder,
+): SimulationState | null {
+  let next = state
+  for (const material of Object.keys(order.required) as Array<
+    keyof Inventory
+  >) {
+    const amount =
+      (order.reserved[material] ?? 0) + (order.delivered[material] ?? 0)
+    for (let count = 0; count < amount; count += 1) {
+      const returned = returnMaterialToStorage(next.world, material)
+      if (!returned.stored) return null
+      next = {
+        ...next,
+        world: returned.world,
+        inventory: {
+          ...next.inventory,
+          [material]: next.inventory[material] + 1,
+        },
+      }
+    }
+  }
+  return next
+}
+
+export function recoverStaleOutpostOrders(
+  state: SimulationState,
+): SimulationState {
+  let next = state
+  for (const order of state.constructionOrders) {
+    if (order.reason !== 'outpost') continue
+    const building = next.world.buildings.find(
+      (candidate) => candidate.id === order.buildingId,
+    )
+    if (
+      building?.construction !== 'planned' ||
+      hasActiveBuilder(next, building.id) ||
+      hasReachableConstructionSite(next, building.position)
+    ) {
+      continue
+    }
+
+    const returned = returnOrderMaterials(next, order)
+    if (!returned) continue
+    next = {
+      ...returned,
+      world: {
+        ...returned.world,
+        buildings: returned.world.buildings.filter(
+          (candidate) => candidate.id !== building.id,
+        ),
+      },
+      constructionOrders: returned.constructionOrders.filter(
+        (candidate) => candidate.id !== order.id,
+      ),
+    }
+  }
+  return next
 }

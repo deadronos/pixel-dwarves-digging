@@ -9,6 +9,7 @@ import type {
 export const BUILDING_DEFINITIONS = {
   stockpile: { width: 3, height: 2, capacity: 120 },
   outpost: { width: 2, height: 2, capacity: 48, stone: 12 },
+  depot: { width: 1, height: 1, capacity: 24, stone: 4 },
   bridge: { width: 1, height: 1, stone: 2 },
   ladder: { width: 1, height: 1, stone: 1 },
 } as const
@@ -20,6 +21,7 @@ export const STARTER_STONE_VEIN_LENGTH = 3
 export const STARTER_STONE_SUPPLY = 2
 export const STARTER_EMERGENCY_STONE = 1
 export const MAX_OPEN_ACCESS_REQUESTS = 3
+export const OVERFLOW_DEPOT_TRIGGER_CAPACITY = 12
 export const NO_PROGRESS_TICK_LIMIT = 20
 export const BOOTSTRAP_NO_PROGRESS_TICK_LIMIT = 3
 

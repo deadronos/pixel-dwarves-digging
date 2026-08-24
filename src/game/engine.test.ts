@@ -602,6 +602,30 @@ describe('stepSimulation', () => {
     expect(result.constructionOrders).toEqual([])
   })
 
+  it('allows a blocked storage-full state to plan a capacity depot', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.type !== 'bridge' || building.position.x > 1,
+    )
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+    if (!stockpile?.storage) throw new Error('fixture stockpile missing')
+    stockpile.storage = { capacity: 120, inventory: { stone: 120 } }
+    state.inventory.stone = 120
+    state.safety = {
+      phase: 'blocked',
+      emergencyStone: 0,
+      blockedReason: 'storage-full',
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.constructionOrders[0]).toEqual(
+      expect.objectContaining({ type: 'depot', reason: 'capacity' }),
+    )
+  })
+
   it('reports an unroutable access request instead of silently idling', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.dwarves = []
@@ -778,6 +802,59 @@ describe('stepSimulation', () => {
         id: 'outpost-1',
         construction: 'completed',
       }),
+    )
+  })
+
+  it('assigns a capacity depot before an optional outpost', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings.push(
+      {
+        id: 'outpost-optional',
+        type: 'outpost',
+        position: { x: 3, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'planned',
+      },
+      {
+        id: 'depot-capacity',
+        type: 'depot',
+        position: { x: 4, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'planned',
+      },
+    )
+    state.inventory.stone = 8
+    state.constructionOrders = [
+      {
+        id: 'outpost-optional-order',
+        buildingId: 'outpost-optional',
+        type: 'outpost',
+        required: { stone: 4 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'outpost',
+      },
+      {
+        id: 'depot-capacity-order',
+        buildingId: 'depot-capacity',
+        type: 'depot',
+        required: { stone: 4 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'capacity',
+      },
+    ]
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].task.constructionOrderId).toBe(
+      'depot-capacity-order',
     )
   })
 
