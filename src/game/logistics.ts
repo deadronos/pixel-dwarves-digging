@@ -10,7 +10,12 @@ import {
   OVERFLOW_DEPOT_TRIGGER_CAPACITY,
   STARTER_PROTECTED_RADIUS,
 } from './content'
-import { findAdjacentPaths, findPath, isSupported } from './pathfinding'
+import {
+  findAdjacentPaths,
+  findPath,
+  isSupported,
+  simulateDigWorld,
+} from './pathfinding'
 import {
   type AccessFailure,
   type AccessRequest,
@@ -35,6 +40,10 @@ export type DigSafety = {
   safe: boolean
   failure?: AccessFailure
   storage?: StorageDestination
+  dropDistance?: number
+  landing?: Position
+  recoveryWorld?: World
+  recoveryMaterial?: CommonBuildingMaterial
 }
 
 export type EmergencyLadderPlan = {
@@ -42,6 +51,7 @@ export type EmergencyLadderPlan = {
   world: World
   destination: StorageDestination
   path: Position[]
+  material?: CommonBuildingMaterial
 }
 
 const digSafetyCache = new WeakMap<World, Map<string, DigSafety>>()
@@ -128,6 +138,7 @@ export function findEmergencyLadderPlan(
   state: SimulationState,
   from: Position,
   block: MineableBlockType,
+  material?: CommonBuildingMaterial,
 ): EmergencyLadderPlan | null {
   const candidates = [
     from,
@@ -166,7 +177,7 @@ export function findEmergencyLadderPlan(
     if (!destination) continue
     const path = findPath(world, from, destination.position)
     if (!path) continue
-    return { position, world, destination, path }
+    return { position, world, destination, path, material }
   }
 
   return null
@@ -511,7 +522,7 @@ function assessDigSafetyUncached(
   }
 
   if (!isSupported(state.world, stand, target)) {
-    return { safe: false, failure: 'support' }
+    return assessSupportDropSafety(state, stand, target, targetCell.block)
   }
 
   const storage = selectStorageDestination(
@@ -524,6 +535,70 @@ function assessDigSafetyUncached(
   return storage
     ? { safe: true, storage }
     : { safe: false, failure: 'storage-route' }
+}
+
+function assessSupportDropSafety(
+  state: SimulationState,
+  stand: Position,
+  target: Position,
+  block: MineableBlockType,
+): DigSafety {
+  if (target.x !== stand.x || target.y !== stand.y - 1) {
+    return { safe: false, failure: 'support' }
+  }
+
+  const recoveryMaterial = chooseCommonConstructionMaterial(state, 1)
+  const hasIdleHelper = state.dwarves.some(
+    (dwarf) =>
+      dwarf.task.kind === 'idle' &&
+      !dwarf.carrying &&
+      (dwarf.position.x !== stand.x || dwarf.position.y !== stand.y),
+  )
+  if (!hasIdleHelper && !recoveryMaterial) {
+    return { safe: false, failure: 'support' }
+  }
+
+  const recoveryWorld = simulateDigWorld(state.world, target)
+  const recoveryState = { ...state, world: recoveryWorld }
+  for (const dropDistance of [1, 2]) {
+    const landing = { x: stand.x, y: stand.y - dropDistance }
+    const landingCell =
+      recoveryWorld.cells[landing.y * recoveryWorld.width + landing.x]
+    if (landingCell?.block !== 'air') continue
+    if (!isSupported(recoveryWorld, landing)) continue
+
+    const storage = selectStorageDestination(recoveryState, block, landing)
+    if (storage) {
+      return {
+        safe: true,
+        storage,
+        dropDistance,
+        landing,
+        recoveryWorld,
+      }
+    }
+
+    if (recoveryMaterial) {
+      const ladderPlan = findEmergencyLadderPlan(
+        recoveryState,
+        landing,
+        block,
+        recoveryMaterial,
+      )
+      if (ladderPlan) {
+        return {
+          safe: true,
+          storage: ladderPlan.destination,
+          dropDistance,
+          landing,
+          recoveryWorld: ladderPlan.world,
+          recoveryMaterial: ladderPlan.material,
+        }
+      }
+    }
+  }
+
+  return { safe: false, failure: 'support' }
 }
 
 export function assessDigSafety(

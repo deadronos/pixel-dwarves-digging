@@ -295,6 +295,23 @@ export function reserveConstructionMaterials(
   }))
 }
 
+export function consumeConstructionMaterial(
+  state: SimulationState,
+  material: keyof Inventory,
+  amount: number,
+): SimulationState | null {
+  if (amount < 0 || state.inventory[material] < amount) return null
+
+  return {
+    ...state,
+    world: removeFromStorage(state.world, material, amount),
+    inventory: {
+      ...state.inventory,
+      [material]: state.inventory[material] - amount,
+    },
+  }
+}
+
 export function completeConstruction(
   state: SimulationState,
   orderId: string,
