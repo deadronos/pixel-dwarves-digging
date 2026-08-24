@@ -105,6 +105,72 @@ function stepUntilCarrying(state: SimulationState): SimulationState {
 }
 
 describe('logistics helpers', () => {
+  it('prioritizes the main stockpile for nearest-stockpile hauling', () => {
+    const state = makeStorageState()
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'air',
+      biome: 'meadow',
+    }
+    state.dwarves[0].position = { x: 3, y: 1 }
+    state.world.buildings.push({
+      id: 'outpost-1',
+      type: 'outpost',
+      position: { x: 2, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+      storage: { capacity: 48, inventory: {} },
+    })
+
+    const destination = selectStorageDestination(
+      state,
+      'dirt',
+      state.dwarves[0].position,
+      state.dwarves[0].id,
+    )
+
+    expect(destination?.id).toBe('stockpile-1')
+  })
+
+  it('finishes a dwarf current haul route before choosing another storage', () => {
+    const state = makeStorageState()
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'air',
+      biome: 'meadow',
+    }
+    state.policy.haulingPreference = 'finish-current-route'
+    state.dwarves[0].position = { x: 3, y: 1 }
+    state.dwarves[0].carrying = 'dirt'
+    state.dwarves[0].task = {
+      kind: 'haul',
+      target: { x: 2, y: 1 },
+      path: [],
+      progress: 0,
+      block: 'dirt',
+      buildingId: 'outpost-1',
+    }
+    state.world.buildings.push({
+      id: 'outpost-1',
+      type: 'outpost',
+      position: { x: 2, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+      storage: { capacity: 48, inventory: {} },
+    })
+
+    const destination = selectStorageDestination(
+      state,
+      'dirt',
+      state.dwarves[0].position,
+      state.dwarves[0].id,
+    )
+
+    expect(destination?.id).toBe('outpost-1')
+  })
+
   it('plans an anchored reachable ladder for an access request', () => {
     const state = makeStorageState()
     state.inventory.stone = 1

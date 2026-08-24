@@ -288,6 +288,8 @@ export function completeConstruction(
   )
   if (!building) return state
 
+  if (!canCompleteConstruction(state.world, order.buildingId)) return state
+
   const materialsComplete = Object.entries(order.required).every(
     ([material, required]) =>
       (order.delivered[material as keyof Inventory] ?? 0) >= (required ?? 0),

@@ -42,7 +42,7 @@ function makeBuildingState(): SimulationState {
       {
         id: 'outpost-1',
         type: 'outpost',
-        position: { x: 5, y: 2 },
+        position: { x: 5, y: 3 },
         width: 2,
         height: 1,
         level: 1,
@@ -182,6 +182,31 @@ describe('building helpers', () => {
         position: { x: 5, y: 2 },
       }),
     ).toBe(false)
+  })
+
+  it('does not complete a planned building after a reservation conflict appears', () => {
+    const state = makeBuildingState()
+    state.world.buildings.push({
+      id: 'late-conflict',
+      type: 'outpost',
+      position: { x: 6, y: 2 },
+      width: 2,
+      height: 2,
+      level: 1,
+      construction: 'planned',
+    })
+
+    const completed = completeConstruction(state, 'outpost-order')
+
+    expect(completed.world.buildings).toContainEqual(
+      expect.objectContaining({
+        id: 'outpost-1',
+        construction: 'planned',
+      }),
+    )
+    expect(completed.constructionOrders).toContainEqual(
+      expect.objectContaining({ id: 'outpost-order' }),
+    )
   })
 
   it('reserves and consumes construction stone exactly once', () => {

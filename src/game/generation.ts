@@ -56,6 +56,7 @@ function blockForDepth(
   depth: number,
   x: number,
   y: number,
+  prospecting: number,
 ): BlockType {
   const definition = BIOME_DEFINITIONS[biome]
 
@@ -64,10 +65,11 @@ function blockForDepth(
   if (depth <= 9) return definition.subsoil
 
   const mineralRoll = random()
-  if (mineralRoll < 0.018 && y < 58) return 'relic'
-  if (mineralRoll < 0.07) return 'crystal'
-  if (mineralRoll < 0.16) return 'iron'
-  if (mineralRoll < 0.26) return 'coal'
+  const prospectingBonus = Math.min(0.2, prospecting * 0.015)
+  if (mineralRoll < 0.018 + prospectingBonus && y < 58) return 'relic'
+  if (mineralRoll < 0.07 + prospectingBonus) return 'crystal'
+  if (mineralRoll < 0.16 + prospectingBonus) return 'iron'
+  if (mineralRoll < 0.26 + prospectingBonus) return 'coal'
   if ((x + y) % 17 === 0 && depth > 22) return 'iron'
 
   return definition.deep
@@ -96,7 +98,11 @@ function carveStarterPocket(
   set(stockpile.x, stockpile.y, 'air')
 }
 
-export function generateWorld(seed: string, runNumber: number): World {
+export function generateWorld(
+  seed: string,
+  runNumber: number,
+  prospecting = 0,
+): World {
   const random = createRng(hashSeed(seed, runNumber))
   const surfaceHeights = Array.from({ length: MAP_WIDTH }, (_, x) =>
     surfaceHeight(random, x),
@@ -113,7 +119,7 @@ export function generateWorld(seed: string, runNumber: number): World {
         y < BEDROCK_DEPTH
           ? 'bedrock'
           : y <= surface
-            ? blockForDepth(random, biome, surface - y, x, y)
+            ? blockForDepth(random, biome, surface - y, x, y, prospecting)
             : 'air'
       return { block, biome }
     },

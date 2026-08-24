@@ -106,6 +106,25 @@ export default function ControlBar() {
         </select>
       </div>
 
+      <div className="control-group">
+        <label className="control-label" htmlFor="hauling-preference">
+          HAUL
+        </label>
+        <select
+          id="hauling-preference"
+          value={policy.haulingPreference}
+          onChange={(event) =>
+            setPolicy({
+              haulingPreference: event.target
+                .value as typeof policy.haulingPreference,
+            })
+          }
+        >
+          <option value="nearest-stockpile">main stockpile first</option>
+          <option value="finish-current-route">finish current route</option>
+        </select>
+      </div>
+
       <div className="control-group material-priority">
         <span className="control-label">PRIORITY</span>
         {(['coal', 'iron', 'crystal', 'relic'] as const).map((material) => (

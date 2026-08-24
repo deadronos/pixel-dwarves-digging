@@ -537,12 +537,15 @@ function invalidateTask(
 }
 
 function recoveryTask(dwarf: DwarfState, reason: 'stranded' | 'storage-route') {
+  const currentBuildingId =
+    dwarf.task.kind === 'haul' ? dwarf.task.buildingId : undefined
   return dwarf.carrying
     ? {
         kind: 'haul' as const,
         path: [],
         progress: 0,
         block: dwarf.carrying,
+        ...(currentBuildingId ? { buildingId: currentBuildingId } : {}),
         purpose: 'recovery' as const,
         recoveryReason: 'storage-route' as const,
       }
@@ -999,7 +1002,9 @@ function advanceDwarf(
   if (task.path.length > 0) {
     const movementSteps = Math.min(
       task.path.length,
-      1 + state.upgrades.moveSpeed,
+      1 +
+        state.upgrades.moveSpeed +
+        (task.kind === 'haul' ? state.upgrades.satchel : 0),
     )
     if (!validPath(state.world, dwarf.position, task.path, movementSteps)) {
       return invalidateTask(state, dwarf)

@@ -60,7 +60,7 @@ function digSafetyKey(
     })
     .sort()
     .join('|')
-  return `${stand.x}:${stand.y}|${target.x}:${target.y}|${reservations}`
+  return `${stand.x}:${stand.y}|${target.x}:${target.y}|${state.policy.haulingPreference}|${reservations}`
 }
 
 export function isBootstrapActive(state: SimulationState): boolean {
@@ -354,6 +354,13 @@ export function selectStorageDestination(
   excludeDwarfId?: string,
   cleared?: Position,
 ): StorageDestination | null {
+  const primaryStockpileId = getPrimaryStockpile(state.world)?.id
+  const currentRouteBuildingId = excludeDwarfId
+    ? (() => {
+        const dwarf = state.dwarves.find(({ id }) => id === excludeDwarfId)
+        return dwarf?.task.kind === 'haul' ? dwarf.task.buildingId : undefined
+      })()
+    : undefined
   const candidates = storageBuildings(state.world)
     .filter(
       (building) =>
@@ -371,7 +378,21 @@ export function selectStorageDestination(
         path: Position[]
       } => candidate.path !== null,
     )
-    .sort((first, second) => first.path.length - second.path.length)
+    .sort((first, second) => {
+      if (state.policy.haulingPreference === 'finish-current-route') {
+        const firstCurrent = first.building.id === currentRouteBuildingId
+        const secondCurrent = second.building.id === currentRouteBuildingId
+        if (firstCurrent !== secondCurrent) return firstCurrent ? -1 : 1
+      }
+
+      if (state.policy.haulingPreference === 'nearest-stockpile') {
+        const firstPrimary = first.building.id === primaryStockpileId
+        const secondPrimary = second.building.id === primaryStockpileId
+        if (firstPrimary !== secondPrimary) return firstPrimary ? -1 : 1
+      }
+
+      return first.path.length - second.path.length
+    })
 
   const selected = candidates[0]
   return selected
