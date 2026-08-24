@@ -1,6 +1,7 @@
 import {
   canCompleteConstruction,
   completeConstruction,
+  consumeConstructionMaterial,
   reserveConstructionMaterials,
   returnMaterialToStorage,
 } from './buildings'
@@ -1138,10 +1139,27 @@ function advanceDwarf(
           state.world,
         )
       }
-      const nextWorld = clearCell(state.world, target)
+      const nextWorld = safety.recoveryWorld ?? clearCell(state.world, target)
       const haulTarget = safety.storage.position
-      const haulPath = findPath(nextWorld, dwarf.position, haulTarget)
+      const haulOrigin = safety.landing ?? dwarf.position
+      const haulPath = findPath(nextWorld, haulOrigin, haulTarget)
       if (!haulPath) {
+        return unchanged(
+          {
+            ...dwarf,
+            task: { kind: 'idle', path: [], progress: 0 },
+          },
+          state.world,
+        )
+      }
+      const recoveryState = safety.recoveryMaterial
+        ? consumeConstructionMaterial(
+            { ...state, world: nextWorld },
+            safety.recoveryMaterial,
+            1,
+          )
+        : { ...state, world: nextWorld }
+      if (!recoveryState) {
         return unchanged(
           {
             ...dwarf,
@@ -1153,6 +1171,7 @@ function advanceDwarf(
       return {
         dwarf: {
           ...dwarf,
+          position: haulOrigin,
           carrying: minedBlock,
           task: {
             kind: 'haul',
@@ -1161,11 +1180,19 @@ function advanceDwarf(
             progress: 0,
             block: minedBlock,
             buildingId: safety.storage.id,
-            purpose: 'ordinary',
+            ...(safety.landing
+              ? {
+                  purpose: 'recovery' as const,
+                  recoveryReason: 'stranded' as const,
+                }
+              : { purpose: 'ordinary' as const }),
           },
         },
-        world: nextWorld,
+        world: recoveryState.world,
         minedBlock,
+        inventory: safety.recoveryMaterial
+          ? recoveryState.inventory
+          : undefined,
         progressed: true,
       }
     }

@@ -92,6 +92,90 @@ function makeState(rows: string[]): SimulationState {
   }
 }
 
+function makeEmergencyDropState(dropDistance: number): SimulationState {
+  const width = 6
+  const targetY = dropDistance === 3 ? 4 : dropDistance
+  const height = targetY + 2
+  const cells: Cell[] = Array.from({ length: width * height }, (_, index) => {
+    const y = Math.floor(index / width)
+    return {
+      block: y === 0 ? ('bedrock' as const) : ('air' as const),
+      biome: 'meadow' as const,
+    }
+  })
+  cells[targetY * width + 2] = { block: 'dirt', biome: 'meadow' }
+
+  const stockpile = {
+    id: 'stockpile-1',
+    type: 'stockpile' as const,
+    position: { x: 0, y: 1 },
+    width: 1,
+    height: 1,
+    level: 1,
+    construction: 'completed' as const,
+    storage: { capacity: 120, inventory: {} },
+  }
+
+  return {
+    world: {
+      width,
+      height,
+      cells,
+      seed: `engine-drop-${dropDistance}`,
+      runNumber: 1,
+      surfaceHeights: Array(width).fill(0),
+      biomes: Array(width).fill('meadow'),
+      start: { x: 1, y: 1 },
+      stockpile: { x: 0, y: 1 },
+      buildings: [stockpile],
+    },
+    dwarves: [
+      {
+        id: 'dwarf-1',
+        position: { x: 2, y: targetY + 1 },
+        movement: 'grounded',
+        task: { kind: 'idle', path: [], progress: 0 },
+        carrying: null,
+      },
+      {
+        id: 'dwarf-helper',
+        position: { x: 1, y: 1 },
+        movement: 'grounded',
+        task: { kind: 'idle', path: [], progress: 0 },
+        carrying: null,
+      },
+    ],
+    inventory: { ...EMPTY_INVENTORY, dirt: 1 },
+    policy: {
+      workPreference: 'nearest',
+      haulingPreference: 'nearest-stockpile',
+      materialPriority: {
+        coal: false,
+        iron: false,
+        crystal: false,
+        relic: false,
+      },
+    },
+    constructionOrders: [],
+    constructionPolicy: 'balanced',
+    accessRequests: [],
+    worldRevision: 0,
+    safety: { phase: 'operational', emergencyStone: 0 },
+    tick: 0,
+    totalCleared: 0,
+    completed: false,
+    discoveredRelics: 0,
+    prestigeCurrency: 0,
+    upgrades: {
+      toolPower: 0,
+      moveSpeed: 0,
+      satchel: 0,
+      extraBunks: 0,
+      prospecting: 0,
+    },
+  }
+}
+
 describe('stepSimulation', () => {
   it('moves, digs, hauls, and increments global inventory', () => {
     const initial = makeState(['.....', '..d..', '.....'])
@@ -119,6 +203,39 @@ describe('stepSimulation', () => {
 
     expect(result.dwarves[0].task.kind).toBe('dig')
     expect(result.dwarves[0].task.target).toEqual({ x: 0, y: 1 })
+  })
+
+  it('assigns a diagonal mining target and reaches its diagonal stand', () => {
+    const state = makeState(['#####', '.....', '..d..'])
+    state.world.cells = state.world.cells.map((cell, index) =>
+      index < state.world.width ? { ...cell, block: 'bedrock' as const } : cell,
+    )
+    state.dwarves[0].position = { x: 0, y: 1 }
+
+    const assigned = stepSimulation(state, 1)
+    expect(assigned.dwarves[0].task.kind).toBe('dig')
+    expect(assigned.dwarves[0].task.target).toEqual({ x: 2, y: 2 })
+    expect(assigned.dwarves[0].task.path).toEqual([{ x: 1, y: 1 }])
+
+    const moved = stepSimulation(assigned, 1)
+    expect(moved.dwarves[0].position).toEqual({ x: 1, y: 1 })
+    expect(moved.dwarves[0].task.kind).toBe('dig')
+  })
+
+  it('lands a dwarf after a one-cell emergency support drop', () => {
+    const result = stepSimulation(makeEmergencyDropState(1), 6)
+
+    expect(result.dwarves[0].position).toEqual({ x: 2, y: 1 })
+    expect(result.dwarves[0].carrying).toBe('dirt')
+    expect(result.dwarves[0].task.kind).toBe('haul')
+    expect(result.totalCleared).toBe(1)
+  })
+
+  it('does not allow a support-breaking dig to fall three cells', () => {
+    const result = stepSimulation(makeEmergencyDropState(3), 20)
+
+    expect(result.totalCleared).toBe(0)
+    expect(result.dwarves[0].task.kind).toBe('idle')
   })
 
   it('does not count assignment alone as watchdog progress', () => {
