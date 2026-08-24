@@ -431,6 +431,35 @@ describe('stepSimulation', () => {
     expect(result.safety.emergencyStone).toBe(0)
   })
 
+  it('returns a grounded stranded dwarf to ordinary work without rescue resources', () => {
+    const state = makeState(['#####', '.....', '..d..'])
+    state.world.cells = state.world.cells.map((cell, index) =>
+      index < state.world.width ? { ...cell, block: 'bedrock' as const } : cell,
+    )
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      position: { x: 1, y: 1 },
+      movement: 'grounded',
+      task: {
+        kind: 'idle',
+        path: [],
+        progress: 0,
+        purpose: 'recovery',
+        recoveryReason: 'stranded',
+      },
+    }
+    state.safety = { phase: 'operational', emergencyStone: 0 }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].task).toEqual(
+      expect.objectContaining({
+        kind: 'dig',
+        target: { x: 2, y: 2 },
+      }),
+    )
+  })
+
   it('does not assign the only-support block below a dwarf as a dig', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.world.buildings = state.world.buildings.filter(

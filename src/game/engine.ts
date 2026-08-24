@@ -824,9 +824,8 @@ function advanceDwarf(
     task.purpose === 'recovery' &&
     task.recoveryReason === 'stranded'
   ) {
-    return (
-      attemptEmergencyRecovery(state, dwarf) ?? unchanged(dwarf, state.world)
-    )
+    const recovery = attemptEmergencyRecovery(state, dwarf)
+    if (recovery) return recovery
   }
 
   if (task.kind === 'idle') {
