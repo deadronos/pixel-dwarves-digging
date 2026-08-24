@@ -63,6 +63,24 @@ describe('findPath', () => {
     ])
   })
 
+  it('reuses an exact path query for the same world and virtual override', () => {
+    const world = makeWorld(['######', '..#...', '######'])
+    const first = findPath(
+      world,
+      { x: 0, y: 1 },
+      { x: 5, y: 1 },
+      { x: 2, y: 1 },
+    )
+    const second = findPath(
+      world,
+      { x: 0, y: 1 },
+      { x: 5, y: 1 },
+      { x: 2, y: 1 },
+    )
+
+    expect(second).toBe(first)
+  })
+
   it('uses a completed bridge across an unsupported gap', () => {
     const world = makeWorld(['##.###', '......', '######'])
     world.buildings = [
