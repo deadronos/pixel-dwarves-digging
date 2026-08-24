@@ -602,6 +602,52 @@ describe('stepSimulation', () => {
     expect(result.constructionOrders).toEqual([])
   })
 
+  it('plans existing access recovery while blocked but skips new outposts', () => {
+    const state = makeState(['#####', '.....', '.....', '..d..'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.type !== 'bridge' || building.position.x !== 2,
+    )
+    state.world.buildings.push({
+      id: 'completed-ladder',
+      type: 'ladder',
+      position: { x: 2, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    })
+    state.inventory.dirt = 1
+    state.accessRequests = [
+      {
+        id: 'blocked-access',
+        target: { x: 2, y: 3 },
+        failure: 'support',
+        priority: 10,
+        worldRevision: 0,
+        status: 'open',
+      },
+    ]
+    state.safety = {
+      phase: 'blocked',
+      emergencyStone: 0,
+      blockedReason: 'no-safe-work',
+    }
+    state.constructionPolicy = 'expand'
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.constructionOrders).toContainEqual(
+      expect.objectContaining({
+        type: 'ladder',
+        reason: 'access',
+        accessRequestId: 'blocked-access',
+      }),
+    )
+    expect(result.constructionOrders).not.toContainEqual(
+      expect.objectContaining({ type: 'outpost' }),
+    )
+  })
+
   it('allows a blocked storage-full state to plan a capacity depot', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.world.buildings = state.world.buildings.filter(

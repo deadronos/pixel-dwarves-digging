@@ -1254,7 +1254,7 @@ function stepOnce(state: SimulationState): SimulationState {
   )
   const requestedState =
     state.safety.phase === 'blocked'
-      ? reopenResolvedAccessRequests(recoveredState)
+      ? planAccessRequests(reopenResolvedAccessRequests(recoveredState))
       : planAccessRequests(recoveredState)
   const capacityState = planOverflowDepotOrder(requestedState)
   const plannedState =
