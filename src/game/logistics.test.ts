@@ -8,6 +8,7 @@ import {
   planAccessConstructionOrder,
   planExpansionOrder,
   planOverflowDepotOrder,
+  recoverStaleAccessOrders,
   recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
@@ -267,7 +268,7 @@ describe('logistics helpers', () => {
         reserved: {},
         delivered: {},
         progress: 0,
-        reason: 'access',
+        reason: 'policy',
       },
     ]
     expect(getAvailableConstructionMaterial(state, 'stone')).toBe(0)
@@ -677,5 +678,103 @@ describe('logistics helpers', () => {
     )
     expect(recovered.constructionOrders).toEqual([])
     expect(recovered.inventory.stone).toBe(4)
+  })
+
+  it('recovers a planned access order whose request link is missing', () => {
+    const state = makeStorageState()
+    state.world.buildings.push({
+      id: 'access-stale',
+      type: 'ladder',
+      position: { x: 2, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.constructionOrders = [
+      {
+        id: 'access-stale-order',
+        buildingId: 'access-stale',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: { stone: 1 },
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+        accessRequestId: 'missing-access-request',
+      },
+    ]
+
+    const recovered = recoverStaleAccessOrders(state)
+    const stockpile = recovered.world.buildings.find(
+      (building) => building.id === 'stockpile-1',
+    )
+
+    expect(recovered.world.buildings).not.toContainEqual(
+      expect.objectContaining({ id: 'access-stale' }),
+    )
+    expect(recovered.constructionOrders).toEqual([])
+    expect(recovered.inventory.stone).toBe(1)
+    expect(stockpile?.storage?.inventory.stone).toBe(1)
+  })
+
+  it('recovers a planned access order with no reachable builder route', () => {
+    const state = makeStorageState()
+    state.world.cells[1 * state.world.width + 3] = {
+      block: 'stone',
+      biome: 'meadow',
+    }
+    state.world.cells[1 * state.world.width + 5] = {
+      block: 'stone',
+      biome: 'meadow',
+    }
+    state.world.cells[0 * state.world.width + 4] = {
+      block: 'stone',
+      biome: 'meadow',
+    }
+    state.world.cells[2 * state.world.width + 4] = {
+      block: 'stone',
+      biome: 'meadow',
+    }
+    state.world.buildings.push({
+      id: 'unreachable-access',
+      type: 'ladder',
+      position: { x: 4, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.accessRequests = [
+      {
+        id: 'access-4-1',
+        target: { x: 4, y: 0 },
+        failure: 'support',
+        priority: 1,
+        worldRevision: 0,
+        status: 'open',
+      },
+    ]
+    state.constructionOrders = [
+      {
+        id: 'unreachable-access-order',
+        buildingId: 'unreachable-access',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: { stone: 1 },
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+        accessRequestId: 'access-4-1',
+      },
+    ]
+
+    const recovered = recoverStaleAccessOrders(state)
+
+    expect(recovered.constructionOrders).toEqual([])
+    expect(recovered.world.buildings).not.toContainEqual(
+      expect.objectContaining({ id: 'unreachable-access' }),
+    )
+    expect(recovered.inventory.stone).toBe(1)
   })
 })

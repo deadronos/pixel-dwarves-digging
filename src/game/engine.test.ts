@@ -626,6 +626,94 @@ describe('stepSimulation', () => {
     )
   })
 
+  it('skips an unreachable access order when a reachable depot can be built', () => {
+    const state = makeState(['.....', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.id !== 'bridge-3',
+    )
+    state.world.cells[1 * state.world.width + 3] = {
+      block: 'bedrock',
+      biome: 'meadow',
+    }
+    state.world.cells[0 * state.world.width + 4] = {
+      block: 'bedrock',
+      biome: 'meadow',
+    }
+    state.world.cells[2 * state.world.width + 4] = {
+      block: 'bedrock',
+      biome: 'meadow',
+    }
+    state.world.buildings.push(
+      {
+        id: 'unreachable-access-ladder',
+        type: 'ladder',
+        position: { x: 4, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'under-construction',
+      },
+      {
+        id: 'reachable-depot',
+        type: 'depot',
+        position: { x: 2, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'planned',
+      },
+    )
+    state.accessRequests = [
+      {
+        id: 'unreachable-access',
+        target: { x: 4, y: 0 },
+        failure: 'support',
+        priority: 10,
+        worldRevision: 0,
+        status: 'open',
+      },
+    ]
+    state.constructionOrders = [
+      {
+        id: 'unreachable-access-order',
+        buildingId: 'unreachable-access-ladder',
+        type: 'ladder',
+        required: { dirt: 1 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+        accessRequestId: 'unreachable-access',
+      },
+      {
+        id: 'reachable-depot-order',
+        buildingId: 'reachable-depot',
+        type: 'depot',
+        required: { stone: 4 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'capacity',
+      },
+    ]
+    state.inventory.dirt = 1
+    state.inventory.stone = 4
+    state.safety = {
+      phase: 'blocked',
+      emergencyStone: 0,
+      blockedReason: 'storage-full',
+    }
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.dwarves[0].task).toEqual(
+      expect.objectContaining({
+        kind: 'build',
+        constructionOrderId: 'reachable-depot-order',
+      }),
+    )
+  })
+
   it('reports an unroutable access request instead of silently idling', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.dwarves = []
@@ -701,7 +789,7 @@ describe('stepSimulation', () => {
     state.accessRequests = Array.from({ length: 5 }, (_, index) => ({
       id: `legacy-access-${index}`,
       target: { x: index, y: 0 },
-      failure: 'support' as const,
+      failure: 'storage-route' as const,
       priority: index,
       worldRevision: 0,
       status: 'open' as const,
@@ -717,6 +805,59 @@ describe('stepSimulation', () => {
       'legacy-access-3',
       'legacy-access-4',
     ])
+  })
+
+  it('recovers construction tied to an access request trimmed from the frontier', () => {
+    const state = makeState(['ddddd', '.....', '.....'])
+    state.dwarves = []
+    state.world.buildings = state.world.buildings.filter(
+      (building) => building.id !== 'bridge-4',
+    )
+    state.world.buildings.push({
+      id: 'trimmed-ladder',
+      type: 'ladder',
+      position: { x: 4, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.accessRequests = Array.from({ length: 5 }, (_, index) => ({
+      id: `trim-access-${index}`,
+      target: { x: index, y: 0 },
+      failure: 'storage-route' as const,
+      priority: index,
+      worldRevision: 0,
+      status: 'open' as const,
+    }))
+    state.constructionOrders = [
+      {
+        id: 'trimmed-ladder-order',
+        buildingId: 'trimmed-ladder',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: { stone: 1 },
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+        accessRequestId: 'trim-access-0',
+      },
+    ]
+
+    const result = stepSimulation(state, 1)
+    const stockpile = result.world.buildings.find(
+      (building) => building.id === 'stockpile-1',
+    )
+
+    expect(result.accessRequests.map((request) => request.id)).not.toContain(
+      'trim-access-0',
+    )
+    expect(result.constructionOrders).toEqual([])
+    expect(result.world.buildings).not.toContainEqual(
+      expect.objectContaining({ id: 'trimmed-ladder' }),
+    )
+    expect(result.inventory.stone).toBe(1)
+    expect(stockpile?.storage?.inventory.stone).toBe(1)
   })
 
   it('marks a dwarf stranded instead of assigning new mining work', () => {
@@ -879,7 +1020,7 @@ describe('stepSimulation', () => {
         reserved: {},
         delivered: {},
         progress: 0,
-        reason: 'access',
+        reason: 'policy',
       },
     ]
 
@@ -958,7 +1099,7 @@ describe('stepSimulation', () => {
         reserved: { stone: 1 },
         delivered: {},
         progress: 0,
-        reason: 'access',
+        reason: 'policy',
       },
     ]
     state.dwarves = [0, 1, 2].map((index) => ({
@@ -996,7 +1137,7 @@ describe('stepSimulation', () => {
         reserved: { stone: 1 },
         delivered: {},
         progress: 0,
-        reason: 'access',
+        reason: 'policy',
       },
     ]
 

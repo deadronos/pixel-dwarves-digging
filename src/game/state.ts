@@ -201,7 +201,14 @@ export function createGameStore(
         set({ saveError: result.error, saveStatus: 'IMPORT FAILED' })
         return false
       }
-      set({ simulation: result.state, saveError: null, saveStatus: 'IMPORTED' })
+      set({
+        simulation: result.state,
+        saveError: null,
+        saveStatus:
+          result.recoveredAccessOrders && result.recoveredAccessOrders > 0
+            ? 'IMPORTED WITH RECOVERY'
+            : 'IMPORTED',
+      })
       writeLocalSave(result.state)
       return true
     },

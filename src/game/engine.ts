@@ -27,6 +27,8 @@ import {
   planAccessConstructionOrder,
   planExpansionOrder,
   planOverflowDepotOrder,
+  recoverOrphanedAccessOrders,
+  recoverStaleAccessOrders,
   recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
@@ -324,12 +326,23 @@ function trimOpenAccessRequests(state: SimulationState): SimulationState {
       .slice(0, MAX_OPEN_ACCESS_REQUESTS)
       .map((request) => request.id),
   )
-  return {
+  const discardedIds = new Set(
+    openRequests.slice(MAX_OPEN_ACCESS_REQUESTS).map((request) => request.id),
+  )
+  const trimmed = {
     ...state,
     accessRequests: state.accessRequests.filter(
       (request) => request.status !== 'open' || retainedIds.has(request.id),
     ),
   }
+  const recovered = recoverOrphanedAccessOrders(trimmed)
+  const unrecoveredDiscardedOrder = recovered.constructionOrders.some(
+    (order) =>
+      order.reason === 'access' &&
+      order.accessRequestId !== undefined &&
+      discardedIds.has(order.accessRequestId),
+  )
+  return unrecoveredDiscardedOrder ? state : recovered
 }
 
 function planAccessRequests(state: SimulationState): SimulationState {
@@ -384,6 +397,7 @@ function planAccessRequests(state: SimulationState): SimulationState {
 function chooseBuildOrder(
   state: SimulationState,
   dwarf: DwarfState,
+  onlyOrderId?: string,
 ): {
   orderId: string
   path: Position[]
@@ -400,6 +414,7 @@ function chooseBuildOrder(
 
   const candidates = state.constructionOrders
     .filter((order) => {
+      if (onlyOrderId !== undefined && order.id !== onlyOrderId) return false
       const building = state.world.buildings.find(
         ({ id }) => id === order.buildingId,
       )
@@ -867,7 +882,7 @@ function advanceDwarf(
       }
     }
 
-    const orderNeedingMaterials = state.constructionOrders
+    const ordersNeedingMaterials = state.constructionOrders
       .filter((order) => {
         const building = state.world.buildings.find(
           ({ id }) => id === order.buildingId,
@@ -888,13 +903,17 @@ function advanceDwarf(
         const rank = (reason: ConstructionOrder['reason']) =>
           reason === 'access' ? 0 : reason === 'capacity' ? 1 : 2
         return rank(first.reason) - rank(second.reason)
-      })[0]
-    if (orderNeedingMaterials) {
+      })
+    for (const orderNeedingMaterials of ordersNeedingMaterials) {
       const reservedState = reserveConstructionMaterials(
         state,
         orderNeedingMaterials.id,
       )
-      const reservedBuild = chooseBuildOrder(reservedState, dwarf)
+      const reservedBuild = chooseBuildOrder(
+        reservedState,
+        dwarf,
+        orderNeedingMaterials.id,
+      )
       if (reservedBuild) {
         const order = reservedState.constructionOrders.find(
           ({ id }) => id === reservedBuild.orderId,
@@ -1230,7 +1249,9 @@ function advanceDwarf(
 function stepOnce(state: SimulationState): SimulationState {
   if (state.completed) return { ...state, tick: state.tick + 1 }
 
-  const recoveredState = recoverStaleOutpostOrders(state)
+  const recoveredState = recoverStaleAccessOrders(
+    recoverStaleOutpostOrders(state),
+  )
   const requestedState =
     state.safety.phase === 'blocked'
       ? reopenResolvedAccessRequests(recoveredState)

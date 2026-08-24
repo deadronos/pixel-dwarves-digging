@@ -210,7 +210,111 @@ describe('serialization', () => {
         reserved: {},
         delivered: {},
         progress: 0,
+        reason: 'policy',
+      },
+    ]
+
+    expect(parseSave(JSON.stringify({ schemaVersion: 4, state }))).toEqual({
+      error: 'Save file is missing required simulation data.',
+    })
+  })
+
+  it('repairs an orphaned schema-four access order and reports the recovery', () => {
+    const state = makeState()
+    state.world.buildings.push({
+      id: 'orphaned-access-ladder',
+      type: 'ladder',
+      position: { x: 1, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    state.constructionOrders = [
+      {
+        id: 'orphaned-access-order',
+        buildingId: 'orphaned-access-ladder',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
         reason: 'access',
+        accessRequestId: 'missing-access-request',
+      },
+    ]
+
+    const result = parseSave(JSON.stringify({ schemaVersion: 4, state }))
+
+    expect(result).toEqual({
+      state: expect.objectContaining({
+        constructionOrders: [],
+        world: expect.objectContaining({
+          buildings: [],
+        }),
+      }),
+      recoveredAccessOrders: 1,
+    })
+  })
+
+  it('repairs an orphaned access order whose planned building is missing', () => {
+    const state = makeState()
+    state.constructionOrders = [
+      {
+        id: 'missing-access-building-order',
+        buildingId: 'missing-access-building',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+        accessRequestId: 'missing-access-request',
+      },
+    ]
+
+    const result = parseSave(JSON.stringify({ schemaVersion: 4, state }))
+
+    expect(result).toEqual({
+      state: expect.objectContaining({ constructionOrders: [] }),
+      recoveredAccessOrders: 1,
+    })
+  })
+
+  it('rejects an orphaned access order when reserved material cannot be returned', () => {
+    const state = makeState()
+    state.world.buildings = [
+      {
+        id: 'stockpile-1',
+        type: 'stockpile',
+        position: { x: 0, y: 0 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+        storage: { capacity: 1, inventory: { stone: 1 } },
+      },
+      {
+        id: 'orphaned-access-ladder',
+        type: 'ladder',
+        position: { x: 1, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'planned',
+      },
+    ]
+    state.constructionOrders = [
+      {
+        id: 'orphaned-access-order',
+        buildingId: 'orphaned-access-ladder',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: { stone: 1 },
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+        accessRequestId: 'missing-access-request',
       },
     ]
 
