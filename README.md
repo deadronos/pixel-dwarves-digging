@@ -13,6 +13,7 @@ Open the local Vite URL. The simulation starts with three dwarves on a determini
 
 - pause / resume and 1×, 2×, 4× control simulation speed.
 - work chooses nearest exposed, ore-first, or deepest-first planning.
+- haul chooses main-stockpile-first or finish-current-route storage planning.
 - Priority toggles tell the planner to favor coal, iron, crystal, or relics.
 - build chooses essential routes, balanced expansion, or broader logistics growth.
 - save writes the current versioned save to local storage.

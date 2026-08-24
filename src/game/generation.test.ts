@@ -6,7 +6,13 @@ import {
   STARTER_STONE_VEIN_LENGTH,
 } from './content'
 import { stepSimulation } from './engine'
-import { countSolids, generateWorld, getCell, isSolid } from './generation'
+import {
+  countMinerals,
+  countSolids,
+  generateWorld,
+  getCell,
+  isSolid,
+} from './generation'
 import { findReachableExposedSolids } from './pathfinding'
 import { createInitialSimulation } from './state'
 
@@ -16,6 +22,13 @@ describe('generateWorld', () => {
     const second = generateWorld('ember-cavern', 1)
 
     expect(second).toEqual(first)
+  })
+
+  it('uses prospecting levels to reveal more minerals in generated terrain', () => {
+    const baseline = generateWorld('prospecting-test', 1, 0)
+    const prospected = generateWorld('prospecting-test', 1, 4)
+
+    expect(countMinerals(prospected)).toBeGreaterThan(countMinerals(baseline))
   })
 
   it('creates every requested biome band with its own surface material', () => {

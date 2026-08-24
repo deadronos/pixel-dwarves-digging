@@ -181,6 +181,38 @@ describe('stepSimulation', () => {
     expect(moved.dwarves[0].position.x).toBe(4)
   })
 
+  it('uses satchel upgrades to move hauling tasks farther per tick', () => {
+    const initial = makeState(['........', '........', '........'])
+    const haulingDwarf = {
+      ...initial.dwarves[0],
+      task: {
+        kind: 'haul' as const,
+        target: { x: 4, y: 1 },
+        path: [
+          { x: 2, y: 1 },
+          { x: 3, y: 1 },
+          { x: 4, y: 1 },
+        ],
+        progress: 0,
+        block: 'dirt' as const,
+        buildingId: 'stockpile-1',
+      },
+      carrying: 'dirt' as const,
+    }
+    const normal = stepSimulation({ ...initial, dwarves: [haulingDwarf] }, 1)
+    const upgraded = stepSimulation(
+      {
+        ...initial,
+        dwarves: [haulingDwarf],
+        upgrades: { ...initial.upgrades, satchel: 1 },
+      },
+      1,
+    )
+
+    expect(normal.dwarves[0].position).toEqual({ x: 2, y: 1 })
+    expect(upgraded.dwarves[0].position).toEqual({ x: 3, y: 1 })
+  })
+
   it('preserves the world reference during movement-only ticks', () => {
     const initial = makeState(['........', '.....d..', '........'])
     const assigned = stepSimulation(initial, 1)

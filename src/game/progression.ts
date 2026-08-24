@@ -58,7 +58,11 @@ export function startPrestige(
   state: SimulationState,
   mode: PrestigeMode,
 ): SimulationState {
-  const world = generateWorld(state.world.seed, state.world.runNumber + 1)
+  const world = generateWorld(
+    state.world.seed,
+    state.world.runNumber + 1,
+    state.upgrades.prospecting,
+  )
   return {
     ...state,
     world,

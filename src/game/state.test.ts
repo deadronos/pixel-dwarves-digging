@@ -15,6 +15,16 @@ describe('createGameStore', () => {
     expect(state.simulation.dwarves).toHaveLength(3)
   })
 
+  it('increments the run number for each manual new run', () => {
+    const store = createGameStore('run-one')
+
+    store.getState().newRun('run-two')
+    expect(store.getState().simulation.world.runNumber).toBe(2)
+
+    store.getState().newRun('run-three')
+    expect(store.getState().simulation.world.runNumber).toBe(3)
+  })
+
   it('starts with empty access planning state and no active task purpose', () => {
     const state = createGameStore('access-state-seed').getState().simulation
 

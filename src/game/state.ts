@@ -78,7 +78,7 @@ export function createInitialSimulation(
   policy: PolicyState = DEFAULT_POLICY,
   constructionPolicy: ConstructionPolicy = 'balanced',
 ): SimulationState {
-  const world = generateWorld(seed, runNumber)
+  const world = generateWorld(seed, runNumber, upgrades.prospecting)
   const inventory = cloneInventory(EMPTY_INVENTORY)
   inventory.stone = STARTER_STONE_SUPPLY
   return {
@@ -210,7 +210,7 @@ export function createGameStore(
       set({
         simulation: createInitialSimulation(
           nextSeed,
-          1,
+          current.world.runNumber + 1,
           current.upgrades,
           current.prestigeCurrency,
           current.policy,
