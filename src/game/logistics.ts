@@ -14,6 +14,7 @@ import { findAdjacentPaths, findPath, isSupported } from './pathfinding'
 import {
   type AccessFailure,
   type AccessRequest,
+  type BuildingState,
   type BuildingType,
   type CommonBuildingMaterial,
   type ConstructionOrder,
@@ -284,6 +285,38 @@ export function planAccessConstructionOrder(
 function storageBuildings(world: World) {
   return world.buildings.filter(
     (building) => building.construction === 'completed' && building.storage,
+  )
+}
+
+function storagePerimeterCandidates(
+  building: Pick<BuildingState, 'position' | 'width' | 'height'>,
+): Position[] {
+  const candidates: Position[] = []
+  for (
+    let x = building.position.x;
+    x < building.position.x + building.width;
+    x += 1
+  ) {
+    candidates.push(
+      { x, y: building.position.y - 1 },
+      { x, y: building.position.y + building.height },
+    )
+  }
+  for (
+    let y = building.position.y;
+    y < building.position.y + building.height;
+    y += 1
+  ) {
+    candidates.push(
+      { x: building.position.x - 1, y },
+      { x: building.position.x + building.width, y },
+    )
+  }
+  return candidates.filter(
+    (candidate, index, all) =>
+      all.findIndex(
+        (other) => other.x === candidate.x && other.y === candidate.y,
+      ) === index,
   )
 }
 
@@ -584,12 +617,7 @@ export function planOverflowDepotOrder(
   }
 
   const storage = storageBuildings(state.world)
-  const candidates = storage.flatMap((building) => [
-    { x: building.position.x + building.width, y: building.position.y },
-    { x: building.position.x - 1, y: building.position.y },
-    { x: building.position.x, y: building.position.y + building.height },
-    { x: building.position.x, y: building.position.y - 1 },
-  ])
+  const candidates = storage.flatMap(storagePerimeterCandidates)
 
   for (const position of candidates) {
     if (!canPlaceBuilding(state.world, { type: 'depot', position })) continue

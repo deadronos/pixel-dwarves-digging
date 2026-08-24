@@ -497,6 +497,54 @@ describe('logistics helpers', () => {
     )
   })
 
+  it('plans an overflow depot on an alternate perimeter cell', () => {
+    const state = makeStorageState()
+    state.world.height = 5
+    state.world.cells = Array.from({ length: state.world.width * 5 }, (_, index) => {
+      const y = Math.floor(index / state.world.width)
+      return {
+        block: y === 0 ? ('stone' as const) : ('air' as const),
+        biome: 'meadow' as const,
+      }
+    })
+    state.world.stockpile = { x: 1, y: 1 }
+    state.world.buildings[0] = {
+      ...state.world.buildings[0],
+      position: { x: 1, y: 1 },
+      width: 3,
+      height: 2,
+      storage: {
+        capacity: 120,
+        inventory: { stone: 116, dirt: 4 },
+      },
+    }
+    state.dwarves[0].position = { x: 4, y: 2 }
+    state.inventory.stone = 4
+
+    for (const position of [
+      { x: 4, y: 1 },
+      { x: 0, y: 1 },
+      { x: 1, y: 3 },
+      { x: 1, y: 0 },
+    ]) {
+      state.world.cells[position.y * state.world.width + position.x] = {
+        block: 'stone',
+        biome: 'meadow',
+      }
+    }
+
+    const planned = planOverflowDepotOrder(state)
+
+    expect(planned.constructionOrders).toHaveLength(1)
+    expect(planned.world.buildings).toContainEqual(
+      expect.objectContaining({
+        type: 'depot',
+        construction: 'planned',
+        position: { x: 2, y: 3 },
+      }),
+    )
+  })
+
   it('recovers an unreachable planned outpost without losing its reservation', () => {
     const state = makeStorageState()
     state.inventory.stone = 0
