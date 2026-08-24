@@ -19,6 +19,7 @@ import {
 import { getCell } from './generation'
 import {
   assessDigSafety,
+  chooseCommonConstructionMaterial,
   depositCarriedMaterial,
   findEmergencyLadderPlan,
   getAvailableConstructionMaterial,
@@ -35,6 +36,7 @@ import {
 } from './logistics'
 import {
   canMoveBetween,
+  findAdjacentConstructionPaths,
   findAdjacentPaths,
   findPath,
   findReachableExposedSolids,
@@ -452,7 +454,7 @@ function chooseBuildOrder(
         ({ id }) => id === order.buildingId,
       )
       if (!building) return []
-      const route = findAdjacentPaths(
+      const route = findAdjacentConstructionPaths(
         state.world,
         dwarf.position,
         building.position,
@@ -586,27 +588,44 @@ function attemptEmergencyRecovery(
   const usesCarriedMaterial =
     dwarf.carrying !== null && !MINERAL_BLOCKS.has(dwarf.carrying)
   const reserveMaterial = getEmergencyReserveMaterial(state.inventory)
+  const stockMaterial = !usesCarriedMaterial
+    ? chooseCommonConstructionMaterial(state, 1)
+    : null
   const usesReserve =
     !usesCarriedMaterial &&
+    !stockMaterial &&
     state.safety.emergencyStone > 0 &&
     reserveMaterial !== null
-  if (!usesCarriedMaterial && !usesReserve) return null
+  const usesStockMaterial = !usesCarriedMaterial && stockMaterial !== null
+  if (!usesCarriedMaterial && !usesReserve && !usesStockMaterial) return null
 
   const plan = findEmergencyLadderPlan(
     state,
     dwarf.position,
     dwarf.carrying ?? reserveMaterial ?? 'stone',
+    stockMaterial ?? undefined,
   )
   if (!plan) return null
 
   const strandedRecovery =
     dwarf.movement === 'stranded' || dwarf.task.recoveryReason === 'stranded'
-  const inventory = usesReserve
-    ? {
-        ...state.inventory,
-        [reserveMaterial]: Math.max(0, state.inventory[reserveMaterial] - 1),
-      }
-    : undefined
+  let recoveryWorld = plan.world
+  let inventory = state.inventory
+  if (usesReserve && reserveMaterial) {
+    inventory = {
+      ...inventory,
+      [reserveMaterial]: Math.max(0, inventory[reserveMaterial] - 1),
+    }
+  } else if (usesStockMaterial && stockMaterial) {
+    const consumed = consumeConstructionMaterial(
+      { ...state, world: recoveryWorld },
+      stockMaterial,
+      1,
+    )
+    if (!consumed) return null
+    recoveryWorld = consumed.world
+    inventory = consumed.inventory
+  }
   const retainedCarriedMaterial = usesCarriedMaterial ? null : dwarf.carrying
   const task = {
     kind: 'haul' as const,
@@ -628,9 +647,9 @@ function attemptEmergencyRecovery(
       carrying: retainedCarriedMaterial,
       task,
     },
-    world: plan.world,
+    world: recoveryWorld,
     minedBlock: null,
-    inventory,
+    inventory: usesReserve || usesStockMaterial ? inventory : undefined,
     safety: usesReserve
       ? { ...state.safety, emergencyStone: state.safety.emergencyStone - 1 }
       : state.safety,
@@ -659,6 +678,11 @@ function updateSafetyState(state: SimulationState): SimulationState['safety'] {
   )
   const hasRecoveryProgress = state.dwarves.some(
     (dwarf) => dwarf.task.purpose === 'recovery' && dwarf.task.path.length > 0,
+  )
+  const hasStalledRecovery = state.dwarves.some(
+    (dwarf) =>
+      (dwarf.noProgressTicks ?? 0) >= NO_PROGRESS_TICK_LIMIT &&
+      (dwarf.task.purpose === 'recovery' || dwarf.movement === 'stranded'),
   )
   const hasActiveWork = state.dwarves.some(
     (dwarf) => dwarf.task.kind !== 'idle' || dwarf.carrying !== null,
@@ -713,6 +737,10 @@ function updateSafetyState(state: SimulationState): SimulationState['safety'] {
     blockedReason,
     noProgressTicks,
   })
+
+  if (hasStalledRecovery && !hasRecoveryProgress) {
+    return blocked('awaiting-recovery')
+  }
 
   if (
     !hasSafeWork &&
@@ -1312,16 +1340,23 @@ function stepOnce(state: SimulationState): SimulationState {
 
   let progressedThisTick = false
   for (let index = 0; index < state.dwarves.length; index += 1) {
+    const previousDwarf = nextState.dwarves[index]
     const before = settleDwarf(nextState.world, nextState.dwarves[index])
     nextState.dwarves[index] = before
     const worldBeforeAdvance = nextState.world
     const advanced = advanceDwarf(nextState, before)
-    nextState.dwarves[index] = advanced.dwarf
-    nextState.world = advanced.world
-    if (
+    const worldChanged =
       advanced.world.cells !== worldBeforeAdvance.cells ||
       advanced.world.buildings !== worldBeforeAdvance.buildings
-    ) {
+    nextState.dwarves[index] = {
+      ...advanced.dwarf,
+      noProgressTicks:
+        advanced.progressed || worldChanged
+          ? 0
+          : (previousDwarf.noProgressTicks ?? 0) + 1,
+    }
+    nextState.world = advanced.world
+    if (worldChanged) {
       nextState.worldRevision += 1
       progressedThisTick = true
     }

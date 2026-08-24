@@ -11,7 +11,7 @@ import {
   STARTER_PROTECTED_RADIUS,
 } from './content'
 import {
-  findAdjacentPaths,
+  findAdjacentConstructionPaths,
   findPath,
   isSupported,
   simulateDigWorld,
@@ -223,7 +223,11 @@ export function planAccessConstructionOrder(
     const definition = BUILDING_DEFINITIONS[candidate.type]
     if (!canPlaceBuilding(state.world, candidate)) continue
     if (
-      !findAdjacentPaths(state.world, stockpile.position, candidate.position)[0]
+      !findAdjacentConstructionPaths(
+        state.world,
+        stockpile.position,
+        candidate.position,
+      )[0]
     ) {
       continue
     }
@@ -368,7 +372,8 @@ function hasReachableConstructionSite(
     ...storageBuildings(state.world).map((building) => building.position),
   ]
   return sources.some(
-    (source) => findAdjacentPaths(state.world, source, position).length > 0,
+    (source) =>
+      findAdjacentConstructionPaths(state.world, source, position).length > 0,
   )
 }
 
@@ -385,7 +390,8 @@ function hasReachableBuilder(
 ): boolean {
   return state.dwarves.some(
     (dwarf) =>
-      findAdjacentPaths(state.world, dwarf.position, position).length > 0,
+      findAdjacentConstructionPaths(state.world, dwarf.position, position)
+        .length > 0,
   )
 }
 

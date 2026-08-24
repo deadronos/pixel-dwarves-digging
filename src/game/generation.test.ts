@@ -147,4 +147,28 @@ describe('generateWorld', () => {
       }
     }
   })
+
+  it('keeps the starter frontier reachable after the initial pocket is mined', () => {
+    const result = stepSimulation(createInitialSimulation('review-live-0'), 120)
+
+    expect(result.safety.phase).not.toBe('blocked')
+    expect(result.totalCleared).toBeGreaterThan(7)
+  })
+
+  it('keeps the deterministic fresh-run seed sweep out of permanent no-safe-work', () => {
+    for (let index = 0; index < 200; index += 1) {
+      const seed = `review-live-${index}`
+      const result = stepSimulation(createInitialSimulation(seed), 120)
+
+      expect(
+        result.safety.phase === 'blocked' &&
+          (result.safety.noProgressTicks ?? 0) > 20,
+        `${seed} should keep making progress: ${JSON.stringify(result.safety)}`,
+      ).toBe(false)
+      expect(
+        result.totalCleared,
+        `${seed} should clear starter work`,
+      ).toBeGreaterThan(7)
+    }
+  })
 })

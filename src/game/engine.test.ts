@@ -176,6 +176,109 @@ function makeEmergencyDropState(dropDistance: number): SimulationState {
   }
 }
 
+function makeStrandedStockRecoveryState(
+  withActiveDwarf = false,
+): SimulationState {
+  const width = 5
+  const height = 3
+  const cells = Array.from({ length: width * height }, (_, index) => {
+    const y = Math.floor(index / width)
+    const x = index % width
+    return {
+      block:
+        x === 1 && y === 2
+          ? ('dirt' as const)
+          : x === 4 && y === 2 && withActiveDwarf
+            ? ('relic' as const)
+            : ('air' as const),
+      biome: 'meadow' as const,
+    }
+  })
+  const stockpile = {
+    id: 'stockpile-1',
+    type: 'stockpile' as const,
+    position: { x: 3, y: 2 },
+    width: 1,
+    height: 1,
+    level: 1,
+    construction: 'completed' as const,
+    storage: { capacity: 120, inventory: {} },
+  }
+  const dwarves: SimulationState['dwarves'] = [
+    {
+      id: 'dwarf-stranded',
+      position: { x: 2, y: 2 },
+      movement: 'stranded',
+      task: {
+        kind: 'idle',
+        path: [],
+        progress: 0,
+        purpose: 'recovery',
+        recoveryReason: 'stranded',
+      },
+      carrying: null,
+    },
+  ]
+  if (withActiveDwarf) {
+    dwarves.push({
+      id: 'dwarf-active',
+      position: { x: 3, y: 2 },
+      movement: 'grounded',
+      task: {
+        kind: 'dig',
+        target: { x: 4, y: 2 },
+        path: [],
+        progress: 0,
+        purpose: 'ordinary',
+      },
+      carrying: null,
+    })
+  }
+  return {
+    world: {
+      width,
+      height,
+      cells,
+      seed: 'stranded-stock-recovery',
+      runNumber: 1,
+      surfaceHeights: Array(width).fill(0),
+      biomes: Array(width).fill('meadow'),
+      start: { x: 2, y: 2 },
+      stockpile: { x: 3, y: 2 },
+      buildings: [stockpile],
+    },
+    dwarves,
+    inventory: { ...EMPTY_INVENTORY, dirt: withActiveDwarf ? 0 : 1 },
+    policy: {
+      workPreference: 'nearest',
+      haulingPreference: 'nearest-stockpile',
+      materialPriority: {
+        coal: false,
+        iron: false,
+        crystal: false,
+        relic: false,
+      },
+    },
+    constructionOrders: [],
+    constructionPolicy: 'balanced',
+    accessRequests: [],
+    worldRevision: 0,
+    safety: { phase: 'operational', emergencyStone: 0 },
+    tick: 0,
+    totalCleared: 0,
+    completed: false,
+    discoveredRelics: 0,
+    prestigeCurrency: 0,
+    upgrades: {
+      toolPower: 0,
+      moveSpeed: 0,
+      satchel: 0,
+      extraBunks: 0,
+      prospecting: 0,
+    },
+  }
+}
+
 describe('stepSimulation', () => {
   it('moves, digs, hauls, and increments global inventory', () => {
     const initial = makeState(['.....', '..d..', '.....'])
@@ -456,6 +559,50 @@ describe('stepSimulation', () => {
       expect.objectContaining({
         kind: 'dig',
         target: { x: 2, y: 2 },
+      }),
+    )
+  })
+
+  it('rescues a truly stranded dwarf from stocked common material without emergency reserve', () => {
+    const result = stepSimulation(makeStrandedStockRecoveryState(), 1)
+
+    expect(result.world.buildings).toContainEqual(
+      expect.objectContaining({
+        type: 'ladder',
+        position: { x: 2, y: 2 },
+        construction: 'completed',
+      }),
+    )
+    expect(result.dwarves[0]?.task).toEqual(
+      expect.objectContaining({
+        kind: 'haul',
+        purpose: 'recovery',
+        recoveryReason: 'stranded',
+      }),
+    )
+    expect(result.inventory.dirt).toBe(0)
+    expect(result.safety.emergencyStone).toBe(0)
+  })
+
+  it('preserves the emergency reserve when excess common material is stocked', () => {
+    const state = makeStrandedStockRecoveryState()
+    state.inventory.dirt = 2
+    state.safety.emergencyStone = 1
+
+    const result = stepSimulation(state, 1)
+
+    expect(result.inventory.dirt).toBe(1)
+    expect(result.safety.emergencyStone).toBe(1)
+  })
+
+  it('reports a stalled stranded dwarf while another dwarf is still working', () => {
+    const result = stepSimulation(makeStrandedStockRecoveryState(true), 20)
+
+    expect(result.dwarves[0]?.noProgressTicks).toBeGreaterThanOrEqual(20)
+    expect(result.safety).toEqual(
+      expect.objectContaining({
+        phase: 'blocked',
+        blockedReason: 'awaiting-recovery',
       }),
     )
   })
@@ -900,6 +1047,10 @@ describe('stepSimulation', () => {
       biome: 'meadow',
     }
     state.world.cells[2 * state.world.width + 4] = {
+      block: 'bedrock',
+      biome: 'meadow',
+    }
+    state.world.cells[2 * state.world.width + 3] = {
       block: 'bedrock',
       biome: 'meadow',
     }

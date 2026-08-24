@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { findPath, findReachableExposedSolids } from './pathfinding'
+import {
+  findAdjacentConstructionPaths,
+  findPath,
+  findReachableExposedSolids,
+} from './pathfinding'
 import type { Cell, World } from './types'
 
 function makeWorld(rows: string[]): World {
@@ -164,6 +168,14 @@ describe('findPath', () => {
     expect(findPath(world, { x: 1, y: 1 }, { x: 2, y: 2 })).toEqual([
       { x: 2, y: 2 },
     ])
+  })
+
+  it('finds a diagonal builder stand when cardinal stands are blocked', () => {
+    const world = makeWorld(['#####', '.#...', '.#.#.', '#####'])
+
+    expect(
+      findAdjacentConstructionPaths(world, { x: 0, y: 1 }, { x: 1, y: 2 }),
+    ).toEqual([{ path: [], stand: { x: 0, y: 1 } }])
   })
 
   it('does not move diagonally through a blocked corner', () => {

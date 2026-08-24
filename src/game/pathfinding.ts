@@ -372,6 +372,27 @@ export function findAdjacentPaths(
     .sort((first, second) => first.path.length - second.path.length)
 }
 
+export function findAdjacentConstructionPaths(
+  world: World,
+  from: Position,
+  target: Position,
+  cleared?: Position,
+): Array<{ path: Position[]; stand: Position }> {
+  return MOVEMENT_DIRECTIONS.map((direction) => {
+    const stand = {
+      x: target.x + direction.x,
+      y: target.y + direction.y,
+    }
+    const path = findPath(world, from, stand, cleared)
+    return path ? { path, stand } : null
+  })
+    .filter(
+      (result): result is { path: Position[]; stand: Position } =>
+        result !== null,
+    )
+    .sort((first, second) => first.path.length - second.path.length)
+}
+
 export function findExposedSolids(world: World, from: Position): Position[] {
   return findReachableExposedSolids(world, from).map(({ target }) => target)
 }

@@ -95,6 +95,7 @@ function carveStarterPocket(
     }
   }
 
+  set(stockpile.x, start.y - 1, 'air')
   set(stockpile.x, stockpile.y, 'air')
 }
 
@@ -161,6 +162,24 @@ export function generateWorld(
       inventory: { stone: STARTER_STONE_SUPPLY },
     },
   }
+  const starterLadder = {
+    id: 'starter-ladder',
+    type: 'ladder' as const,
+    position: { x: stockpile.x, y: start.y - 1 },
+    width: BUILDING_DEFINITIONS.ladder.width,
+    height: BUILDING_DEFINITIONS.ladder.height,
+    level: 1,
+    construction: 'completed' as const,
+  }
+  const starterBridges = Array.from({ length: 3 }, (_, offset) => ({
+    id: `starter-bridge-${offset + 1}`,
+    type: 'bridge' as const,
+    position: { x: start.x + offset, y: start.y - 1 },
+    width: BUILDING_DEFINITIONS.bridge.width,
+    height: BUILDING_DEFINITIONS.bridge.height,
+    level: 1,
+    construction: 'completed' as const,
+  }))
 
   return {
     width: MAP_WIDTH,
@@ -172,7 +191,7 @@ export function generateWorld(
     biomes,
     start,
     stockpile,
-    buildings: [stockpileBuilding],
+    buildings: [stockpileBuilding, starterLadder, ...starterBridges],
   }
 }
 
