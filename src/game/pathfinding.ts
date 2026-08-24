@@ -2,11 +2,19 @@ import { MINEABLE_BLOCK_SET } from './content'
 import { getCell } from './generation'
 import { indexFor, type Position, type World } from './types'
 
-const DIRECTIONS: Position[] = [
+const CARDINAL_DIRECTIONS: Position[] = [
   { x: 0, y: 1 },
   { x: 1, y: 0 },
   { x: 0, y: -1 },
   { x: -1, y: 0 },
+]
+
+const MOVEMENT_DIRECTIONS: Position[] = [
+  ...CARDINAL_DIRECTIONS,
+  { x: 1, y: 1 },
+  { x: 1, y: -1 },
+  { x: -1, y: 1 },
+  { x: -1, y: -1 },
 ]
 
 type SearchResult = {
@@ -149,6 +157,18 @@ export function canMoveBetween(
   if (!isWalkable(world, from, cleared) || !isWalkable(world, to, cleared)) {
     return false
   }
+
+  const deltaX = to.x - from.x
+  const deltaY = to.y - from.y
+  if (Math.abs(deltaX) > 1 || Math.abs(deltaY) > 1) return false
+
+  if (deltaX !== 0 && deltaY !== 0) {
+    return (
+      isWalkable(world, { x: from.x + deltaX, y: from.y }, cleared) &&
+      isWalkable(world, { x: from.x, y: from.y + deltaY }, cleared)
+    )
+  }
+
   const vertical = from.x === to.x && from.y !== to.y
   if (!vertical) return true
   return hasLadder(world, from) || hasLadder(world, to)
@@ -183,16 +203,12 @@ function createSearchUncached(
     head += 1
     const current = positionFor(currentIndex, world.width)
 
-    for (const direction of DIRECTIONS) {
+    for (const direction of MOVEMENT_DIRECTIONS) {
       const next = {
         x: current.x + direction.x,
         y: current.y + direction.y,
       }
-      if (!isWalkable(world, next, cleared)) continue
-      const vertical = current.x === next.x && current.y !== next.y
-      if (vertical && !hasLadder(world, current) && !hasLadder(world, next)) {
-        continue
-      }
+      if (!canMoveBetween(world, current, next, cleared)) continue
 
       const nextIndex = indexFor(next.x, next.y, world.width)
       if (distance[nextIndex] !== -1) continue
@@ -276,7 +292,7 @@ export function findReachableExposedSolids(
     const standIndex = search.queue[index]
     const stand = positionFor(standIndex, world.width)
 
-    for (const direction of DIRECTIONS) {
+    for (const direction of MOVEMENT_DIRECTIONS) {
       const target = {
         x: stand.x + direction.x,
         y: stand.y + direction.y,
@@ -341,7 +357,7 @@ export function findAdjacentPaths(
   target: Position,
   cleared?: Position,
 ): Array<{ path: Position[]; stand: Position }> {
-  return DIRECTIONS.map((direction) => {
+  return CARDINAL_DIRECTIONS.map((direction) => {
     const stand = {
       x: target.x + direction.x,
       y: target.y + direction.y,
