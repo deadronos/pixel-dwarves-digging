@@ -288,6 +288,36 @@ function storageBuildings(world: World) {
   )
 }
 
+function completedBaseStockpileCapacity(world: World): number {
+  return world.buildings
+    .filter(
+      (building) =>
+        building.type === 'stockpile' && building.construction === 'completed',
+    )
+    .reduce((total, building) => total + (building.storage?.capacity ?? 0), 0)
+}
+
+function completedStorageCapacity(world: World): number {
+  return storageBuildings(world).reduce(
+    (total, building) => total + (building.storage?.capacity ?? 0),
+    0,
+  )
+}
+
+function canPlanAdditionalDepot(world: World): boolean {
+  const baseCapacity = completedBaseStockpileCapacity(world)
+  if (baseCapacity === 0) return false
+
+  const completedDepotCount = world.buildings.filter(
+    (building) =>
+      building.type === 'depot' && building.construction === 'completed',
+  ).length
+  const maxDepots = Math.ceil(
+    completedStorageCapacity(world) / baseCapacity,
+  )
+  return completedDepotCount < maxDepots
+}
+
 function storagePerimeterCandidates(
   building: Pick<BuildingState, 'position' | 'width' | 'height'>,
 ): Position[] {
@@ -605,7 +635,7 @@ export function planOverflowDepotOrder(
     return state
   }
   if (
-    state.world.buildings.some((building) => building.type === 'depot') ||
+    !canPlanAdditionalDepot(state.world) ||
     state.constructionOrders.some((order) => order.type === 'depot')
   ) {
     return state
