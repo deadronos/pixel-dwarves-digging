@@ -123,10 +123,42 @@ describe('findPath', () => {
   it('finds a supported diagonal path', () => {
     const world = makeWorld(['#####', '.....', '.....', '#####'])
     world.buildings = [
-      { id: 'bridge-1', type: 'bridge', position: { x: 1, y: 1 }, width: 1, height: 1, level: 1, construction: 'completed' },
-      { id: 'bridge-2', type: 'bridge', position: { x: 2, y: 1 }, width: 1, height: 1, level: 1, construction: 'completed' },
-      { id: 'bridge-3', type: 'bridge', position: { x: 1, y: 2 }, width: 1, height: 1, level: 1, construction: 'completed' },
-      { id: 'bridge-4', type: 'bridge', position: { x: 2, y: 2 }, width: 1, height: 1, level: 1, construction: 'completed' },
+      {
+        id: 'bridge-1',
+        type: 'bridge',
+        position: { x: 1, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-2',
+        type: 'bridge',
+        position: { x: 2, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-3',
+        type: 'bridge',
+        position: { x: 1, y: 2 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-4',
+        type: 'bridge',
+        position: { x: 2, y: 2 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
     ]
 
     expect(findPath(world, { x: 1, y: 1 }, { x: 2, y: 2 })).toEqual([
@@ -152,10 +184,42 @@ describe('findPath', () => {
   it('discovers a diagonally exposed solid target', () => {
     const world = makeWorld(['#####', '.....', '.....', '...d.', '#####'])
     world.buildings = [
-      { id: 'bridge-1', type: 'bridge', position: { x: 1, y: 1 }, width: 1, height: 1, level: 1, construction: 'completed' },
-      { id: 'bridge-2', type: 'bridge', position: { x: 2, y: 1 }, width: 1, height: 1, level: 1, construction: 'completed' },
-      { id: 'bridge-3', type: 'bridge', position: { x: 1, y: 2 }, width: 1, height: 1, level: 1, construction: 'completed' },
-      { id: 'bridge-4', type: 'bridge', position: { x: 2, y: 2 }, width: 1, height: 1, level: 1, construction: 'completed' },
+      {
+        id: 'bridge-1',
+        type: 'bridge',
+        position: { x: 1, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-2',
+        type: 'bridge',
+        position: { x: 2, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-3',
+        type: 'bridge',
+        position: { x: 1, y: 2 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-4',
+        type: 'bridge',
+        position: { x: 2, y: 2 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
     ]
 
     expect(findReachableExposedSolids(world, { x: 1, y: 1 })).toContainEqual({

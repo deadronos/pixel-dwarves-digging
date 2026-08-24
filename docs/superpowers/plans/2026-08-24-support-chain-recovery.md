@@ -16,7 +16,7 @@
 - Modify: `src/game/pathfinding.ts`
 - Modify: `src/game/pathfinding.test.ts`
 
-- [ ] **Step 1: Add failing pathfinding tests**
+- [x] **Step 1: Add failing pathfinding tests**
 
 Extend the existing `makeWorld` fixture with tests for a diagonal route and corner blocking:
 
@@ -57,13 +57,13 @@ it('discovers a diagonally exposed solid target', () => {
 })
 ```
 
-- [ ] **Step 2: Run the new tests and observe the red state**
+- [x] **Step 2: Run the new tests and observe the red state**
 
 Run `npm test -- --run src/game/pathfinding.test.ts -t "diagonal"`.
 
 Expected: the diagonal path and exposed-target tests fail because the current search only expands the four cardinal directions.
 
-- [ ] **Step 3: Separate cardinal and movement directions**
+- [x] **Step 3: Separate cardinal and movement directions**
 
 In `src/game/pathfinding.ts`, replace the single direction constant with:
 
@@ -86,11 +86,11 @@ const MOVEMENT_DIRECTIONS: Position[] = [
 
 Use `MOVEMENT_DIRECTIONS` in BFS expansion. For a diagonal transition, require both adjacent cardinal side cells to be walkable before accepting the destination. Keep the existing ladder requirement for purely vertical movement.
 
-- [ ] **Step 4: Include diagonal mining targets without changing construction adjacency**
+- [x] **Step 4: Include diagonal mining targets without changing construction adjacency**
 
 Use `MOVEMENT_DIRECTIONS` for exposed-solid target offsets while retaining the reconstructed path to the standing cell. Keep `findAdjacentPaths` on `CARDINAL_DIRECTIONS`; builders may approach a cardinal construction stand diagonally, but a building footprint must not gain diagonal construction semantics.
 
-- [ ] **Step 5: Run pathfinding tests and commit**
+- [x] **Step 5: Run pathfinding tests and commit**
 
 Run `npm test -- --run src/game/pathfinding.test.ts`; all existing cardinal, ladder, exposed-solid, diagonal, and corner tests must pass. Commit with:
 
@@ -109,21 +109,21 @@ git commit -m "feat: add guarded diagonal navigation"
 - Modify: `src/game/engine.test.ts`
 - Modify: `src/game/logistics.test.ts`
 
-- [ ] **Step 1: Add failing ladder-anchor and blocked-planning tests**
+- [x] **Step 1: Add failing ladder-anchor and blocked-planning tests**
 
 Add a fixture with a completed ladder at `{x:2,y:2}` and an empty air cell directly below it at `{x:2,y:1}`. Assert that `canPlaceBuilding(world, {type:'ladder', position:{x:2,y:1}})` is true. Add a blocked simulation fixture with an open support access request, available dirt/stone, and an existing completed ladder above the candidate site; after one tick assert that an access construction order is planned. Include an optional outpost candidate and assert that no outpost order is created while blocked.
 
-- [ ] **Step 2: Run the focused tests and verify failure**
+- [x] **Step 2: Run the focused tests and verify failure**
 
 Run `npm test -- --run src/game/engine.test.ts src/game/logistics.test.ts -t "anchor|blocked.*access|access.*blocked"`.
 
 Expected: ladder placement is rejected and the blocked tick leaves the access request without an order.
 
-- [ ] **Step 3: Extend ladder anchors vertically**
+- [x] **Step 3: Extend ladder anchors vertically**
 
 In `src/game/buildings.ts`, update `hasLadderAnchor` so it checks four cardinal neighbors. Horizontal neighbors retain the current terrain/completed-building rule; vertical neighbors additionally accept a completed ladder or completed non-ladder building at that exact adjacent cell. Do not accept planned/under-construction buildings or arbitrary air.
 
-- [ ] **Step 4: Plan existing access requests during blocked ticks**
+- [x] **Step 4: Plan existing access requests during blocked ticks**
 
 In `stepOnce`, change the blocked request branch to:
 
@@ -136,7 +136,7 @@ const requestedState =
 
 Keep the later blocked-state gate that skips `planExpansionOrder`, so optional outposts remain disabled while blocked.
 
-- [ ] **Step 5: Run focused tests and commit**
+- [x] **Step 5: Run focused tests and commit**
 
 Run `npm test -- --run src/game/engine.test.ts src/game/logistics.test.ts`. Expected: existing construction/access tests and the new vertical-anchor/blocked-planning tests pass. Commit:
 
@@ -153,7 +153,7 @@ git commit -m "fix: reopen anchored access recovery while blocked"
 - Modify: `src/game/logistics.ts`
 - Modify: `src/game/logistics.test.ts`
 
-- [ ] **Step 1: Add failing emergency-drop safety tests**
+- [x] **Step 1: Add failing emergency-drop safety tests**
 
 Create a grounded fixture with a dwarf above a mineable support block, a supported air landing one cell below after virtual clearing, and a reachable stockpile. Assert that an idle helper allows a one-cell drop, no helper/material rejects it, a two-cell landing is accepted, and a three-cell landing is rejected:
 
@@ -176,11 +176,11 @@ expect(assessDigSafety(threeCellDropFixture, stand, target)).toEqual({
 
 Each accepted fixture must verify a storage path from the landing after virtual clearing; a lower cell alone is insufficient.
 
-- [ ] **Step 2: Run the new tests and verify failure**
+- [x] **Step 2: Run the new tests and verify failure**
 
 Run `npm test -- --run src/game/logistics.test.ts -t "drop|support-breaking"`. Expected: all new tests fail because support failures currently return immediately and `DigSafety` has no recovery landing.
 
-- [ ] **Step 3: Add a bounded recovery result to dig safety**
+- [x] **Step 3: Add a bounded recovery result to dig safety**
 
 Extend `DigSafety` with optional recovery data:
 
@@ -200,11 +200,11 @@ Add a private helper that, only for a support failure, simulates clearing the ta
 
 Use `getAvailableConstructionMaterial` for common ladder material availability so emergency reserve and existing reservations remain protected. Treat an idle dwarf other than the mining dwarf as the alternate recovery gate. If a recovery ladder is selected, return the selected material and deduct it from the same state/storage accounting used by construction reservation before completing the dig. Do not allow storage-route failures to become emergency drops.
 
-- [ ] **Step 4: Revalidate the route after virtual clearing**
+- [x] **Step 4: Revalidate the route after virtual clearing**
 
 Find storage against the virtual world and use the landing as the origin. Do not use the current unsupported standing cell as the haul origin. If no storage route exists, leave the dig unsafe even when a landing exists.
 
-- [ ] **Step 5: Run logistics tests and commit**
+- [x] **Step 5: Run logistics tests and commit**
 
 Run `npm test -- --run src/game/logistics.test.ts`. Expected: all existing storage/support tests and bounded-drop tests pass. Commit:
 
@@ -221,7 +221,7 @@ git commit -m "feat: add bounded support-breaking digs"
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/engine.test.ts`
 
-- [ ] **Step 1: Add failing engine tests**
+- [x] **Step 1: Add failing engine tests**
 
 Add deterministic fixtures asserting that a diagonal target creates a diagonal task path, a one-cell emergency drop lands on the supported cell and starts a haul, and a three-cell drop mines nothing:
 
@@ -247,11 +247,11 @@ it('does not allow a support-breaking dig to fall three cells', () => {
 })
 ```
 
-- [ ] **Step 2: Run the engine tests and verify failure**
+- [x] **Step 2: Run the engine tests and verify failure**
 
 Run `npm test -- --run src/game/engine.test.ts -t "diagonal|emergency support|three cells"`. Expected: diagonal assignment/path and emergency-landing expectations fail before engine integration.
 
-- [ ] **Step 3: Permit diagonal task completion**
+- [x] **Step 3: Permit diagonal task completion**
 
 In the dig execution branch, replace the cardinal-only distance check with Chebyshev adjacency:
 
@@ -266,11 +266,11 @@ if (!adjacent) return invalidateTask(state, dwarf)
 
 Use the `DigSafety` recovery data when mining completes. Clear the target, choose `safety.recoveryWorld ?? nextWorld`, set the dwarf position to `safety.landing ?? dwarf.position`, and compute the haul path from that origin. Preserve existing cargo/reservation semantics and only set `movement: 'grounded'` when the chosen landing is supported.
 
-- [ ] **Step 4: Preserve current task invalidation and fall recovery**
+- [x] **Step 4: Preserve current task invalidation and fall recovery**
 
 Keep `validPath` as the authority for diagonal movement transitions. A stale diagonal path must invalidate through the existing `invalidateTask` recovery path. Do not broaden `settleDwarf` beyond its supported-column search; emergency drops use an explicitly validated landing.
 
-- [ ] **Step 5: Run engine tests and commit**
+- [x] **Step 5: Run engine tests and commit**
 
 Run `npm test -- --run src/game/engine.test.ts`. Expected: all existing engine regressions and new diagonal/drop tests pass. Commit:
 
@@ -289,11 +289,11 @@ git commit -m "feat: execute diagonal recovery mining"
 - Modify: `src/game/logistics.test.ts`
 - Modify: `docs/superpowers/plans/2026-08-24-support-chain-recovery.md`
 
-- [ ] **Step 1: Add a deterministic support-chain regression**
+- [x] **Step 1: Add a deterministic support-chain regression**
 
 Build a compact fixture equivalent to the supplied save: a completed stockpile at `{x:3,y:3}`, a completed ladder at `{x:2,y:3}`, air at `{x:2,y:2}`, a mineable support row at `y:1`, one open support access request, idle dwarves, and `safety.phase: 'blocked'`. Assert that one tick creates an anchored access ladder order, and that after the ladder is completed a dwarf can select a safe mining target.
 
-- [ ] **Step 2: Run the complete verification matrix**
+- [x] **Step 2: Run the complete verification matrix**
 
 Run:
 
@@ -307,11 +307,11 @@ git diff --check
 
 Expected: all tests pass, typecheck/lint/build succeed, and `git diff --check` is clean.
 
-- [ ] **Step 3: Replay the supplied save without committing a diagnostic harness**
+- [x] **Step 3: Replay the supplied save without committing a diagnostic harness**
 
 Use a temporary Vitest diagnostic, then remove it, to parse `/Users/openclaw/Downloads/pixel-dwarves-save.json`, run up to 40 simulation ticks, and assert that either an access order is planned or a dwarf receives a diagonal/support-recovery task. Confirm the supplied save no longer remains unchanged for every tick.
 
-- [ ] **Step 4: Mark the plan complete and inspect the branch**
+- [x] **Step 4: Mark the plan complete and inspect the branch**
 
 Mark every completed checkbox in this plan, then run:
 

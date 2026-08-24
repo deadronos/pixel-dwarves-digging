@@ -231,6 +231,24 @@ describe('stepSimulation', () => {
     expect(result.totalCleared).toBe(1)
   })
 
+  it('recovers a compact blocked support-chain save without expanding', () => {
+    const state = makeEmergencyDropState(1)
+    state.safety = {
+      phase: 'blocked',
+      emergencyStone: 0,
+      blockedReason: 'no-safe-work',
+    }
+    state.constructionPolicy = 'expand'
+
+    const result = stepSimulation(state, 20)
+
+    expect(result.totalCleared).toBe(1)
+    expect(result.safety.phase).toBe('operational')
+    expect(result.constructionOrders).not.toContainEqual(
+      expect.objectContaining({ type: 'outpost' }),
+    )
+  })
+
   it('does not allow a support-breaking dig to fall three cells', () => {
     const result = stepSimulation(makeEmergencyDropState(3), 20)
 

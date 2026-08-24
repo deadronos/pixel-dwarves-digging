@@ -12,7 +12,7 @@ import {
   recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
-import { EMPTY_INVENTORY, type Cell, type SimulationState } from './types'
+import { type Cell, EMPTY_INVENTORY, type SimulationState } from './types'
 
 function makeStorageState(): SimulationState {
   const width = 6
@@ -437,9 +437,7 @@ describe('logistics helpers', () => {
   it('allows a one-cell support drop when an idle helper is available', () => {
     const state = makeDropState(1, true)
 
-    expect(
-      assessDigSafety(state, { x: 2, y: 2 }, { x: 2, y: 1 }),
-    ).toEqual(
+    expect(assessDigSafety(state, { x: 2, y: 2 }, { x: 2, y: 1 })).toEqual(
       expect.objectContaining({
         safe: true,
         dropDistance: 1,
@@ -461,9 +459,7 @@ describe('logistics helpers', () => {
   it('allows a two-cell support drop only when the lower landing is routed', () => {
     const state = makeDropState(2, false, true)
 
-    expect(
-      assessDigSafety(state, { x: 2, y: 3 }, { x: 2, y: 2 }),
-    ).toEqual(
+    expect(assessDigSafety(state, { x: 2, y: 3 }, { x: 2, y: 2 })).toEqual(
       expect.objectContaining({
         safe: true,
         dropDistance: 2,
