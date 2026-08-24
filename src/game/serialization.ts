@@ -4,6 +4,7 @@ import {
   MINEABLE_BLOCKS,
   STARTER_BOOTSTRAP_CLEAR_COUNT,
 } from './content'
+import { recoverOrphanedAccessOrders } from './logistics'
 import {
   type AccessFailure,
   type AccessRequest,
@@ -21,7 +22,9 @@ import {
 
 export const SAVE_VERSION = 4
 
-export type SaveParseResult = { state: SimulationState } | { error: string }
+export type SaveParseResult =
+  | { state: SimulationState; recoveredAccessOrders?: number }
+  | { error: string }
 
 export function serializeState(state: SimulationState): string {
   const save: SerializedSave = {
@@ -387,7 +390,10 @@ function normalizeSafety(
   }
 }
 
-function isSimulationState(value: unknown): value is SimulationState {
+function isSimulationState(
+  value: unknown,
+  allowOrphanedAccessOrders = false,
+): value is SimulationState {
   if (!isRecord(value)) return false
   const world = value.world
   if (!isWorld(world)) return false
@@ -456,12 +462,19 @@ function isSimulationState(value: unknown): value is SimulationState {
       const building = world.buildings.find(
         (candidate) => candidate.id === order.buildingId,
       )
+      const orphanedAccessOrder =
+        allowOrphanedAccessOrders &&
+        order.reason === 'access' &&
+        (building === undefined ||
+          order.accessRequestId === undefined ||
+          !requestIds.has(order.accessRequestId))
       return (
-        building !== undefined &&
-        building.type === order.type &&
-        building.construction !== 'completed' &&
-        (order.accessRequestId === undefined ||
-          requestIds.has(order.accessRequestId))
+        (building !== undefined &&
+          building.type === order.type &&
+          building.construction !== 'completed' &&
+          (order.accessRequestId === undefined ||
+            requestIds.has(order.accessRequestId))) ||
+        orphanedAccessOrder
       )
     }) &&
     Array.isArray(value.accessRequests) &&
@@ -568,7 +581,7 @@ function migrateV1State(value: unknown): SimulationState | null {
 function normalizeV3State(
   value: unknown,
   addBedrockFloor: boolean,
-): SimulationState | null {
+): { state: SimulationState; recoveredAccessOrders: number } | null {
   if (!isRecord(value)) return null
   const world = value.world
   if (
@@ -597,7 +610,24 @@ function normalizeV3State(
     safety: normalizeSafety(value),
   }
 
-  return isSimulationState(normalized) ? normalized : null
+  if (isSimulationState(normalized)) {
+    return { state: normalized, recoveredAccessOrders: 0 }
+  }
+  if (!isSimulationState(normalized, true)) return null
+
+  const orphanedAccessOrderCount = normalized.constructionOrders.filter(
+    (order) => order.reason === 'access',
+  ).length
+  const repaired = recoverOrphanedAccessOrders(normalized)
+  if (!isSimulationState(repaired)) return null
+
+  return {
+    state: repaired,
+    recoveredAccessOrders:
+      orphanedAccessOrderCount -
+      repaired.constructionOrders.filter((order) => order.reason === 'access')
+        .length,
+  }
 }
 
 export function parseSave(payload: string): SaveParseResult {
@@ -616,7 +646,12 @@ export function parseSave(payload: string): SaveParseResult {
     const migrated = migrateV1State(parsed.state)
     const normalized = normalizeV3State(migrated, true)
     return normalized
-      ? { state: normalized }
+      ? {
+          state: normalized.state,
+          ...(normalized.recoveredAccessOrders > 0
+            ? { recoveredAccessOrders: normalized.recoveredAccessOrders }
+            : {}),
+        }
       : { error: 'Save file is missing required simulation data.' }
   }
 
@@ -633,5 +668,10 @@ export function parseSave(payload: string): SaveParseResult {
     return { error: 'Save file is missing required simulation data.' }
   }
 
-  return { state: normalized }
+  return {
+    state: normalized.state,
+    ...(normalized.recoveredAccessOrders > 0
+      ? { recoveredAccessOrders: normalized.recoveredAccessOrders }
+      : {}),
+  }
 }

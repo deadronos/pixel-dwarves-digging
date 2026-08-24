@@ -368,6 +368,16 @@ function hasActiveBuilder(state: SimulationState, buildingId: string): boolean {
   )
 }
 
+function hasReachableBuilder(
+  state: SimulationState,
+  position: Position,
+): boolean {
+  return state.dwarves.some(
+    (dwarf) =>
+      findAdjacentPaths(state.world, dwarf.position, position).length > 0,
+  )
+}
+
 function storedCount(inventory: Partial<Inventory>): number {
   return Object.values(inventory).reduce(
     (total, amount) => total + (amount ?? 0),
@@ -712,6 +722,69 @@ function returnOrderMaterials(
     }
   }
   return next
+}
+
+function recoverAccessOrders(
+  state: SimulationState,
+  recoverUnreachable: boolean,
+): SimulationState {
+  let next = state
+  for (const order of state.constructionOrders) {
+    if (order.reason !== 'access') continue
+
+    const request = next.accessRequests.find(
+      (candidate) => candidate.id === order.accessRequestId,
+    )
+    const building = next.world.buildings.find(
+      (candidate) => candidate.id === order.buildingId,
+    )
+    const orphaned =
+      order.accessRequestId === undefined || request === undefined
+    const unreachable =
+      recoverUnreachable &&
+      building?.construction === 'planned' &&
+      !hasActiveBuilder(next, building.id) &&
+      !hasReachableBuilder(next, building.position)
+
+    if (!orphaned && !unreachable) continue
+    if (building && hasActiveBuilder(next, building.id)) continue
+    if (
+      building?.construction !== undefined &&
+      building.construction !== 'planned'
+    ) {
+      continue
+    }
+
+    const returned = returnOrderMaterials(next, order)
+    if (!returned) continue
+    next = {
+      ...returned,
+      world: {
+        ...returned.world,
+        buildings: building
+          ? returned.world.buildings.filter(
+              (candidate) => candidate.id !== building.id,
+            )
+          : returned.world.buildings,
+      },
+      constructionOrders: returned.constructionOrders.filter(
+        (candidate) => candidate.id !== order.id,
+      ),
+    }
+  }
+  return next
+}
+
+export function recoverOrphanedAccessOrders(
+  state: SimulationState,
+): SimulationState {
+  return recoverAccessOrders(state, false)
+}
+
+export function recoverStaleAccessOrders(
+  state: SimulationState,
+): SimulationState {
+  return recoverAccessOrders(state, true)
 }
 
 export function recoverStaleOutpostOrders(

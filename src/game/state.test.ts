@@ -99,6 +99,40 @@ describe('createGameStore', () => {
     expect(store.getState().simulation.world.seed).toBe('save-test')
   })
 
+  it('marks an imported save when it repaired an orphaned access order', () => {
+    const store = createGameStore('recovery-save-test')
+    const parsed = JSON.parse(store.getState().exportSave()) as {
+      schemaVersion: number
+      state: ReturnType<typeof store.getState>['simulation']
+    }
+    parsed.state.world.buildings.push({
+      id: 'orphaned-access-ladder',
+      type: 'ladder',
+      position: { x: 10, y: 10 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned',
+    })
+    parsed.state.constructionOrders = [
+      {
+        id: 'orphaned-access-order',
+        buildingId: 'orphaned-access-ladder',
+        type: 'ladder',
+        required: { stone: 1 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'access',
+        accessRequestId: 'missing-access-request',
+      },
+    ]
+
+    expect(store.getState().importSave(JSON.stringify(parsed))).toBe(true)
+    expect(store.getState().saveStatus).toBe('IMPORTED WITH RECOVERY')
+    expect(store.getState().simulation.constructionOrders).toEqual([])
+  })
+
   it('restores the latest local save when a fresh store starts', () => {
     const saved = createGameStore('saved-seed')
     saved.getState().saveLocally()
