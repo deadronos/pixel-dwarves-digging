@@ -4,10 +4,13 @@ import {
   assessDigSafety,
   getAggregateInventory,
   getAvailableConstructionMaterial,
+  getStorageDiagnostics,
   isBootstrapProtectedTarget,
   planAccessConstructionOrder,
+  planEmergencyCapacityOrder,
   planExpansionOrder,
   planOverflowDepotOrder,
+  planStorageUpgradeOrder,
   recoverStaleAccessOrders,
   recoverStaleOutpostOrders,
   selectStorageDestination,
@@ -709,7 +712,7 @@ describe('logistics helpers', () => {
     )
   })
 
-  it('does not exceed the capacity-based depot limit', () => {
+  it('keeps expanding after two full depots instead of self-limiting on capacity', () => {
     const state = makeStorageState()
     state.inventory.stone = 4
     state.world.buildings[0].storage = {
@@ -741,7 +744,104 @@ describe('logistics helpers', () => {
 
     const planned = planOverflowDepotOrder(state)
 
-    expect(planned.constructionOrders).toEqual([])
+    expect(planned.constructionOrders).toContainEqual(
+      expect.objectContaining({ type: 'depot', reason: 'capacity' }),
+    )
+  })
+
+  it('plans a material-funded storage upgrade when capacity is exhausted', () => {
+    const state = makeStorageState()
+    state.inventory.stone = 8
+    state.world.buildings[0].storage = {
+      capacity: 120,
+      inventory: { stone: 120 },
+    }
+
+    const planned = planStorageUpgradeOrder(state)
+
+    expect(planned.constructionOrders).toContainEqual(
+      expect.objectContaining({
+        type: 'stockpile',
+        reason: 'storage-upgrade',
+        required: { stone: 8 },
+        targetLevel: 2,
+      }),
+    )
+  })
+
+  it('uses a reachable outpost as the final storage-full escape hatch', () => {
+    const state = makeStorageState()
+    state.constructionPolicy = 'expand'
+    state.safety = {
+      phase: 'blocked',
+      emergencyStone: 0,
+      blockedReason: 'storage-full',
+    }
+    state.inventory.stone = 12
+    state.world.cells[1 * state.world.width + 2] = {
+      block: 'air',
+      biome: 'meadow',
+    }
+    const stockpile = state.world.buildings[0]
+    stockpile.level = 3
+    stockpile.storage = { capacity: 168, inventory: { stone: 168 } }
+    state.world.buildings.push(
+      ...Array.from({ length: 8 }, (_, index) => ({
+        id: `depot-cap-${index}`,
+        type: 'depot' as const,
+        position: { x: 0, y: 0 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed' as const,
+      })),
+    )
+
+    const planned = planEmergencyCapacityOrder(state)
+
+    expect(planned.constructionOrders).toContainEqual(
+      expect.objectContaining({ type: 'outpost', reason: 'outpost' }),
+    )
+  })
+
+  it('reports occupancy, reservations, and rejected expansion reasons', () => {
+    const state = makeStorageState()
+    state.world.buildings[0].storage = {
+      capacity: 120,
+      inventory: { stone: 120 },
+    }
+    state.inventory.stone = 4
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      carrying: 'dirt',
+      task: {
+        kind: 'haul',
+        target: { x: 0, y: 1 },
+        path: [],
+        progress: 0,
+        block: 'dirt',
+        buildingId: 'stockpile-1',
+      },
+    }
+
+    const diagnostics = getStorageDiagnostics(state)
+
+    expect(diagnostics).toMatchObject({
+      totalCapacity: 120,
+      occupiedCapacity: 120,
+      availableCapacity: 0,
+      reservedCapacity: 1,
+      stateAvailableCapacity: 0,
+    })
+    expect(diagnostics.expansion).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: 'depot', reason: 'available' }),
+        expect.objectContaining({
+          kind: 'storage-upgrade',
+          reason: 'insufficient-stone',
+        }),
+      ]),
+    )
   })
 
   it('does not create a duplicate depot order while one is pending', () => {

@@ -117,13 +117,14 @@ export type BuildingState = {
 export type ConstructionOrder = {
   id: string
   buildingId: string
-  type: Exclude<BuildingType, 'stockpile'>
+  type: BuildingType
   required: Partial<Inventory>
   reserved: Partial<Inventory>
   delivered: Partial<Inventory>
   progress: number
-  reason: 'access' | 'outpost' | 'capacity' | 'policy'
+  reason: 'access' | 'outpost' | 'capacity' | 'storage-upgrade' | 'policy'
   accessRequestId?: string
+  targetLevel?: number
 }
 
 export type AccessRequest = {

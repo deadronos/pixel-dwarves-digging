@@ -272,7 +272,7 @@ function isConstructionOrder(value: unknown): boolean {
     isRecord(value) &&
     typeof value.id === 'string' &&
     typeof value.buildingId === 'string' &&
-    ['outpost', 'depot', 'bridge', 'ladder'].includes(value.type as string) &&
+    BUILDING_TYPES.includes(value.type as BuildingType) &&
     isInventoryRecord(value.required, true) &&
     isInventoryRecord(value.reserved, true) &&
     isInventoryRecord(value.delivered, true) &&
@@ -280,9 +280,14 @@ function isConstructionOrder(value: unknown): boolean {
     materials.length > 0 &&
     value.progress <= totalRequired &&
     quantitiesValid &&
-    ['access', 'outpost', 'capacity', 'policy'].includes(
+    ['access', 'outpost', 'capacity', 'storage-upgrade', 'policy'].includes(
       value.reason as string,
     ) &&
+    (value.targetLevel === undefined ||
+      isNonNegativeInteger(value.targetLevel)) &&
+    (value.reason === 'storage-upgrade'
+      ? value.targetLevel !== undefined
+      : value.targetLevel === undefined) &&
     (value.accessRequestId === undefined ||
       typeof value.accessRequestId === 'string')
   )
@@ -473,7 +478,11 @@ function isSimulationState(
       return (
         (building !== undefined &&
           building.type === order.type &&
-          building.construction !== 'completed' &&
+          (order.reason === 'storage-upgrade'
+            ? building.construction === 'completed' &&
+              building.storage !== undefined &&
+              order.targetLevel === building.level + 1
+            : building.construction !== 'completed') &&
           (order.accessRequestId === undefined ||
             requestIds.has(order.accessRequestId))) ||
         orphanedAccessOrder

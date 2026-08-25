@@ -1,4 +1,8 @@
-import { BUILDING_DEFINITIONS, getEmergencyReserveMaterial } from './content'
+import {
+  BUILDING_DEFINITIONS,
+  getEmergencyReserveMaterial,
+  STORAGE_UPGRADE_CAPACITY_BONUS,
+} from './content'
 import type {
   BuildingState,
   BuildingType,
@@ -272,7 +276,13 @@ export function reserveConstructionMaterials(
   const building = state.world.buildings.find(
     ({ id }) => id === order.buildingId,
   )
-  if (!building || building.construction === 'completed') return state
+  if (
+    !building ||
+    (building.construction === 'completed' &&
+      order.reason !== 'storage-upgrade')
+  ) {
+    return state
+  }
 
   const inventory = { ...state.inventory }
   const reserved = { ...order.reserved }
@@ -324,13 +334,50 @@ export function completeConstruction(
   )
   if (!building) return state
 
-  if (!canCompleteConstruction(state.world, order.buildingId)) return state
+  if (
+    !canCompleteConstruction(
+      state.world,
+      order.buildingId,
+      order.reason === 'storage-upgrade',
+    )
+  ) {
+    return state
+  }
 
   const materialsComplete = Object.entries(order.required).every(
     ([material, required]) =>
       (order.delivered[material as keyof Inventory] ?? 0) >= (required ?? 0),
   )
   if (!materialsComplete) return state
+
+  if (order.reason === 'storage-upgrade') {
+    if (!building.storage || order.targetLevel !== building.level + 1) {
+      return state
+    }
+    const storage = building.storage
+
+    return {
+      ...state,
+      world: {
+        ...state.world,
+        buildings: state.world.buildings.map((candidate) =>
+          candidate.id === building.id
+            ? {
+                ...candidate,
+                level: order.targetLevel ?? candidate.level,
+                storage: {
+                  ...storage,
+                  capacity: storage.capacity + STORAGE_UPGRADE_CAPACITY_BONUS,
+                },
+              }
+            : candidate,
+        ),
+      },
+      constructionOrders: state.constructionOrders.filter(
+        ({ id }) => id !== orderId,
+      ),
+    }
+  }
 
   const definition = BUILDING_DEFINITIONS[order.type]
   const completedBuilding: BuildingState = {
@@ -362,9 +409,13 @@ export function completeConstruction(
 export function canCompleteConstruction(
   world: World,
   buildingId: string,
+  allowStorageUpgrade = false,
 ): boolean {
   const building = world.buildings.find(({ id }) => id === buildingId)
-  if (!building || building.construction === 'completed') return false
+  if (!building) return false
+  if (building.construction === 'completed') {
+    return allowStorageUpgrade && building.storage !== undefined
+  }
 
   const placementWorld = {
     ...world,

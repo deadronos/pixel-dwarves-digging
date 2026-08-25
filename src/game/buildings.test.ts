@@ -248,4 +248,51 @@ describe('building helpers', () => {
     )
     expect(completed.inventory.stone).toBe(0)
   })
+
+  it('completes a storage upgrade without resetting stored inventory', () => {
+    const state = makeBuildingState()
+    const stockpile = state.world.buildings.find(
+      (building) => building.type === 'stockpile',
+    )
+    if (!stockpile?.storage) throw new Error('fixture stockpile missing')
+    stockpile.storage.inventory = { dirt: 12, stone: 8 }
+    state.inventory = { ...EMPTY_INVENTORY, stone: 8, dirt: 12 }
+    state.constructionOrders = [
+      {
+        id: 'stockpile-upgrade-order',
+        buildingId: stockpile.id,
+        type: 'stockpile',
+        required: { stone: 8 },
+        reserved: {},
+        delivered: {},
+        progress: 0,
+        reason: 'storage-upgrade',
+        targetLevel: 2,
+      },
+    ]
+
+    const reserved = reserveConstructionMaterials(
+      state,
+      'stockpile-upgrade-order',
+    )
+    expect(reserved.inventory.stone).toBe(0)
+    const delivered = {
+      ...reserved,
+      constructionOrders: reserved.constructionOrders.map((order) =>
+        order.id === 'stockpile-upgrade-order'
+          ? { ...order, reserved: {}, delivered: { stone: 8 }, progress: 8 }
+          : order,
+      ),
+    }
+    const completed = completeConstruction(delivered, 'stockpile-upgrade-order')
+    const upgraded = completed.world.buildings.find(
+      (building) => building.id === stockpile.id,
+    )
+
+    expect(upgraded).toMatchObject({
+      level: 2,
+      storage: { capacity: 144, inventory: { dirt: 12 } },
+    })
+    expect(completed.constructionOrders).toEqual([])
+  })
 })

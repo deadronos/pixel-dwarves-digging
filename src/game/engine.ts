@@ -27,8 +27,10 @@ import {
   hasReachableStorage,
   isBootstrapProtectedTarget,
   planAccessConstructionOrder,
+  planEmergencyCapacityOrder,
   planExpansionOrder,
   planOverflowDepotOrder,
+  planStorageUpgradeOrder,
   recoverOrphanedAccessOrders,
   recoverStaleAccessOrders,
   recoverStaleOutpostOrders,
@@ -421,7 +423,13 @@ function chooseBuildOrder(
       const building = state.world.buildings.find(
         ({ id }) => id === order.buildingId,
       )
-      if (!building || building.construction === 'completed') return false
+      if (
+        !building ||
+        (building.construction === 'completed' &&
+          order.reason !== 'storage-upgrade')
+      ) {
+        return false
+      }
       if (
         state.constructionPolicy === 'conserve' &&
         order.reason !== 'access'
@@ -465,7 +473,11 @@ function chooseBuildOrder(
     })
     .sort((first, second) => {
       const rank = (reason: ConstructionOrder['reason']) =>
-        reason === 'access' ? 0 : reason === 'capacity' ? 1 : 2
+        reason === 'access'
+          ? 0
+          : reason === 'capacity' || reason === 'storage-upgrade'
+            ? 1
+            : 2
       return (
         rank(first.reason) - rank(second.reason) ||
         first.path.length - second.path.length
@@ -927,7 +939,8 @@ function advanceDwarf(
         )
         return (
           building !== undefined &&
-          building.construction !== 'completed' &&
+          (building.construction !== 'completed' ||
+            order.reason === 'storage-upgrade') &&
           Object.keys(order.required).some((material) => {
             const key = material as keyof Inventory
             const required = order.required[key] ?? 0
@@ -939,7 +952,11 @@ function advanceDwarf(
       })
       .sort((first, second) => {
         const rank = (reason: ConstructionOrder['reason']) =>
-          reason === 'access' ? 0 : reason === 'capacity' ? 1 : 2
+          reason === 'access'
+            ? 0
+            : reason === 'capacity' || reason === 'storage-upgrade'
+              ? 1
+              : 2
         return rank(first.reason) - rank(second.reason)
       })
     for (const orderNeedingMaterials of ordersNeedingMaterials) {
@@ -1104,7 +1121,13 @@ function advanceDwarf(
           )
     }
 
-    if (!canCompleteConstruction(state.world, order.buildingId)) {
+    if (
+      !canCompleteConstruction(
+        state.world,
+        order.buildingId,
+        order.reason === 'storage-upgrade',
+      )
+    ) {
       return invalidateTask(state, dwarf)
     }
 
@@ -1326,10 +1349,11 @@ function stepOnce(state: SimulationState): SimulationState {
       ? planAccessRequests(reopenResolvedAccessRequests(recoveredState))
       : planAccessRequests(recoveredState)
   const capacityState = planOverflowDepotOrder(requestedState)
+  const upgradedState = planStorageUpgradeOrder(capacityState)
   const plannedState =
     state.safety.phase === 'blocked'
-      ? capacityState
-      : planExpansionOrder(capacityState)
+      ? planEmergencyCapacityOrder(upgradedState)
+      : planExpansionOrder(upgradedState)
 
   const nextState: SimulationState = {
     ...plannedState,
