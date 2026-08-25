@@ -6,7 +6,7 @@
 
 **Architecture:** Vite will select `/pixel-dwarves-digging/` only when `GITHUB_ACTIONS=true`; all local dev/build commands will retain `/`. A single GitHub Actions workflow will validate and build pushed version tags, upload `dist` as a Pages artifact, and deploy it with the official Pages actions.
 
-**Tech Stack:** Vite 8, npm/package-lock, Vitest, GitHub Actions Pages (`configure-pages`, `upload-pages-artifact`, `deploy-pages`).
+**Tech Stack:** Vite 8, npm/package-lock, Vitest, Node.js 24, GitHub Actions Pages (`configure-pages@v5`, `upload-pages-artifact@v4`, `deploy-pages@v4`).
 
 ---
 
@@ -15,7 +15,7 @@
 **Files:**
 - Modify: `vite.config.ts`
 
-- [ ] **Step 1: Add an environment-aware base setting**
+- [x] **Step 1: Add an environment-aware base setting**
 
 Update `vite.config.ts` so the exported Vite config includes:
 
@@ -34,7 +34,7 @@ export default defineConfig({
 
 This keeps local development at `http://localhost:5173/` and makes Actions-built asset URLs resolve under `/pixel-dwarves-digging/`.
 
-- [ ] **Step 2: Verify both base-path modes**
+- [x] **Step 2: Verify both base-path modes**
 
 Run:
 
@@ -49,7 +49,7 @@ rg -n 'src="/pixel-dwarves-digging/assets/|href="/pixel-dwarves-digging/assets/'
 
 Expected: the first build contains root `/assets/` URLs; the Actions-style build contains `/pixel-dwarves-digging/assets/` URLs.
 
-- [ ] **Step 3: Commit the Vite configuration**
+- [x] **Step 3: Commit the Vite configuration**
 
 ```bash
 git add vite.config.ts
@@ -61,7 +61,7 @@ git commit -m "fix: configure Vite base path for Pages"
 **Files:**
 - Create: `.github/workflows/deploy-pages.yml`
 
-- [ ] **Step 1: Add the workflow with tag filtering and least-required permissions**
+- [x] **Step 1: Add the workflow with tag filtering and least-required permissions**
 
 Create `.github/workflows/deploy-pages.yml`:
 
@@ -92,12 +92,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out tagged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -113,7 +113,7 @@ jobs:
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: dist
 
@@ -124,7 +124,7 @@ jobs:
 
 The tag push makes `GITHUB_ACTIONS=true` available to the Vite build, so the workflow automatically emits repository-prefixed asset URLs.
 
-- [ ] **Step 2: Validate workflow syntax and repository checks locally**
+- [x] **Step 2: Validate workflow syntax and repository checks locally**
 
 Run:
 
@@ -138,7 +138,7 @@ git diff --check
 
 Expected: all tests, typecheck, lint, build, and whitespace checks pass. Confirm the workflow’s tag trigger, permissions, artifact path, and deployment action by reviewing the YAML after formatting/checks.
 
-- [ ] **Step 3: Commit the deployment workflow**
+- [x] **Step 3: Commit the deployment workflow**
 
 ```bash
 git add .github/workflows/deploy-pages.yml
@@ -151,7 +151,7 @@ git commit -m "ci: deploy tagged builds to GitHub Pages"
 - Verify: `vite.config.ts`
 - Verify: `.github/workflows/deploy-pages.yml`
 
-- [ ] **Step 1: Inspect the final changes**
+- [x] **Step 1: Inspect the final changes**
 
 Run:
 
@@ -163,7 +163,7 @@ git log -2 --oneline
 
 Expected: only the Pages configuration, workflow, and their design/plan documentation are present; the working tree is clean.
 
-- [ ] **Step 2: Report the release trigger and URL**
+- [x] **Step 2: Report the release trigger and URL**
 
 Document that pushing a tag such as `v0.1.0` triggers the workflow and publishes to:
 
