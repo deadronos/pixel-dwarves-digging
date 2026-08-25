@@ -161,7 +161,9 @@ describe('createGameStore', () => {
 
     store.getState().resetProgress()
 
-    expect(window.localStorage.getItem(GAME_STORAGE_KEY)).toBeTruthy()
+    expect(window.localStorage.getItem(GAME_STORAGE_KEY)).toContain(
+      store.getState().simulation.world.seed,
+    )
     expect(store.getState().simulation.world.seed).not.toBe('before-reset-seed')
   })
 
