@@ -1,7 +1,7 @@
 import { canPlaceBuilding } from './buildings/placement'
 import {
   getBuildingById,
-  getCompletedStorageBuildings,
+  getCompletedBuildingByType,
 } from './buildings/selectors'
 import {
   BUILDING_DEFINITIONS,
@@ -17,12 +17,7 @@ import type {
 } from './types'
 
 export function getPrimaryStockpile(world: World): BuildingState | null {
-  return (
-    getCompletedStorageBuildings(world).find(
-      (building) =>
-        building.type === 'stockpile' && building.construction === 'completed',
-    ) ?? null
-  )
+  return getCompletedBuildingByType(world, 'stockpile')
 }
 
 export function getStorageBuilding(

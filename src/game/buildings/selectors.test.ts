@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { getPrimaryStockpile } from '../buildings'
 import type { World } from '../types'
 import { getBuildingById, getCompletedStorageBuildings } from './selectors'
 
@@ -47,5 +48,18 @@ describe('building selectors', () => {
 
   it('finds a building by id without changing its construction state', () => {
     expect(getBuildingById(world, 'depot-1')?.construction).toBe('planned')
+  })
+
+  it('finds a completed stockpile even when it has no storage payload', () => {
+    const stockpileWithoutStorage = {
+      ...world,
+      buildings: world.buildings.map((building) =>
+        building.id === 'stockpile-1'
+          ? { ...building, storage: undefined }
+          : building,
+      ),
+    }
+
+    expect(getPrimaryStockpile(stockpileWithoutStorage)?.id).toBe('stockpile-1')
   })
 })

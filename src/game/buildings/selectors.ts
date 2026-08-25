@@ -13,6 +13,18 @@ export function getCompletedStorageBuildings(world: World): BuildingState[] {
   )
 }
 
+export function getCompletedBuildingByType(
+  world: World,
+  type: BuildingState['type'],
+): BuildingState | null {
+  return (
+    world.buildings.find(
+      (building) =>
+        building.type === type && building.construction === 'completed',
+    ) ?? null
+  )
+}
+
 export function hasCompletedBuildingType(
   world: World,
   type: BuildingState['type'],
