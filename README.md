@@ -41,11 +41,11 @@ The pure simulation core is tested independently of React or Three.js. It covers
 
 - src/game/generation.ts creates deterministic biome bands and starter guarantees.
 - src/game/buildings.ts defines building footprints, storage, support, and construction completion.
-- src/game/logistics.ts selects physical storage destinations, aggregates carried material, and plans expansion orders.
+- src/game/logistics.ts is the public logistics facade; focused modules under src/game/logistics/ own storage accounting, access/recovery orders, dig safety, and expansion diagnostics/planning.
 - src/game/pathfinding.ts handles bounded grounded paths, ladders, bridges, and exposed work.
-- src/game/engine.ts advances dwarves through grounded movement, falling, safe digging, access requests, hauling, building, recovery, bootstrap protection, and completion.
+- src/game/engine.ts is the simulation orchestrator; focused modules under src/game/engine/ own target selection, access-request planning, recovery, and task helpers.
 - src/game/progression.ts handles prestige rewards and permanent upgrades.
-- src/game/serialization.ts defines the versioned JSON save envelope.
+- src/game/serialization.ts defines the public versioned JSON save envelope; focused modules under src/game/serialization/ own structural validation and schema migrations.
 - src/game/state.ts owns the fixed simulation timer, UI actions, and local persistence.
 - src/components/WorldCanvas.tsx renders the world through an orthographic R3F canvas.
 - src/components/Hud.tsx, ControlBar.tsx, and Inspector.tsx provide the DOM HUD and controls.

@@ -16,6 +16,7 @@ import {
   recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
+import { getAvailableCapacity as getFocusedAvailableCapacity } from './logistics/storage'
 import { type Cell, EMPTY_INVENTORY, type SimulationState } from './types'
 
 function makeStorageState(): SimulationState {
@@ -203,6 +204,12 @@ function makeDropState(
 }
 
 describe('logistics helpers', () => {
+  it('exposes storage capacity through the focused storage module', () => {
+    const state = makeStorageState()
+
+    expect(getFocusedAvailableCapacity(state.world)).toBe(120)
+  })
+
   it('prioritizes the main stockpile for nearest-stockpile hauling', () => {
     const state = makeStorageState()
     state.world.cells[1 * state.world.width + 2] = {
