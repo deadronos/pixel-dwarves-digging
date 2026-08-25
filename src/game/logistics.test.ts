@@ -5,6 +5,7 @@ import {
   getAggregateInventory,
   getAvailableConstructionMaterial,
   getStorageDiagnostics,
+  getStorageExpansionDiagnostics,
   isBootstrapProtectedTarget,
   planAccessConstructionOrder,
   planEmergencyCapacityOrder,
@@ -1010,5 +1011,61 @@ describe('logistics helpers', () => {
       expect.objectContaining({ id: 'unreachable-access' }),
     )
     expect(recovered.inventory.stone).toBe(1)
+  })
+
+  it('reuses cached storage expansion diagnostics when only tick changes', () => {
+    const state = makeStorageState()
+    const first = getStorageExpansionDiagnostics(state)
+    const nextTickState = { ...state, tick: state.tick + 1 }
+    const second = getStorageExpansionDiagnostics(nextTickState)
+
+    expect(second).toBe(first)
+  })
+
+  it('invalidates storage expansion diagnostics when construction policy changes', () => {
+    const state = makeStorageState()
+    state.constructionPolicy = 'balanced'
+    const first = getStorageExpansionDiagnostics(state)
+
+    const conserveState: SimulationState = {
+      ...state,
+      constructionPolicy: 'conserve',
+    }
+    const second = getStorageExpansionDiagnostics(conserveState)
+
+    expect(second).not.toBe(first)
+    expect(second).toContainEqual(
+      expect.objectContaining({ kind: 'outpost', reason: 'policy-disabled' }),
+    )
+  })
+
+  it('invalidates storage expansion diagnostics when available stone changes', () => {
+    const state = makeStorageState()
+    state.world.buildings[0].storage = {
+      capacity: 120,
+      inventory: { stone: 120 },
+    }
+    state.inventory.stone = 0
+    const first = getStorageExpansionDiagnostics(state)
+    expect(first).toContainEqual(
+      expect.objectContaining({
+        kind: 'storage-upgrade',
+        reason: 'insufficient-stone',
+      }),
+    )
+
+    const fundedState: SimulationState = {
+      ...state,
+      inventory: { ...state.inventory, stone: 8 },
+    }
+    const second = getStorageExpansionDiagnostics(fundedState)
+
+    expect(second).not.toBe(first)
+    expect(second).toContainEqual(
+      expect.objectContaining({
+        kind: 'storage-upgrade',
+        reason: 'available',
+      }),
+    )
   })
 })

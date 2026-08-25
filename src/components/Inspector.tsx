@@ -52,7 +52,10 @@ export default function Inspector() {
     (dwarf) =>
       dwarf.task.purpose === 'recovery' || dwarf.movement === 'stranded',
   ).length
-  const storageDiagnostics = getStorageDiagnostics(simulation)
+  const storageDiagnostics = useMemo(
+    () => getStorageDiagnostics(simulation),
+    [simulation],
+  )
 
   return (
     <aside className="inspector">
