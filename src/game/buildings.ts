@@ -83,12 +83,31 @@ function hasHorizontalAnchor(world: World, position: Position): boolean {
 }
 
 function hasLadderAnchor(world: World, position: Position): boolean {
-  return [-1, 1].some((offset) => {
-    const neighbor = { x: position.x + offset, y: position.y }
+  return [
+    { x: -1, y: 0 },
+    { x: 1, y: 0 },
+    { x: 0, y: -1 },
+    { x: 0, y: 1 },
+  ].some(({ x: offsetX, y: offsetY }) => {
+    const neighbor = {
+      x: position.x + offsetX,
+      y: position.y + offsetY,
+    }
     if (!isInBounds(world, neighbor.x, neighbor.y)) return false
+    const cell = world.cells[neighbor.y * world.width + neighbor.x]
+    if (cell.block !== 'air') return true
+    if (hasCompletedBuildingAt(world, neighbor)) return true
     return (
-      world.cells[neighbor.y * world.width + neighbor.x].block !== 'air' ||
-      hasCompletedBuildingAt(world, neighbor)
+      offsetX === 0 &&
+      world.buildings.some(
+        (building) =>
+          building.type === 'ladder' &&
+          building.construction === 'completed' &&
+          cellsFor(building).some(
+            (occupied) =>
+              occupied.x === neighbor.x && occupied.y === neighbor.y,
+          ),
+      )
     )
   })
 }
@@ -274,6 +293,23 @@ export function reserveConstructionMaterials(
     ...current,
     reserved,
   }))
+}
+
+export function consumeConstructionMaterial(
+  state: SimulationState,
+  material: keyof Inventory,
+  amount: number,
+): SimulationState | null {
+  if (amount < 0 || state.inventory[material] < amount) return null
+
+  return {
+    ...state,
+    world: removeFromStorage(state.world, material, amount),
+    inventory: {
+      ...state.inventory,
+      [material]: state.inventory[material] - amount,
+    },
+  }
 }
 
 export function completeConstruction(

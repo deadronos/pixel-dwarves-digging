@@ -238,6 +238,8 @@ function isDwarf(value: unknown, width: number, height: number): boolean {
     isPosition(value.position, width, height) &&
     ['grounded', 'falling', 'stranded'].includes(value.movement as string) &&
     isTask(value.task, width, height) &&
+    (value.noProgressTicks === undefined ||
+      isNonNegativeInteger(value.noProgressTicks)) &&
     (value.carrying === null ||
       (typeof value.carrying === 'string' &&
         MINEABLE_BLOCKS.includes(value.carrying as MineableBlockType)))

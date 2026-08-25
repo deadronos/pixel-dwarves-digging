@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { findPath, findReachableExposedSolids } from './pathfinding'
+import {
+  findAdjacentConstructionPaths,
+  findPath,
+  findReachableExposedSolids,
+} from './pathfinding'
 import type { Cell, World } from './types'
 
 function makeWorld(rows: string[]): World {
@@ -120,12 +124,119 @@ describe('findPath', () => {
     ])
   })
 
+  it('finds a supported diagonal path', () => {
+    const world = makeWorld(['#####', '.....', '.....', '#####'])
+    world.buildings = [
+      {
+        id: 'bridge-1',
+        type: 'bridge',
+        position: { x: 1, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-2',
+        type: 'bridge',
+        position: { x: 2, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-3',
+        type: 'bridge',
+        position: { x: 1, y: 2 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-4',
+        type: 'bridge',
+        position: { x: 2, y: 2 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+    ]
+
+    expect(findPath(world, { x: 1, y: 1 }, { x: 2, y: 2 })).toEqual([
+      { x: 2, y: 2 },
+    ])
+  })
+
+  it('finds a diagonal builder stand when cardinal stands are blocked', () => {
+    const world = makeWorld(['#####', '.#...', '.#.#.', '#####'])
+
+    expect(
+      findAdjacentConstructionPaths(world, { x: 0, y: 1 }, { x: 1, y: 2 }),
+    ).toEqual([{ path: [], stand: { x: 0, y: 1 } }])
+  })
+
+  it('does not move diagonally through a blocked corner', () => {
+    const world = makeWorld(['#####', '#.#.#', '##..#', '#####'])
+
+    expect(findPath(world, { x: 1, y: 1 }, { x: 2, y: 2 })).toBeNull()
+  })
+
   it('returns exposed solids with shortest paths to a standing cell', () => {
     const world = makeWorld(['#####', '.....', '..d..'])
 
     expect(findReachableExposedSolids(world, { x: 1, y: 1 })).toContainEqual({
       target: { x: 2, y: 2 },
-      path: [{ x: 2, y: 1 }],
+      path: [],
+    })
+  })
+
+  it('discovers a diagonally exposed solid target', () => {
+    const world = makeWorld(['#####', '.....', '.....', '...d.', '#####'])
+    world.buildings = [
+      {
+        id: 'bridge-1',
+        type: 'bridge',
+        position: { x: 1, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-2',
+        type: 'bridge',
+        position: { x: 2, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-3',
+        type: 'bridge',
+        position: { x: 1, y: 2 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+      {
+        id: 'bridge-4',
+        type: 'bridge',
+        position: { x: 2, y: 2 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+    ]
+
+    expect(findReachableExposedSolids(world, { x: 1, y: 1 })).toContainEqual({
+      target: { x: 3, y: 3 },
+      path: [{ x: 2, y: 2 }],
     })
   })
 

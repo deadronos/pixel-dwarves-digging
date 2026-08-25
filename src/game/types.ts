@@ -161,6 +161,7 @@ export type DwarfState = {
   movement: 'grounded' | 'falling' | 'stranded'
   task: TaskState
   carrying: MineableBlockType | null
+  noProgressTicks?: number
 }
 
 export type SimulationState = {

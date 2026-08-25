@@ -173,6 +173,32 @@ describe('building helpers', () => {
     ).toBe(true)
   })
 
+  it('allows a ladder directly below a completed ladder anchor', () => {
+    const state = makeBuildingState()
+    const ladderWorld = {
+      ...state.world,
+      buildings: [
+        ...state.world.buildings,
+        {
+          id: 'ladder-anchor',
+          type: 'ladder' as const,
+          position: { x: 3, y: 4 },
+          width: 1,
+          height: 1,
+          level: 1,
+          construction: 'completed' as const,
+        },
+      ],
+    }
+
+    expect(
+      canPlaceBuilding(ladderWorld, {
+        type: 'ladder',
+        position: { x: 3, y: 3 },
+      }),
+    ).toBe(true)
+  })
+
   it('rejects planned footprints that overlap another planned building', () => {
     const state = makeBuildingState()
 

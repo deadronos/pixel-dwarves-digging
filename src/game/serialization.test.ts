@@ -119,6 +119,48 @@ describe('serialization', () => {
     expect(parseSave(serializeState(original))).toEqual({ state: original })
   })
 
+  it('round-trips per-dwarf no-progress state', () => {
+    const original = makeState()
+    original.dwarves = [
+      {
+        id: 'dwarf-1',
+        position: { x: 0, y: 0 },
+        movement: 'stranded',
+        task: {
+          kind: 'idle',
+          path: [],
+          progress: 0,
+          purpose: 'recovery',
+          recoveryReason: 'stranded',
+        },
+        carrying: null,
+        noProgressTicks: 7,
+      },
+    ]
+
+    expect(parseSave(serializeState(original))).toEqual({ state: original })
+  })
+
+  it('rejects a negative per-dwarf no-progress counter', () => {
+    const original = makeState()
+    original.dwarves = [
+      {
+        id: 'dwarf-1',
+        position: { x: 0, y: 0 },
+        movement: 'grounded',
+        task: { kind: 'idle', path: [], progress: 0 },
+        carrying: null,
+        noProgressTicks: -1,
+      },
+    ]
+
+    expect(
+      parseSave(JSON.stringify({ schemaVersion: 4, state: original })),
+    ).toEqual({
+      error: 'Save file is missing required simulation data.',
+    })
+  })
+
   it('round-trips a storage-full safety state', () => {
     const original = makeState()
     original.safety = {

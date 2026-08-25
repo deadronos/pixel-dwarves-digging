@@ -12,7 +12,7 @@ import {
   recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
-import { EMPTY_INVENTORY, type SimulationState } from './types'
+import { type Cell, EMPTY_INVENTORY, type SimulationState } from './types'
 
 function makeStorageState(): SimulationState {
   const width = 6
@@ -105,6 +105,97 @@ function stepUntilCarrying(state: SimulationState): SimulationState {
     if (current.dwarves[0].carrying) return current
   }
   return current
+}
+
+function makeDropState(
+  dropDistance: number,
+  withIdleHelper = false,
+  withMaterial = false,
+): SimulationState {
+  const width = 6
+  const height = 5
+  const targetY = dropDistance
+  const cells: Cell[] = Array.from({ length: width * height }, (_, index) => {
+    const y = Math.floor(index / width)
+    return {
+      block: y === 0 ? ('stone' as const) : ('air' as const),
+      biome: 'meadow' as const,
+    }
+  })
+  cells[targetY * width + 2] = { block: 'dirt', biome: 'meadow' }
+
+  const primary = {
+    id: 'stockpile-1',
+    type: 'stockpile' as const,
+    position: { x: 0, y: 1 },
+    width: 1,
+    height: 1,
+    level: 1,
+    construction: 'completed' as const,
+    storage: { capacity: 120, inventory: {} },
+  }
+  const dwarves = [
+    {
+      id: 'dwarf-1',
+      position: { x: 2, y: targetY + 1 },
+      movement: 'grounded' as const,
+      task: { kind: 'idle' as const, path: [], progress: 0 },
+      carrying: null,
+    },
+  ]
+  if (withIdleHelper) {
+    dwarves.push({
+      id: 'dwarf-helper',
+      position: { x: 1, y: 1 },
+      movement: 'grounded' as const,
+      task: { kind: 'idle' as const, path: [], progress: 0 },
+      carrying: null,
+    })
+  }
+
+  return {
+    world: {
+      width,
+      height,
+      cells,
+      seed: `drop-${dropDistance}`,
+      runNumber: 1,
+      surfaceHeights: Array(width).fill(0),
+      biomes: Array(width).fill('meadow'),
+      start: { x: 1, y: 1 },
+      stockpile: { x: 0, y: 1 },
+      buildings: [primary],
+    },
+    dwarves,
+    inventory: { ...EMPTY_INVENTORY, dirt: withMaterial ? 1 : 0 },
+    policy: {
+      workPreference: 'nearest',
+      haulingPreference: 'nearest-stockpile',
+      materialPriority: {
+        coal: false,
+        iron: false,
+        crystal: false,
+        relic: false,
+      },
+    },
+    constructionOrders: [],
+    constructionPolicy: 'balanced',
+    accessRequests: [],
+    worldRevision: 0,
+    safety: { phase: 'operational', emergencyStone: 0 },
+    tick: 0,
+    totalCleared: 0,
+    completed: false,
+    discoveredRelics: 0,
+    prestigeCurrency: 0,
+    upgrades: {
+      toolPower: 0,
+      moveSpeed: 0,
+      satchel: 0,
+      extraBunks: 0,
+      prospecting: 0,
+    },
+  }
 }
 
 describe('logistics helpers', () => {
@@ -340,6 +431,49 @@ describe('logistics helpers', () => {
     expect(assessDigSafety(state, { x: 3, y: 1 }, { x: 2, y: 1 })).toEqual({
       safe: true,
       storage: { id: 'stockpile-1', position: { x: 0, y: 1 } },
+    })
+  })
+
+  it('allows a one-cell support drop when an idle helper is available', () => {
+    const state = makeDropState(1, true)
+
+    expect(assessDigSafety(state, { x: 2, y: 2 }, { x: 2, y: 1 })).toEqual(
+      expect.objectContaining({
+        safe: true,
+        dropDistance: 1,
+        landing: { x: 2, y: 1 },
+        storage: { id: 'stockpile-1', position: { x: 0, y: 1 } },
+      }),
+    )
+  })
+
+  it('rejects a support drop without a helper or recovery material', () => {
+    const state = makeDropState(1)
+
+    expect(assessDigSafety(state, { x: 2, y: 2 }, { x: 2, y: 1 })).toEqual({
+      safe: false,
+      failure: 'support',
+    })
+  })
+
+  it('allows a two-cell support drop only when the lower landing is routed', () => {
+    const state = makeDropState(2, false, true)
+
+    expect(assessDigSafety(state, { x: 2, y: 3 }, { x: 2, y: 2 })).toEqual(
+      expect.objectContaining({
+        safe: true,
+        dropDistance: 2,
+        landing: { x: 2, y: 1 },
+      }),
+    )
+  })
+
+  it('never accepts a support drop beyond two cells', () => {
+    const state = makeDropState(3, true, true)
+
+    expect(assessDigSafety(state, { x: 2, y: 4 }, { x: 2, y: 3 })).toEqual({
+      safe: false,
+      failure: 'support',
     })
   })
 
