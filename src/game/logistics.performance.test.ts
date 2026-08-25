@@ -9,6 +9,9 @@ describe('storage diagnostics performance', () => {
 
     const started = performance.now()
     let diagnosticCount = 0
+    let initialExpansion:
+      | ReturnType<typeof getStorageDiagnostics>['expansion']
+      | undefined
 
     for (let index = 0; index < iterations; index += 1) {
       // Simulate state updates where tick increments without changing underlying structure
@@ -17,7 +20,11 @@ describe('storage diagnostics performance', () => {
         tick: index,
       }
       const diagnostics = getStorageDiagnostics(current)
-      expect(diagnostics.expansion.length).toBeGreaterThan(0)
+      if (initialExpansion === undefined) {
+        initialExpansion = diagnostics.expansion
+      } else {
+        expect(diagnostics.expansion).toBe(initialExpansion)
+      }
       diagnosticCount += 1
     }
 
@@ -32,7 +39,7 @@ describe('storage diagnostics performance', () => {
     )
 
     expect(diagnosticCount).toBe(iterations)
-    // 1000 cached diagnostic calls should execute in well under 250ms (typically <20ms)
-    expect(elapsed).toBeLessThan(250)
+    expect(initialExpansion).toBeDefined()
+    expect(initialExpansion?.length).toBeGreaterThan(0)
   })
 })
