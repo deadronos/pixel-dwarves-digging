@@ -261,6 +261,49 @@ describe('serialization', () => {
     })
   })
 
+  it('round-trips a pending storage upgrade against a completed storage building', () => {
+    const state = makeState()
+    state.world.buildings = [
+      {
+        id: 'stockpile-1',
+        type: 'stockpile',
+        position: { x: 0, y: 0 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+        storage: { capacity: 120, inventory: { dirt: 4 } },
+      },
+    ]
+    state.constructionOrders = [
+      {
+        id: 'stockpile-upgrade-order',
+        buildingId: 'stockpile-1',
+        type: 'stockpile',
+        required: { stone: 8 },
+        reserved: { stone: 8 },
+        delivered: {},
+        progress: 0,
+        reason: 'storage-upgrade',
+        targetLevel: 2,
+      },
+    ]
+
+    const result = parseSave(JSON.stringify({ schemaVersion: 4, state }))
+
+    expect(result).toEqual({
+      state: expect.objectContaining({
+        constructionOrders: [
+          expect.objectContaining({
+            type: 'stockpile',
+            reason: 'storage-upgrade',
+            targetLevel: 2,
+          }),
+        ],
+      }),
+    })
+  })
+
   it('repairs an orphaned schema-four access order and reports the recovery', () => {
     const state = makeState()
     state.world.buildings.push({

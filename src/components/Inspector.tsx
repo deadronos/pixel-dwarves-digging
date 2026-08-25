@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { getPrimaryStockpile } from '../game/buildings'
 import { BIOME_DEFINITIONS, MINEABLE_BLOCK_SET } from '../game/content'
-import { getAvailableCapacity } from '../game/logistics'
+import { getStorageDiagnostics } from '../game/logistics'
 import { canPrestige, UPGRADE_COSTS } from '../game/progression'
 import { useGameStore } from '../game/state'
 import type { UpgradeLevels } from '../game/types'
@@ -52,6 +52,7 @@ export default function Inspector() {
     (dwarf) =>
       dwarf.task.purpose === 'recovery' || dwarf.movement === 'stranded',
   ).length
+  const storageDiagnostics = getStorageDiagnostics(simulation)
 
   return (
     <aside className="inspector">
@@ -102,7 +103,7 @@ export default function Inspector() {
           </div>
           <div>
             <dt>free capacity</dt>
-            <dd>{getAvailableCapacity(simulation.world)}</dd>
+            <dd>{storageDiagnostics.availableCapacity}</dd>
           </div>
           <div>
             <dt>outposts</dt>
@@ -138,6 +139,23 @@ export default function Inspector() {
             </dd>
           </div>
         </dl>
+      </div>
+
+      <div className="inspector-section">
+        <span className="section-kicker">STORAGE LOGISTICS</span>
+        <p className="directive">
+          {storageDiagnostics.occupiedCapacity.toLocaleString()} /{' '}
+          {storageDiagnostics.totalCapacity.toLocaleString()} occupied ·{' '}
+          {storageDiagnostics.reservedCapacity} reserved
+        </p>
+        <ul className="muted-copy">
+          {storageDiagnostics.expansion.map((candidate) => (
+            <li key={candidate.kind}>
+              {candidate.kind.replace('-', ' ')}:{' '}
+              {candidate.reason.replaceAll('-', ' ')}
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="inspector-section">
