@@ -3,54 +3,30 @@ import {
   completeConstruction,
   consumeConstructionMaterial,
   reserveConstructionMaterials,
-  returnMaterialToStorage,
 } from './buildings'
 import {
   BOOTSTRAP_NO_PROGRESS_TICK_LIMIT,
   COMMON_BUILDING_MATERIALS,
   DIG_DURATION,
-  getEmergencyReserveMaterial,
-  MAX_OPEN_ACCESS_REQUESTS,
   MINEABLE_BLOCK_SET,
-  MINERAL_BLOCKS,
   NO_PROGRESS_TICK_LIMIT,
   STARTER_BOOTSTRAP_CLEAR_COUNT,
 } from './content'
-import { getCell } from './generation'
-import {
-  assessDigSafety,
-  chooseCommonConstructionMaterial,
-  depositCarriedMaterial,
-  findEmergencyLadderPlan,
-  getAvailableConstructionMaterial,
-  getAvailableStateCapacity,
-  hasReachableStorage,
-  isBootstrapProtectedTarget,
-  planAccessConstructionOrder,
-  planEmergencyCapacityOrder,
-  planExpansionOrder,
-  planOverflowDepotOrder,
-  planStorageUpgradeOrder,
-  recoverOrphanedAccessOrders,
-  recoverStaleAccessOrders,
-  recoverStaleOutpostOrders,
-  selectStorageDestination,
-} from './logistics'
-import {
-  chooseAccessTarget,
-  chooseTarget,
-  findUnsafeTarget,
-} from './engine/targeting'
 import {
   planAccessRequests,
   reopenResolvedAccessRequests,
 } from './engine/accessRequests'
 import {
+  type AdvanceResult,
   attemptEmergencyRecovery,
   recoveryTask,
   settleDwarf,
-  type AdvanceResult,
 } from './engine/recovery'
+import {
+  chooseAccessTarget,
+  chooseTarget,
+  findUnsafeTarget,
+} from './engine/targeting'
 import {
   chooseBuildOrder,
   clearCell,
@@ -60,25 +36,27 @@ import {
   validPath,
 } from './engine/tasks'
 import {
-  canMoveBetween,
-  findAdjacentConstructionPaths,
-  findAdjacentPaths,
-  findPath,
-  findReachableExposedSolids,
-  isSupported,
-  type ReachableExposedSolid,
-} from './pathfinding'
+  assessDigSafety,
+  depositCarriedMaterial,
+  getAvailableConstructionMaterial,
+  getAvailableStateCapacity,
+  hasReachableStorage,
+  planEmergencyCapacityOrder,
+  planExpansionOrder,
+  planOverflowDepotOrder,
+  planStorageUpgradeOrder,
+  recoverStaleAccessOrders,
+  recoverStaleOutpostOrders,
+  selectStorageDestination,
+} from './logistics'
+import { findPath } from './pathfinding'
 import {
-  type AccessRequest,
   type ConstructionOrder,
   cloneInventory,
   type DwarfState,
   type Inventory,
   indexFor,
-  type MineableBlockType,
-  type Position,
   type SimulationState,
-  type World,
 } from './types'
 
 function updateSafetyState(state: SimulationState): SimulationState['safety'] {

@@ -6,9 +6,9 @@ import {
 } from '../content'
 import { findAdjacentConstructionPaths, findPath } from '../pathfinding'
 import {
-  cloneInventory,
   type BuildingState,
   type CommonBuildingMaterial,
+  cloneInventory,
   type Inventory,
   type MineableBlockType,
   type Position,

@@ -2,13 +2,29 @@ import { getPrimaryStockpile } from './buildings'
 import { STARTER_PROTECTED_RADIUS } from './content'
 import type { Position, SimulationState } from './types'
 
-export type { StorageDestination } from './logistics/storage'
 export type { EmergencyLadderPlan } from './logistics/access'
-export type { DigSafety } from './logistics/safety'
+export {
+  findEmergencyLadderPlan,
+  planAccessConstructionOrder,
+  recoverOrphanedAccessOrders,
+  recoverStaleAccessOrders,
+  recoverStaleOutpostOrders,
+} from './logistics/access'
 export type {
   StorageDiagnostics,
   StorageExpansionDiagnostic,
 } from './logistics/expansion'
+export {
+  getStorageDiagnostics,
+  getStorageExpansionDiagnostics,
+  planEmergencyCapacityOrder,
+  planExpansionOrder,
+  planOverflowDepotOrder,
+  planStorageUpgradeOrder,
+} from './logistics/expansion'
+export type { DigSafety } from './logistics/safety'
+export { assessDigSafety } from './logistics/safety'
+export type { StorageDestination } from './logistics/storage'
 export {
   chooseCommonConstructionMaterial,
   depositCarriedMaterial,
@@ -20,22 +36,6 @@ export {
   hasReachableStorage,
   selectStorageDestination,
 } from './logistics/storage'
-export {
-  findEmergencyLadderPlan,
-  planAccessConstructionOrder,
-  recoverOrphanedAccessOrders,
-  recoverStaleAccessOrders,
-  recoverStaleOutpostOrders,
-} from './logistics/access'
-export { assessDigSafety } from './logistics/safety'
-export {
-  getStorageDiagnostics,
-  getStorageExpansionDiagnostics,
-  planEmergencyCapacityOrder,
-  planExpansionOrder,
-  planOverflowDepotOrder,
-  planStorageUpgradeOrder,
-} from './logistics/expansion'
 
 export function isBootstrapActive(state: SimulationState): boolean {
   return state.safety.phase === 'bootstrap'

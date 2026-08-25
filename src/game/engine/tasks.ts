@@ -1,5 +1,5 @@
 import { returnMaterialToStorage } from '../buildings'
-import { findAdjacentConstructionPaths, canMoveBetween } from '../pathfinding'
+import { canMoveBetween, findAdjacentConstructionPaths } from '../pathfinding'
 import type {
   ConstructionOrder,
   DwarfState,
@@ -8,7 +8,7 @@ import type {
   SimulationState,
   World,
 } from '../types'
-import { recoveryTask, type AdvanceResult } from './recovery'
+import { type AdvanceResult, recoveryTask } from './recovery'
 
 export function chooseBuildOrder(
   state: SimulationState,
@@ -52,7 +52,9 @@ export function chooseBuildOrder(
         const required = order.required[key] ?? 0
         const delivered = order.delivered[key] ?? 0
         const reserved = order.reserved[key] ?? 0
-        return delivered < required && reserved - activeClaims(order.id, key) > 0
+        return (
+          delivered < required && reserved - activeClaims(order.id, key) > 0
+        )
       })
     })
     .flatMap((order) => {
@@ -62,7 +64,9 @@ export function chooseBuildOrder(
         const required = order.required[key] ?? 0
         const delivered = order.delivered[key] ?? 0
         const reserved = order.reserved[key] ?? 0
-        return delivered < required && reserved - activeClaims(order.id, key) > 0
+        return (
+          delivered < required && reserved - activeClaims(order.id, key) > 0
+        )
       })
       if (!material) return []
       const building = state.world.buildings.find(

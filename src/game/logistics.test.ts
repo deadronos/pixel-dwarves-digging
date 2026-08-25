@@ -16,8 +16,8 @@ import {
   recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
-import { type Cell, EMPTY_INVENTORY, type SimulationState } from './types'
 import { getAvailableCapacity as getFocusedAvailableCapacity } from './logistics/storage'
+import { type Cell, EMPTY_INVENTORY, type SimulationState } from './types'
 
 function makeStorageState(): SimulationState {
   const width = 6

@@ -1,24 +1,17 @@
 import { MAX_OPEN_ACCESS_REQUESTS } from '../content'
 import {
-  findAdjacentPaths,
-  type ReachableExposedSolid,
-} from '../pathfinding'
-import {
   assessDigSafety,
   planAccessConstructionOrder,
   recoverOrphanedAccessOrders,
 } from '../logistics'
+import { findAdjacentPaths, type ReachableExposedSolid } from '../pathfinding'
+import type { AccessRequest, Position, SimulationState } from '../types'
 import {
   findUnsafeTarget,
   reachableTargets,
   scoreTarget,
   taskKey,
 } from './targeting'
-import type {
-  AccessRequest,
-  Position,
-  SimulationState,
-} from '../types'
 
 export function resolveAccessRequests(state: SimulationState): SimulationState {
   return {
@@ -62,7 +55,9 @@ function reopenAccessRequest(
   }
 }
 
-export function reopenResolvedAccessRequests(state: SimulationState): SimulationState {
+export function reopenResolvedAccessRequests(
+  state: SimulationState,
+): SimulationState {
   let next = state
   for (const request of state.accessRequests) {
     if (request.status !== 'resolved') continue

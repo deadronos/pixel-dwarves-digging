@@ -5,12 +5,7 @@ import {
   OVERFLOW_DEPOT_TRIGGER_CAPACITY,
   STORAGE_UPGRADE_COST,
 } from '../content'
-import {
-  type BuildingType,
-  type Position,
-  type SimulationState,
-  type World,
-} from '../types'
+import type { BuildingType, Position, SimulationState, World } from '../types'
 import {
   canPlanAdditionalDepot,
   getAvailableCapacity,

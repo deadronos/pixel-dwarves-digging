@@ -1,8 +1,5 @@
+import { migrateV1State, normalizeV3State } from './serialization/migrations'
 import { isRecord } from './serialization/validation'
-import {
-  migrateV1State,
-  normalizeV3State,
-} from './serialization/migrations'
 import type { SerializedSave, SimulationState } from './types'
 
 export const SAVE_VERSION = 4

@@ -1,14 +1,9 @@
-import {
-  MINERAL_BLOCKS,
-} from '../content'
+import { MINERAL_BLOCKS } from '../content'
+import { assessDigSafety, isBootstrapProtectedTarget } from '../logistics'
 import {
   findReachableExposedSolids,
   type ReachableExposedSolid,
 } from '../pathfinding'
-import {
-  assessDigSafety,
-  isBootstrapProtectedTarget,
-} from '../logistics'
 import type {
   AccessRequest,
   DwarfState,
@@ -124,11 +119,13 @@ export function chooseTarget(
 export function findUnsafeTarget(
   state: SimulationState,
   dwarf: DwarfState,
-): (ReachableExposedSolid & {
-  score: number
-  stand: Position
-  failure: AccessRequest['failure']
-}) | null {
+):
+  | (ReachableExposedSolid & {
+      score: number
+      stand: Position
+      failure: AccessRequest['failure']
+    })
+  | null {
   const reserved = new Set(
     state.dwarves
       .filter((candidate) => candidate.id !== dwarf.id && candidate.task.target)

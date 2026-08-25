@@ -1,8 +1,4 @@
-import {
-  BIOME_IDS,
-  BUILDING_DEFINITIONS,
-  MINEABLE_BLOCKS,
-} from '../content'
+import { BIOME_IDS, MINEABLE_BLOCKS } from '../content'
 import type {
   AccessFailure,
   AccessRequest,
@@ -211,7 +207,11 @@ function isTask(value: unknown, width: number, height: number): boolean {
   )
 }
 
-export function isDwarf(value: unknown, width: number, height: number): boolean {
+export function isDwarf(
+  value: unknown,
+  width: number,
+  height: number,
+): boolean {
   return (
     isRecord(value) &&
     typeof value.id === 'string' &&

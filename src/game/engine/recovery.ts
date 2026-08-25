@@ -1,8 +1,5 @@
 import { consumeConstructionMaterial } from '../buildings'
-import {
-  getEmergencyReserveMaterial,
-  MINERAL_BLOCKS,
-} from '../content'
+import { getEmergencyReserveMaterial, MINERAL_BLOCKS } from '../content'
 import { getCell } from '../generation'
 import {
   chooseCommonConstructionMaterial,
@@ -12,7 +9,6 @@ import { isSupported } from '../pathfinding'
 import type {
   DwarfState,
   MineableBlockType,
-  Position,
   SimulationState,
   World,
 } from '../types'

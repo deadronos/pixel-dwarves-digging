@@ -5,16 +5,16 @@ import {
 } from '../buildings'
 import { BUILDING_DEFINITIONS } from '../content'
 import { findAdjacentConstructionPaths, findPath } from '../pathfinding'
-import {
-  type AccessRequest,
-  type BuildingType,
-  type CommonBuildingMaterial,
-  type ConstructionOrder,
-  type Inventory,
-  type MineableBlockType,
-  type Position,
-  type SimulationState,
-  type World,
+import type {
+  AccessRequest,
+  BuildingType,
+  CommonBuildingMaterial,
+  ConstructionOrder,
+  Inventory,
+  MineableBlockType,
+  Position,
+  SimulationState,
+  World,
 } from '../types'
 import {
   chooseCommonConstructionMaterial,
@@ -22,8 +22,8 @@ import {
   hasActiveBuilder,
   hasReachableBuilder,
   hasReachableConstructionSite,
-  selectStorageDestination,
   type StorageDestination,
+  selectStorageDestination,
 } from './storage'
 
 export type EmergencyLadderPlan = {
@@ -199,7 +199,9 @@ function returnOrderMaterials(
   order: ConstructionOrder,
 ): SimulationState | null {
   let next = state
-  for (const material of Object.keys(order.required) as Array<keyof Inventory>) {
+  for (const material of Object.keys(order.required) as Array<
+    keyof Inventory
+  >) {
     const amount =
       (order.reserved[material] ?? 0) + (order.delivered[material] ?? 0)
     for (let count = 0; count < amount; count += 1) {

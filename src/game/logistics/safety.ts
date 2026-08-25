@@ -1,17 +1,17 @@
-import { simulateDigWorld, isSupported } from '../pathfinding'
-import {
-  type AccessFailure,
-  type CommonBuildingMaterial,
-  type MineableBlockType,
-  type Position,
-  type SimulationState,
-  type World,
+import { isSupported, simulateDigWorld } from '../pathfinding'
+import type {
+  AccessFailure,
+  CommonBuildingMaterial,
+  MineableBlockType,
+  Position,
+  SimulationState,
+  World,
 } from '../types'
 import { findEmergencyLadderPlan } from './access'
 import {
   chooseCommonConstructionMaterial,
-  selectStorageDestination,
   type StorageDestination,
+  selectStorageDestination,
 } from './storage'
 
 export type DigSafety = {

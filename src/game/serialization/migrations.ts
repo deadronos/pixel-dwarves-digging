@@ -1,20 +1,11 @@
 import { BUILDING_DEFINITIONS, STARTER_BOOTSTRAP_CLEAR_COUNT } from '../content'
 import { recoverOrphanedAccessOrders } from '../logistics'
 import {
-  cloneInventory,
   type BuildingState,
+  cloneInventory,
   type SimulationState,
 } from '../types'
-import {
-  isAccessRequest,
-  isConstructionOrder,
-  isDwarf,
-  isInventoryRecord,
-  isNonNegativeInteger,
-  isRecord,
-  isSimulationState,
-  isWorld,
-} from './validation'
+import { isRecord, isSimulationState } from './validation'
 
 function normalizeSafety(
   value: Record<string, unknown>,
