@@ -6,6 +6,7 @@ import {
   STORAGE_UPGRADE_COST,
 } from '../content'
 import type { BuildingType, Position, SimulationState, World } from '../types'
+import { getExpansionEligibility } from './expansionEligibility'
 import {
   canPlanAdditionalDepot,
   getAvailableCapacity,
@@ -20,10 +21,11 @@ import {
 } from './storage'
 
 export function planExpansionOrder(state: SimulationState): SimulationState {
+  const eligibility = getExpansionEligibility(state)
   if (state.constructionPolicy === 'conserve') return state
   if (
     state.world.buildings.some((building) => building.type === 'outpost') ||
-    state.constructionOrders.some((order) => order.type === 'outpost')
+    eligibility.hasPendingOutpostOrder
   ) {
     return state
   }
@@ -38,7 +40,7 @@ export function planExpansionOrder(state: SimulationState): SimulationState {
   }
 
   const requiredStone = BUILDING_DEFINITIONS.outpost.stone
-  if (getAvailableConstructionMaterial(state, 'stone') < requiredStone) {
+  if (eligibility.availableStone < requiredStone) {
     return state
   }
 
@@ -88,18 +90,16 @@ export function planExpansionOrder(state: SimulationState): SimulationState {
 export function planOverflowDepotOrder(
   state: SimulationState,
 ): SimulationState {
+  const eligibility = getExpansionEligibility(state)
   if (getAvailableCapacity(state.world) > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
     return state
   }
-  if (
-    !canPlanAdditionalDepot(state.world) ||
-    state.constructionOrders.some((order) => order.type === 'depot')
-  ) {
+  if (!canPlanAdditionalDepot(state.world) || eligibility.hasPendingDepot) {
     return state
   }
 
   const definition = BUILDING_DEFINITIONS.depot
-  if (getAvailableConstructionMaterial(state, 'stone') < definition.stone) {
+  if (eligibility.availableStone < definition.stone) {
     return state
   }
 
@@ -151,6 +151,7 @@ export function planOverflowDepotOrder(
 export function planStorageUpgradeOrder(
   state: SimulationState,
 ): SimulationState {
+  const eligibility = getExpansionEligibility(state)
   if (state.constructionPolicy === 'conserve') return state
   if (
     state.safety.phase === 'blocked' &&
@@ -164,12 +165,12 @@ export function planStorageUpgradeOrder(
   if (
     state.constructionOrders.some(
       (order) =>
-        order.reason === 'capacity' || order.reason === 'storage-upgrade',
+        order.reason === 'capacity' || eligibility.hasPendingStorageUpgrade,
     )
   ) {
     return state
   }
-  if (getAvailableConstructionMaterial(state, 'stone') < STORAGE_UPGRADE_COST) {
+  if (eligibility.availableStone < STORAGE_UPGRADE_COST) {
     return state
   }
 
@@ -297,6 +298,7 @@ function explainConstructionSites(
 export function getStorageExpansionDiagnostics(
   state: SimulationState,
 ): StorageExpansionDiagnostic[] {
+  const eligibility = getExpansionEligibility(state)
   let worldCache = storageExpansionCache.get(state.world)
   if (!worldCache) {
     worldCache = new Map()
@@ -307,7 +309,7 @@ export function getStorageExpansionDiagnostics(
   const cached = worldCache.get(key)
   if (cached) return cached
 
-  const availableCapacity = getAvailableCapacity(state.world)
+  const availableCapacity = eligibility.availableCapacity
   const expansion: StorageExpansionDiagnostic[] = []
 
   if (availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
@@ -316,10 +318,7 @@ export function getStorageExpansionDiagnostics(
     expansion.push({ kind: 'depot', reason: 'depot-limit' })
   } else if (state.constructionOrders.some((order) => order.type === 'depot')) {
     expansion.push({ kind: 'depot', reason: 'pending-order' })
-  } else if (
-    getAvailableConstructionMaterial(state, 'stone') <
-    BUILDING_DEFINITIONS.depot.stone
-  ) {
+  } else if (eligibility.availableStone < BUILDING_DEFINITIONS.depot.stone) {
     expansion.push({ kind: 'depot', reason: 'insufficient-stone' })
   } else {
     expansion.push(
@@ -343,9 +342,7 @@ export function getStorageExpansionDiagnostics(
     )
   ) {
     expansion.push({ kind: 'storage-upgrade', reason: 'max-level' })
-  } else if (
-    getAvailableConstructionMaterial(state, 'stone') < STORAGE_UPGRADE_COST
-  ) {
+  } else if (eligibility.availableStone < STORAGE_UPGRADE_COST) {
     expansion.push({ kind: 'storage-upgrade', reason: 'insufficient-stone' })
   } else {
     expansion.push({
@@ -376,10 +373,7 @@ export function getStorageExpansionDiagnostics(
     state.safety.blockedReason !== 'storage-full'
   ) {
     expansion.push({ kind: 'outpost', reason: 'blocked-state' })
-  } else if (
-    getAvailableConstructionMaterial(state, 'stone') <
-    BUILDING_DEFINITIONS.outpost.stone
-  ) {
+  } else if (eligibility.availableStone < BUILDING_DEFINITIONS.outpost.stone) {
     expansion.push({ kind: 'outpost', reason: 'insufficient-stone' })
   } else {
     expansion.push(
