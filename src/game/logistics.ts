@@ -360,14 +360,24 @@ function hasReachableConstructionSite(
   state: SimulationState,
   position: Position,
 ): boolean {
-  const sources = [
-    ...state.dwarves.map((dwarf) => dwarf.position),
-    ...storageBuildings(state.world).map((building) => building.position),
-  ]
-  return sources.some(
-    (source) =>
-      findAdjacentConstructionPaths(state.world, source, position).length > 0,
-  )
+  const storage = storageBuildings(state.world)
+  for (const building of storage) {
+    if (
+      findAdjacentConstructionPaths(state.world, building.position, position)
+        .length > 0
+    ) {
+      return true
+    }
+  }
+  for (const dwarf of state.dwarves) {
+    if (
+      findAdjacentConstructionPaths(state.world, dwarf.position, position)
+        .length > 0
+    ) {
+      return true
+    }
+  }
+  return false
 }
 
 function hasActiveBuilder(state: SimulationState, buildingId: string): boolean {
@@ -880,6 +890,29 @@ export type StorageDiagnostics = {
   expansion: StorageExpansionDiagnostic[]
 }
 
+const storageExpansionCache = new WeakMap<
+  World,
+  Map<string, StorageExpansionDiagnostic[]>
+>()
+
+function storageExpansionKey(state: SimulationState): string {
+  const availableCapacity = getAvailableCapacity(state.world)
+  const availableStone = getAvailableConstructionMaterial(state, 'stone')
+  const ordersSignature = state.constructionOrders
+    .map(
+      (order) =>
+        `${order.id}:${order.type}:${order.reason}:${order.buildingId ?? ''}`,
+    )
+    .sort()
+    .join('|')
+  const dwarfSignature = state.dwarves
+    .map((dwarf) => `${dwarf.position.x},${dwarf.position.y}`)
+    .sort()
+    .join('|')
+
+  return `${state.constructionPolicy}|${state.safety.phase}|${state.safety.blockedReason ?? ''}|${availableCapacity}|${availableStone}|${ordersSignature}|${dwarfSignature}`
+}
+
 function explainConstructionSites(
   state: SimulationState,
   type: 'depot' | 'outpost',
@@ -900,30 +933,20 @@ function explainConstructionSites(
   }
 }
 
-export function getStorageDiagnostics(
+export function getStorageExpansionDiagnostics(
   state: SimulationState,
-): StorageDiagnostics {
-  const buildings = storageBuildings(state.world).map((building) => {
-    const capacity = building.storage?.capacity ?? 0
-    const occupied = storedCount(building.storage?.inventory ?? {})
-    return {
-      id: building.id,
-      type: building.type,
-      level: building.level,
-      capacity,
-      occupied,
-      available: Math.max(0, capacity - occupied),
-    }
-  })
-  const totalCapacity = buildings.reduce(
-    (total, building) => total + building.capacity,
-    0,
-  )
+): StorageExpansionDiagnostic[] {
+  let worldCache = storageExpansionCache.get(state.world)
+  if (!worldCache) {
+    worldCache = new Map()
+    storageExpansionCache.set(state.world, worldCache)
+  }
+
+  const key = storageExpansionKey(state)
+  const cached = worldCache.get(key)
+  if (cached) return cached
+
   const availableCapacity = getAvailableCapacity(state.world)
-  const completedDepots = state.world.buildings.filter(
-    (building) =>
-      building.type === 'depot' && building.construction === 'completed',
-  ).length
   const expansion: StorageExpansionDiagnostic[] = []
 
   if (availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
@@ -1003,6 +1026,35 @@ export function getStorageDiagnostics(
     )
   }
 
+  worldCache.set(key, expansion)
+  return expansion
+}
+
+export function getStorageDiagnostics(
+  state: SimulationState,
+): StorageDiagnostics {
+  const buildings = storageBuildings(state.world).map((building) => {
+    const capacity = building.storage?.capacity ?? 0
+    const occupied = storedCount(building.storage?.inventory ?? {})
+    return {
+      id: building.id,
+      type: building.type,
+      level: building.level,
+      capacity,
+      occupied,
+      available: Math.max(0, capacity - occupied),
+    }
+  })
+  const totalCapacity = buildings.reduce(
+    (total, building) => total + building.capacity,
+    0,
+  )
+  const availableCapacity = getAvailableCapacity(state.world)
+  const completedDepots = state.world.buildings.filter(
+    (building) =>
+      building.type === 'depot' && building.construction === 'completed',
+  ).length
+
   return {
     totalCapacity,
     occupiedCapacity: Math.max(0, totalCapacity - availableCapacity),
@@ -1012,7 +1064,7 @@ export function getStorageDiagnostics(
     depotLimit: getDepotLimit(state.world),
     completedDepots,
     buildings,
-    expansion,
+    expansion: getStorageExpansionDiagnostics(state),
   }
 }
 
