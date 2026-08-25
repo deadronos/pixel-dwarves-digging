@@ -1,4 +1,8 @@
-import { canPlaceBuilding, getPrimaryStockpile } from '../buildings'
+import {
+  canPlaceBuilding,
+  getPrimaryStockpile,
+  returnMaterialToStorage,
+} from '../buildings'
 import { BUILDING_DEFINITIONS } from '../content'
 import { findAdjacentConstructionPaths, findPath } from '../pathfinding'
 import {
@@ -6,6 +10,7 @@ import {
   type BuildingType,
   type CommonBuildingMaterial,
   type ConstructionOrder,
+  type Inventory,
   type MineableBlockType,
   type Position,
   type SimulationState,
@@ -14,6 +19,9 @@ import {
 import {
   chooseCommonConstructionMaterial,
   getAvailableConstructionMaterial,
+  hasActiveBuilder,
+  hasReachableBuilder,
+  hasReachableConstructionSite,
   selectStorageDestination,
   type StorageDestination,
 } from './storage'
@@ -184,4 +192,126 @@ export function planAccessConstructionOrder(
         : current,
     ),
   }
+}
+
+function returnOrderMaterials(
+  state: SimulationState,
+  order: ConstructionOrder,
+): SimulationState | null {
+  let next = state
+  for (const material of Object.keys(order.required) as Array<keyof Inventory>) {
+    const amount =
+      (order.reserved[material] ?? 0) + (order.delivered[material] ?? 0)
+    for (let count = 0; count < amount; count += 1) {
+      const returned = returnMaterialToStorage(next.world, material)
+      if (!returned.stored) return null
+      next = {
+        ...next,
+        world: returned.world,
+        inventory: {
+          ...next.inventory,
+          [material]: next.inventory[material] + 1,
+        },
+      }
+    }
+  }
+  return next
+}
+
+function recoverAccessOrders(
+  state: SimulationState,
+  recoverUnreachable: boolean,
+): SimulationState {
+  let next = state
+  for (const order of state.constructionOrders) {
+    if (order.reason !== 'access') continue
+
+    const request = next.accessRequests.find(
+      (candidate) => candidate.id === order.accessRequestId,
+    )
+    const building = next.world.buildings.find(
+      (candidate) => candidate.id === order.buildingId,
+    )
+    const orphaned =
+      order.accessRequestId === undefined || request === undefined
+    const unreachable =
+      recoverUnreachable &&
+      building?.construction === 'planned' &&
+      !hasActiveBuilder(next, building.id) &&
+      !hasReachableBuilder(next, building.position)
+
+    if (!orphaned && !unreachable) continue
+    if (building && hasActiveBuilder(next, building.id)) continue
+    if (
+      building?.construction !== undefined &&
+      building.construction !== 'planned'
+    ) {
+      continue
+    }
+
+    const returned = returnOrderMaterials(next, order)
+    if (!returned) continue
+    next = {
+      ...returned,
+      world: {
+        ...returned.world,
+        buildings: building
+          ? returned.world.buildings.filter(
+              (candidate) => candidate.id !== building.id,
+            )
+          : returned.world.buildings,
+      },
+      constructionOrders: returned.constructionOrders.filter(
+        (candidate) => candidate.id !== order.id,
+      ),
+    }
+  }
+  return next
+}
+
+export function recoverOrphanedAccessOrders(
+  state: SimulationState,
+): SimulationState {
+  return recoverAccessOrders(state, false)
+}
+
+export function recoverStaleAccessOrders(
+  state: SimulationState,
+): SimulationState {
+  return recoverAccessOrders(state, true)
+}
+
+export function recoverStaleOutpostOrders(
+  state: SimulationState,
+): SimulationState {
+  let next = state
+  for (const order of state.constructionOrders) {
+    if (order.reason !== 'outpost') continue
+    const building = next.world.buildings.find(
+      (candidate) => candidate.id === order.buildingId,
+    )
+    if (
+      building?.construction !== 'planned' ||
+      hasActiveBuilder(next, building.id) ||
+      hasReachableConstructionSite(next, building.position)
+    ) {
+      continue
+    }
+
+    const returned = returnOrderMaterials(next, order)
+    if (!returned) continue
+    next = {
+      ...returned,
+      world: {
+        ...returned.world,
+        buildings: returned.world.buildings.filter(
+          (candidate) => candidate.id !== building.id,
+        ),
+      },
+      constructionOrders: returned.constructionOrders.filter(
+        (candidate) => candidate.id !== order.id,
+      ),
+    }
+  }
+  return next
 }
