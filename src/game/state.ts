@@ -214,25 +214,29 @@ export function createGameStore(
     },
     newRun: (nextSeed = randomStarterSeed()) => {
       const current = get().simulation
+      const simulation = createInitialSimulation(
+        nextSeed,
+        current.world.runNumber + 1,
+        current.upgrades,
+        current.prestigeCurrency,
+        current.policy,
+        current.constructionPolicy,
+      )
       set({
-        simulation: createInitialSimulation(
-          nextSeed,
-          current.world.runNumber + 1,
-          current.upgrades,
-          current.prestigeCurrency,
-          current.policy,
-          current.constructionPolicy,
-        ),
+        simulation,
         saveStatus: 'NEW RUN',
         saveError: null,
       })
+      writeLocalSave(simulation)
     },
     resetProgress: () => {
+      const simulation = createInitialSimulation(randomStarterSeed())
       set({
-        simulation: createInitialSimulation(randomStarterSeed()),
+        simulation,
         saveStatus: 'RESET',
         saveError: null,
       })
+      writeLocalSave(simulation)
     },
     prestige: (mode) => {
       const current = get().simulation

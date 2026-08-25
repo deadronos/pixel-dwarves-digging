@@ -145,6 +145,26 @@ describe('createGameStore', () => {
     )
   })
 
+  it('persists a manual new run immediately', () => {
+    const store = createGameStore('before-new-run-seed')
+
+    store.getState().newRun('after-new-run-seed')
+
+    expect(store.getState().simulation.world.seed).toBe('after-new-run-seed')
+    expect(window.localStorage.getItem(GAME_STORAGE_KEY)).toContain(
+      'after-new-run-seed',
+    )
+  })
+
+  it('persists a reset immediately', () => {
+    const store = createGameStore('before-reset-seed')
+
+    store.getState().resetProgress()
+
+    expect(window.localStorage.getItem(GAME_STORAGE_KEY)).toBeTruthy()
+    expect(store.getState().simulation.world.seed).not.toBe('before-reset-seed')
+  })
+
   it('marks the save dirty after the simulation advances', () => {
     const store = createGameStore('dirty-save-seed')
     store.getState().saveLocally()
