@@ -1,5 +1,6 @@
 import { MINEABLE_BLOCK_SET } from './content'
 import { getCell } from './generation'
+import { isClearedPosition, isInBounds } from './pathfinding/geometry'
 import { indexFor, type Position, type World } from './types'
 
 const CARDINAL_DIRECTIONS: Position[] = [
@@ -33,15 +34,6 @@ type NavigationIndex = {
 const navigationIndexCache = new WeakMap<World, NavigationIndex>()
 const searchCache = new WeakMap<World, Map<string, SearchResult | null>>()
 const pathCache = new WeakMap<World, Map<string, Position[] | null>>()
-
-function isInBounds(world: World, position: Position): boolean {
-  return (
-    position.x >= 0 &&
-    position.x < world.width &&
-    position.y >= 0 &&
-    position.y < world.height
-  )
-}
 
 function createNavigationIndex(world: World): NavigationIndex {
   const floors = new Uint8Array(world.width * world.height)
@@ -97,16 +89,8 @@ function hasLadder(world: World, position: Position): boolean {
   )
 }
 
-function isCleared(position: Position, cleared?: Position): boolean {
-  return (
-    cleared !== undefined &&
-    position.x === cleared.x &&
-    position.y === cleared.y
-  )
-}
-
 function isAir(world: World, position: Position, cleared?: Position): boolean {
-  return isCleared(position, cleared)
+  return isClearedPosition(position, cleared)
     ? true
     : getCell(world, position.x, position.y).block === 'air'
 }

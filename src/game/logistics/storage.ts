@@ -1,4 +1,5 @@
 import { getPrimaryStockpile } from '../buildings'
+import { getCompletedStorageBuildings } from '../buildings/selectors'
 import {
   COMMON_BUILDING_MATERIALS,
   getEmergencyReserveMaterial,
@@ -22,9 +23,7 @@ export type StorageDestination = {
 }
 
 export function storageBuildings(world: World): BuildingState[] {
-  return world.buildings.filter(
-    (building) => building.construction === 'completed' && building.storage,
-  )
+  return getCompletedStorageBuildings(world)
 }
 
 export function getDepotLimit(world: World): number {

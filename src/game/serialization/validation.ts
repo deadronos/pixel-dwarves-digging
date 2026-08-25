@@ -10,6 +10,7 @@ import type {
   SimulationState,
 } from '../types'
 import { MAP_HEIGHT, MAP_WIDTH } from '../types'
+import { hasUniqueIds } from './validation/invariants'
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -363,14 +364,13 @@ export function isSimulationState(
   const upgrades = value.upgrades
   const safety = value.safety
   return (
-    new Set(world.buildings.map((building) => building.id)).size ===
-      world.buildings.length &&
+    hasUniqueIds(world.buildings) &&
     Array.isArray(value.dwarves) &&
-    new Set(
+    hasUniqueIds(
       value.dwarves
         .filter((dwarf) => isDwarf(dwarf, world.width, world.height))
-        .map((dwarf) => (dwarf as { id: string }).id),
-    ).size === value.dwarves.length &&
+        .map((dwarf) => ({ id: (dwarf as { id: string }).id })),
+    ) &&
     value.dwarves.every((dwarf) => isDwarf(dwarf, world.width, world.height)) &&
     isInventoryRecord(value.inventory, false) &&
     isRecord(policy) &&
@@ -397,8 +397,7 @@ export function isSimulationState(
     typeof value.completed === 'boolean' &&
     Array.isArray(value.constructionOrders) &&
     value.constructionOrders.every(isConstructionOrder) &&
-    new Set(value.constructionOrders.map((order) => order.id)).size ===
-      value.constructionOrders.length &&
+    hasUniqueIds(value.constructionOrders) &&
     value.constructionOrders.every((order) => {
       const building = world.buildings.find(
         (candidate) => candidate.id === order.buildingId,
@@ -426,8 +425,7 @@ export function isSimulationState(
     value.accessRequests.every((request) =>
       isAccessRequest(request, world.width, world.height),
     ) &&
-    new Set(value.accessRequests.map((request) => request.id)).size ===
-      value.accessRequests.length &&
+    hasUniqueIds(value.accessRequests) &&
     isNonNegativeInteger(value.worldRevision) &&
     isRecord(safety) &&
     ['bootstrap', 'operational', 'blocked'].includes(safety.phase as string) &&
