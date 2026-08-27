@@ -9,9 +9,10 @@ export default function Hud() {
   const paused = useGameStore((state) => state.paused)
   const speed = useGameStore((state) => state.speed)
   const saveStatus = useGameStore((state) => state.saveStatus)
+  const worldCells = simulation.world.cells
   const remaining = useMemo(
-    () => countSolids(simulation.world),
-    [simulation.world],
+    () => countSolids({ cells: worldCells }),
+    [worldCells],
   )
   const inventory = useMemo(
     () => getAggregateInventory(simulation),

@@ -205,7 +205,7 @@ export function generateWorld(
   }
 }
 
-export function countSolids(world: World): number {
+export function countSolids(world: Pick<World, 'cells'>): number {
   return world.cells.reduce(
     (total, cell) => total + (MINEABLE_BLOCK_SET.has(cell.block) ? 1 : 0),
     0,

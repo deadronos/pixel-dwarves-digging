@@ -22,9 +22,10 @@ export default function Inspector() {
   const simulation = useGameStore((state) => state.simulation)
   const prestige = useGameStore((state) => state.prestige)
   const buyUpgrade = useGameStore((state) => state.buyUpgrade)
+  const worldCells = simulation.world.cells
   const remaining = useMemo(
-    () => countSolids(simulation.world),
-    [simulation.world],
+    () => countSolids({ cells: worldCells }),
+    [worldCells],
   )
   const total = remaining + simulation.totalCleared
   const progress =
