@@ -1,4 +1,5 @@
 import { returnMaterialToStorage } from '../buildings'
+import { clearCell } from '../generation'
 import { canMoveBetween, findAdjacentConstructionPaths } from '../pathfinding'
 import type {
   ConstructionOrder,
@@ -98,15 +99,7 @@ export function chooseBuildOrder(
   return candidates[0] ?? null
 }
 
-export function clearCell(world: World, target: Position): World {
-  const targetIndex = target.y * world.width + target.x
-  return {
-    ...world,
-    cells: world.cells.map((cell, index) =>
-      index === targetIndex ? { ...cell, block: 'air' as const } : cell,
-    ),
-  }
-}
+export { clearCell }
 
 export function unchanged(dwarf: DwarfState, world: World): AdvanceResult {
   return { dwarf, world, minedBlock: null }

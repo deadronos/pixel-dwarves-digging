@@ -1,4 +1,9 @@
-import type { BuildingState, Inventory, MineableBlockType, World } from '../types'
+import type {
+  BuildingState,
+  Inventory,
+  MineableBlockType,
+  World,
+} from '../types'
 
 export function storedCount(inventory: Partial<Inventory>): number {
   return Object.values(inventory).reduce(

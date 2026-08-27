@@ -24,7 +24,7 @@ export default function Inspector() {
   const buyUpgrade = useGameStore((state) => state.buyUpgrade)
   const remaining = useMemo(
     () => countSolids(simulation.world),
-    [simulation.world.cells],
+    [simulation.world],
   )
   const total = remaining + simulation.totalCleared
   const progress =

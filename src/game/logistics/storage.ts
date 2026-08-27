@@ -1,6 +1,6 @@
 import { getPrimaryStockpile } from '../buildings'
-import { addMaterialToStorage, storedCount } from '../buildings/storage'
 import { getCompletedStorageBuildings } from '../buildings/selectors'
+import { addMaterialToStorage, storedCount } from '../buildings/storage'
 import {
   COMMON_BUILDING_MATERIALS,
   getEmergencyReserveMaterial,
