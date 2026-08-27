@@ -7,20 +7,28 @@ import type {
   Inventory,
   Position,
   SimulationState,
+  TaskState,
   World,
 } from '../types'
 import { type AdvanceResult, recoveryTask } from './recovery'
+
+export function idleTask(): TaskState {
+  return { kind: 'idle', path: [], progress: 0 }
+}
+
+export type BuildOrder = {
+  orderId: string
+  reason: ConstructionOrder['reason']
+  path: Position[]
+  stand: Position
+  material: keyof Inventory
+}
 
 export function chooseBuildOrder(
   state: SimulationState,
   dwarf: DwarfState,
   onlyOrderId?: string,
-): {
-  orderId: string
-  path: Position[]
-  stand: Position
-  material: keyof Inventory
-} | null {
+): BuildOrder | null {
   const activeClaims = (orderId: string, material: keyof Inventory) =>
     state.dwarves.filter(
       (candidate) =>
