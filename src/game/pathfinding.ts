@@ -1,5 +1,5 @@
 import { MINEABLE_BLOCK_SET } from './content'
-import { getCell } from './generation'
+import { clearCell, getCell } from './generation'
 import { isClearedPosition, isInBounds } from './pathfinding/geometry'
 import { indexFor, type Position, type World } from './types'
 
@@ -123,13 +123,7 @@ function isWalkable(
 }
 
 export function simulateDigWorld(world: World, target: Position): World {
-  const targetIndex = indexFor(target.x, target.y, world.width)
-  return {
-    ...world,
-    cells: world.cells.map((cell, index) =>
-      index === targetIndex ? { ...cell, block: 'air' as const } : cell,
-    ),
-  }
+  return clearCell(world, target)
 }
 
 export function canMoveBetween(
@@ -335,25 +329,42 @@ export function findPath(
   return path
 }
 
+function findAdjacentPathsForDirections(
+  world: World,
+  from: Position,
+  target: Position,
+  directions: Position[],
+  cleared?: Position,
+): Array<{ path: Position[]; stand: Position }> {
+  return directions
+    .map((direction) => {
+      const stand = {
+        x: target.x + direction.x,
+        y: target.y + direction.y,
+      }
+      const path = findPath(world, from, stand, cleared)
+      return path ? { path, stand } : null
+    })
+    .filter(
+      (result): result is { path: Position[]; stand: Position } =>
+        result !== null,
+    )
+    .sort((first, second) => first.path.length - second.path.length)
+}
+
 export function findAdjacentPaths(
   world: World,
   from: Position,
   target: Position,
   cleared?: Position,
 ): Array<{ path: Position[]; stand: Position }> {
-  return CARDINAL_DIRECTIONS.map((direction) => {
-    const stand = {
-      x: target.x + direction.x,
-      y: target.y + direction.y,
-    }
-    const path = findPath(world, from, stand, cleared)
-    return path ? { path, stand } : null
-  })
-    .filter(
-      (result): result is { path: Position[]; stand: Position } =>
-        result !== null,
-    )
-    .sort((first, second) => first.path.length - second.path.length)
+  return findAdjacentPathsForDirections(
+    world,
+    from,
+    target,
+    CARDINAL_DIRECTIONS,
+    cleared,
+  )
 }
 
 export function findAdjacentConstructionPaths(
@@ -362,19 +373,13 @@ export function findAdjacentConstructionPaths(
   target: Position,
   cleared?: Position,
 ): Array<{ path: Position[]; stand: Position }> {
-  return MOVEMENT_DIRECTIONS.map((direction) => {
-    const stand = {
-      x: target.x + direction.x,
-      y: target.y + direction.y,
-    }
-    const path = findPath(world, from, stand, cleared)
-    return path ? { path, stand } : null
-  })
-    .filter(
-      (result): result is { path: Position[]; stand: Position } =>
-        result !== null,
-    )
-    .sort((first, second) => first.path.length - second.path.length)
+  return findAdjacentPathsForDirections(
+    world,
+    from,
+    target,
+    MOVEMENT_DIRECTIONS,
+    cleared,
+  )
 }
 
 export function findExposedSolids(world: World, from: Position): Position[] {

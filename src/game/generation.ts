@@ -34,6 +34,16 @@ export function getCell(world: World, x: number, y: number): Cell {
   return world.cells[indexFor(x, y, world.width)]
 }
 
+export function clearCell(world: World, target: Position): World {
+  const targetIndex = indexFor(target.x, target.y, world.width)
+  return {
+    ...world,
+    cells: world.cells.map((cell, index) =>
+      index === targetIndex ? { ...cell, block: 'air' as const } : cell,
+    ),
+  }
+}
+
 function biomeAt(x: number): BiomeId {
   const band = Math.min(
     BIOME_IDS.length - 1,
@@ -195,11 +205,15 @@ export function generateWorld(
   }
 }
 
-export function countSolids(world: World): number {
+export function countSolids(world: Pick<World, 'cells'>): number {
   return world.cells.reduce(
     (total, cell) => total + (MINEABLE_BLOCK_SET.has(cell.block) ? 1 : 0),
     0,
   )
+}
+
+export function hasMineableSolids(world: World): boolean {
+  return world.cells.some((cell) => MINEABLE_BLOCK_SET.has(cell.block))
 }
 
 export function countMinerals(world: World): number {

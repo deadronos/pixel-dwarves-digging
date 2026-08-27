@@ -16,6 +16,7 @@ import {
   recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
+import { removeRecoveredConstructionOrder } from './logistics/constructionRecovery'
 import { getAvailableCapacity as getFocusedAvailableCapacity } from './logistics/storage'
 import { type Cell, EMPTY_INVENTORY, type SimulationState } from './types'
 
@@ -204,6 +205,39 @@ function makeDropState(
 }
 
 describe('logistics helpers', () => {
+  it('returns materials and removes a recovered planned order atomically', () => {
+    const state = makeStorageState()
+    const building = {
+      id: 'stale-outpost',
+      type: 'outpost' as const,
+      position: { x: 4, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned' as const,
+    }
+    const order = {
+      id: 'stale-outpost-order',
+      buildingId: building.id,
+      type: 'outpost' as const,
+      required: { stone: 2 },
+      reserved: { stone: 1 },
+      delivered: { stone: 1 },
+      progress: 1,
+      reason: 'outpost' as const,
+    }
+    state.world.buildings.push(building)
+    state.constructionOrders = [order]
+
+    const recovered = removeRecoveredConstructionOrder(state, order)
+
+    expect(recovered?.world.buildings).not.toContainEqual(
+      expect.objectContaining({ id: building.id }),
+    )
+    expect(recovered?.constructionOrders).toEqual([])
+    expect(recovered?.inventory.stone).toBe(2)
+  })
+
   it('exposes storage capacity through the focused storage module', () => {
     const state = makeStorageState()
 

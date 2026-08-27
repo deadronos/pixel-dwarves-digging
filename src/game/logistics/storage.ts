@@ -1,5 +1,6 @@
 import { getPrimaryStockpile } from '../buildings'
 import { getCompletedStorageBuildings } from '../buildings/selectors'
+import { addMaterialToStorage, storedCount } from '../buildings/storage'
 import {
   COMMON_BUILDING_MATERIALS,
   getEmergencyReserveMaterial,
@@ -151,12 +152,7 @@ export function hasReachableBuilder(
   )
 }
 
-export function storedCount(inventory: Partial<Inventory>): number {
-  return Object.values(inventory).reduce(
-    (total, amount) => total + (amount ?? 0),
-    0,
-  )
-}
+export { storedCount }
 
 export function getAggregateInventory(state: SimulationState): Inventory {
   const aggregate = cloneInventory(state.inventory)
@@ -274,26 +270,5 @@ export function depositCarriedMaterial(
   buildingId: string,
   block: MineableBlockType,
 ): World | null {
-  const building = storageBuildings(world).find(({ id }) => id === buildingId)
-  if (!building?.storage) return null
-  if (storedCount(building.storage.inventory) >= building.storage.capacity) {
-    return null
-  }
-
-  return {
-    ...world,
-    buildings: world.buildings.map((candidate) => {
-      if (candidate.id !== buildingId || !candidate.storage) return candidate
-      return {
-        ...candidate,
-        storage: {
-          ...candidate.storage,
-          inventory: {
-            ...candidate.storage.inventory,
-            [block]: (candidate.storage.inventory[block] ?? 0) + 1,
-          },
-        },
-      }
-    }),
-  }
+  return addMaterialToStorage(world, buildingId, block)
 }

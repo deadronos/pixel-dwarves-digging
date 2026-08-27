@@ -12,7 +12,10 @@ import type {
   World,
 } from '../types'
 
-type TargetCandidate = ReachableExposedSolid & { score: number }
+export type TargetCandidate = ReachableExposedSolid & {
+  score: number
+  stand: Position
+}
 
 const reachableWorkCache = new WeakMap<
   World,
@@ -82,10 +85,10 @@ function compareCandidates(
   )
 }
 
-export function chooseTarget(
+export function rankedWorkCandidates(
   state: SimulationState,
   dwarf: DwarfState,
-): ReachableExposedSolid | null {
+): TargetCandidate[] {
   const reserved = new Set(
     state.dwarves
       .filter((candidate) => candidate.id !== dwarf.id && candidate.task.target)
@@ -94,7 +97,7 @@ export function chooseTarget(
       ),
   )
 
-  const candidates = reachableTargets(state.world, dwarf.position)
+  return reachableTargets(state.world, dwarf.position)
     .filter(
       ({ target }) =>
         !reserved.has(taskKey(target)) &&
@@ -107,8 +110,13 @@ export function chooseTarget(
       score: scoreTarget(state, target, path.length),
     }))
     .sort((first, second) => compareCandidates(first, second, dwarf.position))
+}
 
-  for (const candidate of candidates) {
+export function chooseTarget(
+  state: SimulationState,
+  dwarf: DwarfState,
+): ReachableExposedSolid | null {
+  for (const candidate of rankedWorkCandidates(state, dwarf)) {
     if (assessDigSafety(state, candidate.stand, candidate.target).safe) {
       return { target: candidate.target, path: candidate.path }
     }
@@ -126,29 +134,7 @@ export function findUnsafeTarget(
       failure: AccessRequest['failure']
     })
   | null {
-  const reserved = new Set(
-    state.dwarves
-      .filter((candidate) => candidate.id !== dwarf.id && candidate.task.target)
-      .map((candidate) =>
-        candidate.task.target ? taskKey(candidate.task.target) : '',
-      ),
-  )
-
-  const candidates = reachableTargets(state.world, dwarf.position)
-    .filter(
-      ({ target }) =>
-        !reserved.has(taskKey(target)) &&
-        !isBootstrapProtectedTarget(state, target),
-    )
-    .map(({ target, path }) => ({
-      target,
-      path,
-      stand: path.at(-1) ?? dwarf.position,
-      score: scoreTarget(state, target, path.length),
-    }))
-    .sort((first, second) => compareCandidates(first, second, dwarf.position))
-
-  for (const candidate of candidates) {
+  for (const candidate of rankedWorkCandidates(state, dwarf)) {
     const failure = assessDigSafety(
       state,
       candidate.stand,

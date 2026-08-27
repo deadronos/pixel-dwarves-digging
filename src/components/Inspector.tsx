@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { getPrimaryStockpile } from '../game/buildings'
-import { BIOME_DEFINITIONS, MINEABLE_BLOCK_SET } from '../game/content'
+import { BIOME_DEFINITIONS } from '../game/content'
+import { countSolids } from '../game/generation'
 import { getStorageDiagnostics } from '../game/logistics'
 import { canPrestige, UPGRADE_COSTS } from '../game/progression'
 import { useGameStore } from '../game/state'
@@ -21,12 +22,10 @@ export default function Inspector() {
   const simulation = useGameStore((state) => state.simulation)
   const prestige = useGameStore((state) => state.prestige)
   const buyUpgrade = useGameStore((state) => state.buyUpgrade)
+  const worldCells = simulation.world.cells
   const remaining = useMemo(
-    () =>
-      simulation.world.cells.filter((cell) =>
-        MINEABLE_BLOCK_SET.has(cell.block),
-      ).length,
-    [simulation.world.cells],
+    () => countSolids({ cells: worldCells }),
+    [worldCells],
   )
   const total = remaining + simulation.totalCleared
   const progress =

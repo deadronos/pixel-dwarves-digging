@@ -1,4 +1,5 @@
 import { returnMaterialToStorage } from '../buildings'
+import { clearCell } from '../generation'
 import { canMoveBetween, findAdjacentConstructionPaths } from '../pathfinding'
 import type {
   ConstructionOrder,
@@ -6,20 +7,28 @@ import type {
   Inventory,
   Position,
   SimulationState,
+  TaskState,
   World,
 } from '../types'
 import { type AdvanceResult, recoveryTask } from './recovery'
+
+export function idleTask(): TaskState {
+  return { kind: 'idle', path: [], progress: 0 }
+}
+
+export type BuildOrder = {
+  orderId: string
+  reason: ConstructionOrder['reason']
+  path: Position[]
+  stand: Position
+  material: keyof Inventory
+}
 
 export function chooseBuildOrder(
   state: SimulationState,
   dwarf: DwarfState,
   onlyOrderId?: string,
-): {
-  orderId: string
-  path: Position[]
-  stand: Position
-  material: keyof Inventory
-} | null {
+): BuildOrder | null {
   const activeClaims = (orderId: string, material: keyof Inventory) =>
     state.dwarves.filter(
       (candidate) =>
@@ -98,15 +107,7 @@ export function chooseBuildOrder(
   return candidates[0] ?? null
 }
 
-export function clearCell(world: World, target: Position): World {
-  const targetIndex = target.y * world.width + target.x
-  return {
-    ...world,
-    cells: world.cells.map((cell, index) =>
-      index === targetIndex ? { ...cell, block: 'air' as const } : cell,
-    ),
-  }
-}
+export { clearCell }
 
 export function unchanged(dwarf: DwarfState, world: World): AdvanceResult {
   return { dwarf, world, minedBlock: null }
