@@ -39,13 +39,13 @@ The pure simulation core is tested independently of React or Three.js. It covers
 
 ## Architecture
 
-- src/game/generation.ts creates deterministic biome bands and starter guarantees.
-- src/game/buildings.ts defines building footprints, storage, support, and construction completion.
-- src/game/logistics.ts is the public logistics facade; focused modules under src/game/logistics/ own storage accounting, access/recovery orders, dig safety, and expansion diagnostics/planning.
-- src/game/pathfinding.ts handles bounded grounded paths, ladders, bridges, and exposed work.
-- src/game/engine.ts is the simulation orchestrator; focused modules under src/game/engine/ own target selection, access-request planning, recovery, and task helpers.
+- src/game/generation.ts creates deterministic biome bands and starter guarantees; shared world mutations and mineable-solid checks live beside it.
+- src/game/buildings.ts defines building footprints, support, and construction completion; src/game/buildings/storage.ts owns reusable storage accounting.
+- src/game/logistics.ts is the public logistics facade; focused modules under src/game/logistics/ own storage, access recovery, dig safety, expansion planning, and diagnostics.
+- src/game/pathfinding.ts handles bounded grounded paths, ladders, bridges, and exposed work through shared directional search helpers.
+- src/game/engine.ts is the simulation orchestrator; src/game/engine/ owns target selection, access-request planning, recovery, and per-task advancement handlers.
 - src/game/progression.ts handles prestige rewards and permanent upgrades.
-- src/game/serialization.ts defines the public versioned JSON save envelope; focused modules under src/game/serialization/ own structural validation and schema migrations.
+- src/game/serialization.ts defines the public versioned JSON save envelope; validation/primitives.ts, validation/entities.ts, and validation/state.ts separate shape checks from cross-record invariants and schema migrations.ts.
 - src/game/state.ts owns the fixed simulation timer, UI actions, and local persistence.
 - src/components/WorldCanvas.tsx renders the world through an orthographic R3F canvas.
 - src/components/Hud.tsx, ControlBar.tsx, and Inspector.tsx provide the DOM HUD and controls.

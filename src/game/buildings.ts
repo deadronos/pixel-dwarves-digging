@@ -1,13 +1,13 @@
 import { canPlaceBuilding } from './buildings/placement'
 import {
+  getBuildingById,
+  getCompletedBuildingByType,
+} from './buildings/selectors'
+import {
   addMaterialToStorage,
   findStorageWithCapacity,
   removeFromStorage,
 } from './buildings/storage'
-import {
-  getBuildingById,
-  getCompletedBuildingByType,
-} from './buildings/selectors'
 import {
   BUILDING_DEFINITIONS,
   getEmergencyReserveMaterial,

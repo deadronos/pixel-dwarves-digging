@@ -1,5 +1,5 @@
 import { BUILDING_DEFINITIONS, STARTER_BOOTSTRAP_CLEAR_COUNT } from '../content'
-import { recoverOrphanedAccessOrders } from '../logistics'
+import { recoverOrphanedAccessOrders } from '../logistics/access'
 import {
   type BuildingState,
   cloneInventory,
