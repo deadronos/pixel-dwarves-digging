@@ -11,6 +11,7 @@ Branch: `codex/refactor-opportunity-scan-followup-2026-08-27`
 - Split engine task advancement into idle, build, dig, haul, movement, and dispatcher modules while keeping `stepSimulation` as the orchestration boundary.
 - Split save validation into primitive, entity, and cross-record state validators behind the existing validation exports.
 - Added focused behavior tests for storage helpers, target ranking, recovery cleanup, task construction/dispatch, and validation primitives.
+- Preserved cell-array memoization in HUD and Inspector solid counts, and added direct boundary tests for task-handler guards, expansion helper purity, and state invariants.
 - Updated the architecture documentation and routed migration recovery directly to its focused module.
 
 ## Commit sequence
@@ -25,7 +26,7 @@ Branch: `codex/refactor-opportunity-scan-followup-2026-08-27`
 
 ## Verification
 
-- `NODE_OPTIONS=--localstorage-file=<temporary-file> npm test -- --run --maxWorkers=1`: 20 files, 170 tests passed.
+- `NODE_OPTIONS=--localstorage-file=<temporary-file> npm test -- --run --maxWorkers=1`: 22 files, 174 tests passed.
 - `npm run typecheck`: passed.
 - `npm run lint`: passed.
 - `npm run build`: passed; Vite retained the existing large `WorldCanvas` chunk warning.
