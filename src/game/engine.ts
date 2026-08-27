@@ -8,7 +8,6 @@ import {
   BOOTSTRAP_NO_PROGRESS_TICK_LIMIT,
   COMMON_BUILDING_MATERIALS,
   DIG_DURATION,
-  MINEABLE_BLOCK_SET,
   NO_PROGRESS_TICK_LIMIT,
   STARTER_BOOTSTRAP_CLEAR_COUNT,
 } from './content'
@@ -44,6 +43,7 @@ import {
   recoverStaleOutpostOrders,
   selectStorageDestination,
 } from './logistics'
+import { hasMineableSolids } from './generation'
 import { findPath } from './pathfinding'
 import {
   type ConstructionOrder,
@@ -713,9 +713,7 @@ function stepOnce(state: SimulationState): SimulationState {
     }
   }
 
-  const hasSolids = nextState.world.cells.some((cell) =>
-    MINEABLE_BLOCK_SET.has(cell.block),
-  )
+  const hasSolids = hasMineableSolids(nextState.world)
   const allDwarvesSettled = nextState.dwarves.every(
     (dwarf) => dwarf.task.kind === 'idle' && dwarf.carrying === null,
   )

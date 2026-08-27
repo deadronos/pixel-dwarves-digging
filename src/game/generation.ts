@@ -202,6 +202,10 @@ export function countSolids(world: World): number {
   )
 }
 
+export function hasMineableSolids(world: World): boolean {
+  return world.cells.some((cell) => MINEABLE_BLOCK_SET.has(cell.block))
+}
+
 export function countMinerals(world: World): number {
   return world.cells.reduce(
     (total, cell) => total + (MINERAL_BLOCKS.has(cell.block) ? 1 : 0),

@@ -2,9 +2,9 @@ import { useMemo } from 'react'
 import {
   BLOCK_COLORS,
   BLOCK_LABELS,
-  MINEABLE_BLOCK_SET,
   MINEABLE_BLOCKS,
 } from '../game/content'
+import { countSolids } from '../game/generation'
 import { getAggregateInventory } from '../game/logistics'
 import { useGameStore } from '../game/state'
 
@@ -14,10 +14,7 @@ export default function Hud() {
   const speed = useGameStore((state) => state.speed)
   const saveStatus = useGameStore((state) => state.saveStatus)
   const remaining = useMemo(
-    () =>
-      simulation.world.cells.filter((cell) =>
-        MINEABLE_BLOCK_SET.has(cell.block),
-      ).length,
+    () => countSolids(simulation.world),
     [simulation.world.cells],
   )
   const inventory = useMemo(

@@ -1,5 +1,10 @@
 import { canPlaceBuilding } from './buildings/placement'
 import {
+  addMaterialToStorage,
+  findStorageWithCapacity,
+  removeFromStorage,
+} from './buildings/storage'
+import {
   getBuildingById,
   getCompletedBuildingByType,
 } from './buildings/selectors'
@@ -12,6 +17,7 @@ import type {
   BuildingState,
   ConstructionOrder,
   Inventory,
+  MineableBlockType,
   SimulationState,
   World,
 } from './types'
@@ -49,68 +55,20 @@ function updateOrder(
   }
 }
 
-function removeFromStorage(
-  world: World,
-  material: keyof Inventory,
-  amount: number,
-): World {
-  let remaining = amount
-  return {
-    ...world,
-    buildings: world.buildings.map((building) => {
-      if (!building.storage || remaining <= 0) return building
-      const stored = building.storage.inventory[material] ?? 0
-      const removed = Math.min(stored, remaining)
-      remaining -= removed
-      return {
-        ...building,
-        storage: {
-          ...building.storage,
-          inventory: {
-            ...building.storage.inventory,
-            [material]: stored - removed,
-          },
-        },
-      }
-    }),
-  }
-}
-
 export function returnMaterialToStorage(
   world: World,
   material: keyof Inventory,
 ): { world: World; stored: boolean } {
-  const destination = world.buildings.find(
-    (building) =>
-      building.construction === 'completed' &&
-      building.storage &&
-      Object.values(building.storage.inventory).reduce(
-        (total, amount) => total + (amount ?? 0),
-        0,
-      ) < building.storage.capacity,
+  const destination = findStorageWithCapacity(world)
+  if (!destination) return { world, stored: false }
+  const storedWorld = addMaterialToStorage(
+    world,
+    destination.id,
+    material as MineableBlockType,
   )
-  if (!destination?.storage) return { world, stored: false }
-
-  return {
-    world: {
-      ...world,
-      buildings: world.buildings.map((building) =>
-        building.id === destination.id && building.storage
-          ? {
-              ...building,
-              storage: {
-                ...building.storage,
-                inventory: {
-                  ...building.storage.inventory,
-                  [material]: (building.storage.inventory[material] ?? 0) + 1,
-                },
-              },
-            }
-          : building,
-      ),
-    },
-    stored: true,
-  }
+  return storedWorld
+    ? { world: storedWorld, stored: true }
+    : { world, stored: false }
 }
 
 export function reserveConstructionMaterials(

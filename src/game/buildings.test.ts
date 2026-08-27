@@ -6,6 +6,7 @@ import {
   getStorageCapacity,
   reserveConstructionMaterials,
 } from './buildings'
+import { addMaterialToStorage } from './buildings/storage'
 import { EMPTY_INVENTORY, type SimulationState, type World } from './types'
 
 function makeBuildingState(): SimulationState {
@@ -97,6 +98,16 @@ function makeBuildingState(): SimulationState {
 }
 
 describe('building helpers', () => {
+  it('adds carried material only to an available completed storage building', () => {
+    const state = makeBuildingState()
+    const world = addMaterialToStorage(state.world, 'stockpile-1', 'stone')
+
+    expect(world).not.toBeNull()
+    expect(world?.buildings[0].storage?.inventory.stone).toBe(1)
+    expect(state.world.buildings[0].storage?.inventory.stone).toBe(0)
+    expect(addMaterialToStorage(state.world, 'missing', 'stone')).toBeNull()
+  })
+
   it('finds the primary stockpile and reports finite capacity', () => {
     const state = makeBuildingState()
 

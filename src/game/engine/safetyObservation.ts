@@ -1,4 +1,5 @@
-import { MINEABLE_BLOCK_SET, NO_PROGRESS_TICK_LIMIT } from '../content'
+import { NO_PROGRESS_TICK_LIMIT } from '../content'
+import { hasMineableSolids } from '../generation'
 import {
   getAvailableConstructionMaterial,
   getAvailableStateCapacity,
@@ -70,9 +71,7 @@ export function deriveSafetyObservation(
         findUnsafeTarget(state, dwarf)?.failure === 'storage-route',
     ) ||
       (storageCapacityExhausted && storageRouteUnavailable))
-  const hasMineableSolids = state.world.cells.some((cell) =>
-    MINEABLE_BLOCK_SET.has(cell.block),
-  )
+  const hasMineableSolidsInWorld = hasMineableSolids(state.world)
   const hasWaitingConstructionMaterial = state.constructionOrders.some(
     (order) => {
       const pending = (
@@ -102,7 +101,7 @@ export function deriveSafetyObservation(
     storageCapacityExhausted,
     storageRouteUnavailable,
     hasStorageBlockedWork,
-    hasMineableSolids,
+    hasMineableSolids: hasMineableSolidsInWorld,
     hasWaitingConstructionMaterial,
   }
 }
