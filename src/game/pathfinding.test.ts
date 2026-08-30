@@ -488,4 +488,52 @@ describe('navigation cache decoupling', () => {
     )
     expect(pathAfter).toBe(pathBefore)
   })
+
+  it('backfills topologyKey on legacy/loaded worlds without topologyKey and reuses caches across storage mutations', () => {
+    const world = makeWorld(['######', '......', '######'])
+    world.buildings = [
+      {
+        id: 'stockpile-1',
+        type: 'stockpile',
+        position: { x: 0, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+        storage: {
+          capacity: 10,
+          inventory: { stone: 0 },
+        },
+      },
+    ]
+    delete world.topologyKey
+    expect(world.topologyKey).toBeUndefined()
+
+    const path1 = findPath(world, { x: 1, y: 1 }, { x: 5, y: 1 })
+    expect(path1).not.toBeNull()
+    expect(typeof world.topologyKey).toBe('object')
+    expect(world.topologyKey).not.toBeNull()
+
+    const worldAfterAdd = addMaterialToStorage(world, 'stockpile-1', 'stone')
+    if (!worldAfterAdd) throw new Error('Failed to add material')
+    expect(worldAfterAdd).not.toBe(world)
+    expect(worldAfterAdd.topologyKey).toBe(world.topologyKey)
+
+    const path2 = findPath(worldAfterAdd, { x: 1, y: 1 }, { x: 5, y: 1 })
+    expect(path2).toBe(path1)
+  })
+
+  it('safely recovers from malformed non-object topologyKey values without throwing TypeError', () => {
+    const world = makeWorld(['######', '......', '######'])
+    // Simulate malformed loaded save values
+    for (const invalid of [1, 'invalid', true, null, 0]) {
+      ;(world as unknown as { topologyKey: unknown }).topologyKey = invalid
+      expect(() => {
+        const path = findPath(world, { x: 1, y: 1 }, { x: 5, y: 1 })
+        expect(path).not.toBeNull()
+      }).not.toThrow()
+      expect(typeof world.topologyKey).toBe('object')
+      expect(world.topologyKey).not.toBeNull()
+    }
+  })
 })

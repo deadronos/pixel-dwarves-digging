@@ -36,7 +36,16 @@ export function createTopologyKey(): object {
 }
 
 export function getTopologyKey(world: World): object {
-  return world.topologyKey ?? world
+  if (typeof world.topologyKey === 'object' && world.topologyKey !== null) {
+    return world.topologyKey
+  }
+  const key = createTopologyKey()
+  try {
+    world.topologyKey = key
+  } catch {
+    // Non-fatal if world is frozen or non-extensible
+  }
+  return key
 }
 
 const navigationIndexCache = new WeakMap<object, NavigationIndex>()

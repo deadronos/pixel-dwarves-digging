@@ -445,4 +445,23 @@ describe('serialization', () => {
       expect(result.state.constructionPolicy).toBe('balanced')
     }
   })
+
+  it('rejects saves with malformed non-object topologyKey', () => {
+    const current = makeState()
+    const payload = JSON.stringify({
+      schemaVersion: 4,
+      state: {
+        ...current,
+        world: {
+          ...current.world,
+          topologyKey: 1,
+        },
+      },
+    })
+
+    const result = parseSave(payload)
+    expect(result).toEqual({
+      error: 'Save file is missing required simulation data.',
+    })
+  })
 })
