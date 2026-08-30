@@ -138,8 +138,8 @@ export function createGameStore(
               ...(policy.materialPriority ?? {}),
             },
           },
-          saveStatus: 'DIRTY',
         },
+        saveStatus: 'DIRTY',
       })),
     setMaterialPriority: (material, enabled) =>
       set((current) => ({
@@ -152,8 +152,8 @@ export function createGameStore(
               [material]: enabled,
             },
           },
-          saveStatus: 'DIRTY',
         },
+        saveStatus: 'DIRTY',
       })),
     setConstructionPolicy: (constructionPolicy) =>
       set((current) => ({
