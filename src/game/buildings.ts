@@ -13,6 +13,7 @@ import {
   getEmergencyReserveMaterial,
   STORAGE_UPGRADE_CAPACITY_BONUS,
 } from './content'
+import { createTopologyKey } from './pathfinding'
 import type {
   BuildingState,
   ConstructionOrder,
@@ -199,6 +200,7 @@ export function completeConstruction(
       buildings: state.world.buildings.map((candidate) =>
         candidate.id === completedBuilding.id ? completedBuilding : candidate,
       ),
+      topologyKey: createTopologyKey(),
     },
     constructionOrders: state.constructionOrders.filter(
       ({ id }) => id !== orderId,

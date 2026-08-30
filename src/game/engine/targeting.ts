@@ -2,6 +2,7 @@ import { MINERAL_BLOCKS } from '../content'
 import { assessDigSafety, isBootstrapProtectedTarget } from '../logistics'
 import {
   findReachableExposedSolids,
+  getTopologyKey,
   type ReachableExposedSolid,
 } from '../pathfinding'
 import type {
@@ -18,7 +19,7 @@ export type TargetCandidate = ReachableExposedSolid & {
 }
 
 const reachableWorkCache = new WeakMap<
-  World,
+  object,
   Map<string, ReachableExposedSolid[]>
 >()
 
@@ -34,10 +35,11 @@ export function reachableTargets(
   world: World,
   from: Position,
 ): ReachableExposedSolid[] {
-  let byPosition = reachableWorkCache.get(world)
+  const topologyKey = getTopologyKey(world)
+  let byPosition = reachableWorkCache.get(topologyKey)
   if (!byPosition) {
     byPosition = new Map()
-    reachableWorkCache.set(world, byPosition)
+    reachableWorkCache.set(topologyKey, byPosition)
   }
 
   const key = taskKey(from)

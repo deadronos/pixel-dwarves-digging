@@ -1,10 +1,20 @@
 import { describe, expect, it } from 'vitest'
+import { completeConstruction } from './buildings'
+import { addMaterialToStorage, removeFromStorage } from './buildings/storage'
+import { clearCell } from './generation'
 import {
+  createTopologyKey,
   findAdjacentConstructionPaths,
   findPath,
   findReachableExposedSolids,
 } from './pathfinding'
-import type { Cell, World } from './types'
+import {
+  type Cell,
+  cloneInventory,
+  EMPTY_INVENTORY,
+  type SimulationState,
+  type World,
+} from './types'
 
 function makeWorld(rows: string[]): World {
   const height = rows.length
@@ -34,6 +44,7 @@ function makeWorld(rows: string[]): World {
     start: { x: 1, y: 1 },
     stockpile: { x: 1, y: 1 },
     buildings: [],
+    topologyKey: createTopologyKey(),
   }
 }
 
@@ -256,5 +267,225 @@ describe('findPath', () => {
         ({ target }) => target.y === 0,
       ),
     ).toBe(false)
+  })
+})
+
+describe('navigation cache decoupling', () => {
+  it('reuses path and reachable solids cache across addMaterialToStorage and removeFromStorage mutations', () => {
+    const world = makeWorld(['######', '......', '######'])
+    world.buildings = [
+      {
+        id: 'stockpile-1',
+        type: 'stockpile',
+        position: { x: 0, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+        storage: {
+          capacity: 10,
+          inventory: { stone: 0 },
+        },
+      },
+    ]
+
+    const pathBefore = findPath(world, { x: 1, y: 1 }, { x: 5, y: 1 })
+    const solidsBefore = findReachableExposedSolids(world, { x: 1, y: 1 })
+    expect(pathBefore).not.toBeNull()
+
+    const worldWithMaterial = addMaterialToStorage(
+      world,
+      'stockpile-1',
+      'stone',
+    )
+    if (!worldWithMaterial) throw new Error('Failed to add material')
+    expect(worldWithMaterial).not.toBe(world)
+
+    const pathAfterAdd = findPath(
+      worldWithMaterial,
+      { x: 1, y: 1 },
+      { x: 5, y: 1 },
+    )
+    expect(pathAfterAdd).toBe(pathBefore)
+    expect(
+      findReachableExposedSolids(worldWithMaterial, { x: 1, y: 1 }),
+    ).toEqual(solidsBefore)
+
+    const worldAfterRemoval = removeFromStorage(worldWithMaterial, 'stone', 1)
+    expect(worldAfterRemoval).not.toBe(worldWithMaterial)
+
+    const pathAfterRemove = findPath(
+      worldAfterRemoval,
+      { x: 1, y: 1 },
+      { x: 5, y: 1 },
+    )
+    expect(pathAfterRemove).toBe(pathBefore)
+  })
+
+  it('invalidates path and search caches when terrain is modified with clearCell', () => {
+    const world = makeWorld(['######', '.#....', '######'])
+    const blockedPath = findPath(world, { x: 0, y: 1 }, { x: 5, y: 1 })
+    expect(blockedPath).toBeNull()
+
+    const clearedWorld = clearCell(world, { x: 1, y: 1 })
+    expect(clearedWorld).not.toBe(world)
+
+    const openedPath = findPath(clearedWorld, { x: 0, y: 1 }, { x: 5, y: 1 })
+    expect(openedPath).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      { x: 4, y: 1 },
+      { x: 5, y: 1 },
+    ])
+  })
+
+  it('invalidates path cache when new building construction is completed', () => {
+    const world = makeWorld(['##.###', '......', '######'])
+    const bridgeBuilding = {
+      id: 'bridge-1',
+      type: 'bridge' as const,
+      position: { x: 2, y: 0 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'planned' as const,
+    }
+    world.buildings = [bridgeBuilding]
+
+    const pathBefore = findPath(world, { x: 1, y: 1 }, { x: 3, y: 1 })
+    expect(pathBefore).toBeNull()
+
+    const state: SimulationState = {
+      world,
+      dwarves: [],
+      inventory: cloneInventory(EMPTY_INVENTORY),
+      policy: {
+        workPreference: 'nearest',
+        haulingPreference: 'nearest-stockpile',
+        materialPriority: {
+          coal: true,
+          iron: true,
+          crystal: true,
+          relic: true,
+        },
+      },
+      constructionOrders: [
+        {
+          id: 'order-1',
+          buildingId: 'bridge-1',
+          type: 'bridge',
+          required: { stone: 1 },
+          reserved: {},
+          delivered: { stone: 1 },
+          progress: 1,
+          reason: 'access',
+        },
+      ],
+      constructionPolicy: 'balanced',
+      accessRequests: [],
+      worldRevision: 0,
+      safety: { phase: 'operational', emergencyStone: 0 },
+      tick: 0,
+      totalCleared: 0,
+      prestigeCurrency: 0,
+      discoveredRelics: 0,
+      completed: false,
+      upgrades: {
+        toolPower: 0,
+        moveSpeed: 0,
+        satchel: 0,
+        extraBunks: 0,
+        prospecting: 0,
+      },
+    }
+
+    const completedState = completeConstruction(state, 'order-1')
+    const pathAfter = findPath(
+      completedState.world,
+      { x: 1, y: 1 },
+      { x: 3, y: 1 },
+    )
+    expect(pathAfter).toEqual([
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+    ])
+  })
+
+  it('reuses path cache across storage capacity upgrades', () => {
+    const world = makeWorld(['######', '......', '######'])
+    world.buildings = [
+      {
+        id: 'stockpile-1',
+        type: 'stockpile',
+        position: { x: 0, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+        storage: {
+          capacity: 10,
+          inventory: {},
+        },
+      },
+    ]
+
+    const state: SimulationState = {
+      world,
+      dwarves: [],
+      inventory: cloneInventory(EMPTY_INVENTORY),
+      policy: {
+        workPreference: 'nearest',
+        haulingPreference: 'nearest-stockpile',
+        materialPriority: {
+          coal: true,
+          iron: true,
+          crystal: true,
+          relic: true,
+        },
+      },
+      constructionOrders: [
+        {
+          id: 'upgrade-order-1',
+          buildingId: 'stockpile-1',
+          type: 'stockpile',
+          targetLevel: 2,
+          required: { stone: 5 },
+          reserved: {},
+          delivered: { stone: 5 },
+          progress: 5,
+          reason: 'storage-upgrade',
+        },
+      ],
+      constructionPolicy: 'balanced',
+      accessRequests: [],
+      worldRevision: 0,
+      safety: { phase: 'operational', emergencyStone: 0 },
+      tick: 0,
+      totalCleared: 0,
+      prestigeCurrency: 0,
+      discoveredRelics: 0,
+      completed: false,
+      upgrades: {
+        toolPower: 0,
+        moveSpeed: 0,
+        satchel: 0,
+        extraBunks: 0,
+        prospecting: 0,
+      },
+    }
+
+    const pathBefore = findPath(state.world, { x: 1, y: 1 }, { x: 5, y: 1 })
+    expect(pathBefore).not.toBeNull()
+
+    const completedState = completeConstruction(state, 'upgrade-order-1')
+    expect(completedState.world).not.toBe(state.world)
+
+    const pathAfter = findPath(
+      completedState.world,
+      { x: 1, y: 1 },
+      { x: 5, y: 1 },
+    )
+    expect(pathAfter).toBe(pathBefore)
   })
 })

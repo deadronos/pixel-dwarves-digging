@@ -80,6 +80,7 @@ export type World = {
   /** @deprecated Use the primary stockpile building position. */
   stockpile: Position
   buildings: BuildingState[]
+  topologyKey?: object
 }
 
 export type Inventory = Record<MineableBlockType, number>
