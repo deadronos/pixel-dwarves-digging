@@ -1,6 +1,10 @@
 import { canPlaceBuilding, getPrimaryStockpile } from '../buildings'
 import { BUILDING_DEFINITIONS } from '../content'
-import { findAdjacentConstructionPaths, findPath } from '../pathfinding'
+import {
+  createTopologyKey,
+  findAdjacentConstructionPaths,
+  findPath,
+} from '../pathfinding'
 import type {
   AccessRequest,
   BuildingType,
@@ -64,6 +68,7 @@ export function findEmergencyLadderPlan(
           construction: 'completed',
         },
       ],
+      topologyKey: createTopologyKey(),
     }
     const destination = selectStorageDestination(
       { ...state, world },

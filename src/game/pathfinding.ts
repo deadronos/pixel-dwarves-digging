@@ -31,9 +31,26 @@ type NavigationIndex = {
   ladders: Uint8Array
 }
 
-const navigationIndexCache = new WeakMap<World, NavigationIndex>()
-const searchCache = new WeakMap<World, Map<string, SearchResult | null>>()
-const pathCache = new WeakMap<World, Map<string, Position[] | null>>()
+export function createTopologyKey(): object {
+  return {}
+}
+
+export function getTopologyKey(world: World): object {
+  if (typeof world.topologyKey === 'object' && world.topologyKey !== null) {
+    return world.topologyKey
+  }
+  const key = createTopologyKey()
+  try {
+    world.topologyKey = key
+  } catch {
+    // Non-fatal if world is frozen or non-extensible
+  }
+  return key
+}
+
+const navigationIndexCache = new WeakMap<object, NavigationIndex>()
+const searchCache = new WeakMap<object, Map<string, SearchResult | null>>()
+const pathCache = new WeakMap<object, Map<string, Position[] | null>>()
 
 function createNavigationIndex(world: World): NavigationIndex {
   const floors = new Uint8Array(world.width * world.height)
@@ -66,10 +83,11 @@ function createNavigationIndex(world: World): NavigationIndex {
 }
 
 function navigationIndex(world: World): NavigationIndex {
-  const cached = navigationIndexCache.get(world)
+  const key = getTopologyKey(world)
+  const cached = navigationIndexCache.get(key)
   if (cached) return cached
   const created = createNavigationIndex(world)
-  navigationIndexCache.set(world, created)
+  navigationIndexCache.set(key, created)
   return created
 }
 
@@ -214,10 +232,11 @@ function getSearch(
   from: Position,
   cleared?: Position,
 ): SearchResult | null {
-  let cache = searchCache.get(world)
+  const topologyKey = getTopologyKey(world)
+  let cache = searchCache.get(topologyKey)
   if (!cache) {
     cache = new Map()
-    searchCache.set(world, cache)
+    searchCache.set(topologyKey, cache)
   }
 
   const key = searchKey(from, cleared)
@@ -301,10 +320,11 @@ export function findPath(
   to: Position,
   cleared?: Position,
 ): Position[] | null {
-  let cache = pathCache.get(world)
+  const topologyKey = getTopologyKey(world)
+  let cache = pathCache.get(topologyKey)
   if (!cache) {
     cache = new Map()
-    pathCache.set(world, cache)
+    pathCache.set(topologyKey, cache)
   }
 
   const key = pathKey(from, to, cleared)

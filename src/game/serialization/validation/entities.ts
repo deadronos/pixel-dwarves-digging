@@ -258,6 +258,7 @@ export function isWorld(value: unknown): value is SimulationState['world'] {
     isPosition(value.start, width, height) &&
     isPosition(value.stockpile, width, height) &&
     Array.isArray(value.buildings) &&
-    value.buildings.every((building) => isBuilding(building, width, height))
+    value.buildings.every((building) => isBuilding(building, width, height)) &&
+    (value.topologyKey === undefined || isRecord(value.topologyKey))
   )
 }

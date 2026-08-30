@@ -8,6 +8,7 @@ import {
   STARTER_STONE_SUPPLY,
   STARTER_STONE_VEIN_LENGTH,
 } from './content'
+import { createTopologyKey } from './pathfinding'
 import { createRng, hashSeed, randomBetween, randomInt } from './rng'
 import {
   type BiomeId,
@@ -41,6 +42,7 @@ export function clearCell(world: World, target: Position): World {
     cells: world.cells.map((cell, index) =>
       index === targetIndex ? { ...cell, block: 'air' as const } : cell,
     ),
+    topologyKey: createTopologyKey(),
   }
 }
 
@@ -202,6 +204,7 @@ export function generateWorld(
     start,
     stockpile,
     buildings: [stockpileBuilding, starterLadder, ...starterBridges],
+    topologyKey: createTopologyKey(),
   }
 }
 
