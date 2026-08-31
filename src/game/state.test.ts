@@ -234,4 +234,42 @@ describe('createGameStore', () => {
         (store.getState().simulation as unknown as Record<string, unknown>),
     ).toBe(false)
   })
+
+  it('strips stray saveStatus when importing a polluted save payload', () => {
+    const store = createGameStore('import-polluted-seed')
+    const exported = JSON.parse(store.getState().exportSave()) as {
+      schemaVersion: number
+      state: Record<string, unknown>
+    }
+    exported.state.saveStatus = 'DIRTY'
+
+    expect(store.getState().importSave(JSON.stringify(exported))).toBe(true)
+    expect(
+      'saveStatus' in
+        (store.getState().simulation as unknown as Record<string, unknown>),
+    ).toBe(false)
+    expect(store.getState().saveStatus).toBe('IMPORTED')
+  })
+
+  it('strips stray saveStatus when initializing store from a polluted local save', () => {
+    const store = createGameStore('local-polluted-seed')
+    const exported = JSON.parse(store.getState().exportSave()) as {
+      schemaVersion: number
+      state: Record<string, unknown>
+    }
+    exported.state.saveStatus = 'DIRTY'
+    window.localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(exported))
+
+    const freshStore = createGameStore('fresh-init-seed')
+    expect(
+      'saveStatus' in
+        (freshStore.getState().simulation as unknown as Record<
+          string,
+          unknown
+        >),
+    ).toBe(false)
+    expect(freshStore.getState().simulation.world.seed).toBe(
+      'local-polluted-seed',
+    )
+  })
 })
