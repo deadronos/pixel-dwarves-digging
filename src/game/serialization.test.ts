@@ -464,4 +464,29 @@ describe('serialization', () => {
       error: 'Save file is missing required simulation data.',
     })
   })
+
+  it('strips stray saveStatus from polluted simulation state on import and re-export', () => {
+    const original = makeState()
+    const pollutedPayload = JSON.stringify({
+      schemaVersion: 4,
+      state: {
+        ...original,
+        saveStatus: 'DIRTY',
+      },
+    })
+
+    const result = parseSave(pollutedPayload)
+    expect('state' in result).toBe(true)
+    if ('state' in result) {
+      expect(
+        'saveStatus' in (result.state as unknown as Record<string, unknown>),
+      ).toBe(false)
+      expect(result.state).toEqual(original)
+
+      const reExported = JSON.parse(serializeState(result.state)) as {
+        state: Record<string, unknown>
+      }
+      expect('saveStatus' in reExported.state).toBe(false)
+    }
+  })
 })

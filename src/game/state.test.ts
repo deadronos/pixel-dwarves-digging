@@ -176,4 +176,100 @@ describe('createGameStore', () => {
 
     expect(store.getState().saveStatus).toBe('DIRTY')
   })
+
+  it('marks the top-level save status as dirty when updating work preference', () => {
+    const store = createGameStore('policy-work-pref-seed')
+    store.getState().saveLocally()
+    expect(store.getState().saveStatus).toBe('SAVED')
+
+    store.getState().setPolicy({ workPreference: 'ore-first' })
+
+    expect(store.getState().saveStatus).toBe('DIRTY')
+    expect(
+      'saveStatus' in
+        (store.getState().simulation as unknown as Record<string, unknown>),
+    ).toBe(false)
+  })
+
+  it('marks the top-level save status as dirty when updating hauling preference', () => {
+    const store = createGameStore('policy-hauling-pref-seed')
+    store.getState().saveLocally()
+    expect(store.getState().saveStatus).toBe('SAVED')
+
+    store.getState().setPolicy({ haulingPreference: 'finish-current-route' })
+
+    expect(store.getState().saveStatus).toBe('DIRTY')
+    expect(
+      'saveStatus' in
+        (store.getState().simulation as unknown as Record<string, unknown>),
+    ).toBe(false)
+  })
+
+  it('marks the top-level save status as dirty when updating material priority', () => {
+    const store = createGameStore('material-priority-seed')
+    store.getState().saveLocally()
+    expect(store.getState().saveStatus).toBe('SAVED')
+
+    store.getState().setMaterialPriority('iron', true)
+
+    expect(store.getState().saveStatus).toBe('DIRTY')
+    expect(store.getState().simulation.policy.materialPriority.iron).toBe(true)
+    expect(
+      'saveStatus' in
+        (store.getState().simulation as unknown as Record<string, unknown>),
+    ).toBe(false)
+  })
+
+  it('marks the top-level save status as dirty when updating construction policy', () => {
+    const store = createGameStore('construction-policy-dirty-seed')
+    store.getState().saveLocally()
+    expect(store.getState().saveStatus).toBe('SAVED')
+
+    store.getState().setConstructionPolicy('conserve')
+
+    expect(store.getState().saveStatus).toBe('DIRTY')
+    expect(store.getState().simulation.constructionPolicy).toBe('conserve')
+    expect(
+      'saveStatus' in
+        (store.getState().simulation as unknown as Record<string, unknown>),
+    ).toBe(false)
+  })
+
+  it('strips stray saveStatus when importing a polluted save payload', () => {
+    const store = createGameStore('import-polluted-seed')
+    const exported = JSON.parse(store.getState().exportSave()) as {
+      schemaVersion: number
+      state: Record<string, unknown>
+    }
+    exported.state.saveStatus = 'DIRTY'
+
+    expect(store.getState().importSave(JSON.stringify(exported))).toBe(true)
+    expect(
+      'saveStatus' in
+        (store.getState().simulation as unknown as Record<string, unknown>),
+    ).toBe(false)
+    expect(store.getState().saveStatus).toBe('IMPORTED')
+  })
+
+  it('strips stray saveStatus when initializing store from a polluted local save', () => {
+    const store = createGameStore('local-polluted-seed')
+    const exported = JSON.parse(store.getState().exportSave()) as {
+      schemaVersion: number
+      state: Record<string, unknown>
+    }
+    exported.state.saveStatus = 'DIRTY'
+    window.localStorage.setItem(GAME_STORAGE_KEY, JSON.stringify(exported))
+
+    const freshStore = createGameStore('fresh-init-seed')
+    expect(
+      'saveStatus' in
+        (freshStore.getState().simulation as unknown as Record<
+          string,
+          unknown
+        >),
+    ).toBe(false)
+    expect(freshStore.getState().simulation.world.seed).toBe(
+      'local-polluted-seed',
+    )
+  })
 })

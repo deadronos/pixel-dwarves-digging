@@ -55,12 +55,13 @@ function normalizeSafety(
 
 export function migrateV1State(value: unknown): SimulationState | null {
   if (!isRecord(value)) return null
-  const world = value.world
+  const { saveStatus: _straySaveStatus, ...cleanValue } = value
+  const world = cleanValue.world
   if (
     !isRecord(world) ||
-    !isRecord(value.inventory) ||
+    !isRecord(cleanValue.inventory) ||
     !isSimulationState({
-      ...value,
+      ...cleanValue,
       world: { ...world, buildings: [] },
       constructionOrders: [],
       constructionPolicy: 'balanced',
@@ -80,7 +81,7 @@ export function migrateV1State(value: unknown): SimulationState | null {
 
   const stockpileDefinition = BUILDING_DEFINITIONS.stockpile
   const inventory = cloneInventory(
-    value.inventory as SimulationState['inventory'],
+    cleanValue.inventory as SimulationState['inventory'],
   )
   const stockpile: BuildingState = {
     id: 'stockpile-1',
@@ -97,15 +98,17 @@ export function migrateV1State(value: unknown): SimulationState | null {
   }
 
   return {
-    ...(value as SimulationState),
+    ...(cleanValue as SimulationState),
     world: {
       ...(world as SimulationState['world']),
       buildings: [stockpile],
     },
-    dwarves: (value.dwarves as SimulationState['dwarves']).map((dwarf) => ({
-      ...dwarf,
-      movement: 'grounded' as const,
-    })),
+    dwarves: (cleanValue.dwarves as SimulationState['dwarves']).map(
+      (dwarf) => ({
+        ...dwarf,
+        movement: 'grounded' as const,
+      }),
+    ),
     inventory,
     constructionOrders: [],
     constructionPolicy: 'balanced',
@@ -136,8 +139,9 @@ export function normalizeV3State(
       ? { ...cell, block: 'bedrock' as const }
       : cell,
   )
+  const { saveStatus: _straySaveStatus, ...cleanValue } = value
   const normalized = {
-    ...value,
+    ...cleanValue,
     world: { ...world, cells },
     accessRequests: Array.isArray(value.accessRequests)
       ? value.accessRequests
