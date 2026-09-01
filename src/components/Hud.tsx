@@ -1,52 +1,28 @@
-import { useMemo } from 'react'
 import { BLOCK_COLORS, BLOCK_LABELS, MINEABLE_BLOCKS } from '../game/content'
-import { countSolids } from '../game/generation'
-import { getAggregateInventory } from '../game/logistics'
+import { selectHudViewModel } from '../game/selectors'
 import { useGameStore } from '../game/state'
 
 export default function Hud() {
-  const simulation = useGameStore((state) => state.simulation)
   const paused = useGameStore((state) => state.paused)
   const speed = useGameStore((state) => state.speed)
   const saveStatus = useGameStore((state) => state.saveStatus)
-  const worldCells = simulation.world.cells
-  const remaining = useMemo(
-    () => countSolids({ cells: worldCells }),
-    [worldCells],
-  )
-  const inventory = useMemo(
-    () => getAggregateInventory(simulation),
-    [simulation],
-  )
-  const aggregateStored = useMemo(
-    () => Object.values(inventory).reduce((total, amount) => total + amount, 0),
-    [inventory],
-  )
+  const hud = useGameStore(selectHudViewModel)
 
   return (
     <header className="hud">
       <div className="topbar hud-brand">
         <div>
           <p className="eyebrow">
-            AUTONOMOUS EXCAVATION / RUN{' '}
-            {String(simulation.world.runNumber).padStart(2, '0')}
+            AUTONOMOUS EXCAVATION / RUN {String(hud.runNumber).padStart(2, '0')}
           </p>
           <h1>PIXEL DWARVES</h1>
           <p className="run-caption">
-            seed <span>{simulation.world.seed}</span> · tick {simulation.tick} ·{' '}
+            seed <span>{hud.seed}</span> · tick {hud.tick} ·{' '}
             {paused ? 'paused' : `${speed}× live`}
           </p>
         </div>
         <div className="run-status">
-          <span className="status-chip">
-            {simulation.completed
-              ? 'READY TO PRESTIGE'
-              : simulation.safety.phase === 'blocked'
-                ? 'COLONY BLOCKED'
-                : simulation.safety.phase === 'bootstrap'
-                  ? 'BOOTSTRAP SAFETY'
-                  : 'DIGGING'}
-          </span>
+          <span className="status-chip">{hud.statusChip}</span>
           <span className="save-state">{saveStatus}</span>
         </div>
       </div>
@@ -55,7 +31,7 @@ export default function Hud() {
         <div className="inventory-heading">
           <span className="section-kicker">GLOBAL INVENTORY</span>
           <strong>
-            {aggregateStored.toLocaleString()} blocks stored / in transit
+            {hud.aggregateStored.toLocaleString()} blocks stored / in transit
           </strong>
         </div>
         <div className="inventory-list">
@@ -66,27 +42,15 @@ export default function Hud() {
                 style={{ backgroundColor: BLOCK_COLORS[block] }}
               />
               <span>{BLOCK_LABELS[block]}</span>
-              <strong>{inventory[block].toLocaleString()}</strong>
+              <strong>{hud.inventory[block].toLocaleString()}</strong>
             </div>
           ))}
         </div>
         <div className="inventory-summary">
           <span>remaining</span>
-          <strong>{remaining.toLocaleString()}</strong>
-          <span>
-            {
-              simulation.accessRequests.filter(
-                (request) => request.status === 'open',
-              ).length
-            }{' '}
-            access requests
-          </span>
-          <span>
-            safety: {simulation.safety.phase}
-            {simulation.safety.blockedReason
-              ? ` · ${simulation.safety.blockedReason.replaceAll('-', ' ')}`
-              : ''}
-          </span>
+          <strong>{hud.remainingSolids.toLocaleString()}</strong>
+          <span>{hud.openAccessRequests} access requests</span>
+          <span>safety: {hud.safetySummary}</span>
         </div>
       </section>
     </header>

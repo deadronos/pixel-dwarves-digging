@@ -154,7 +154,9 @@ export function hasReachableBuilder(
 
 export { storedCount }
 
-export function getAggregateInventory(state: SimulationState): Inventory {
+export function getAggregateInventory(
+  state: Pick<SimulationState, 'inventory' | 'dwarves'>,
+): Inventory {
   const aggregate = cloneInventory(state.inventory)
   for (const dwarf of state.dwarves) {
     if (dwarf.carrying) aggregate[dwarf.carrying] += 1
