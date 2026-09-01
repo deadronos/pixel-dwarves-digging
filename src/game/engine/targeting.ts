@@ -229,8 +229,10 @@ export function chooseAccessTarget(
       context ?? createTargetPlanningContext(state),
       state,
       dwarf,
-    ).reachableCandidates
-      .filter(({ target }) => taskKey(target) !== taskKey(request.target))
+    )
+      .reachableCandidates.filter(
+        ({ target }) => taskKey(target) !== taskKey(request.target),
+      )
       .sort(
         (first, second) =>
           distance(first.target, request.target) -
@@ -243,7 +245,6 @@ export function chooseAccessTarget(
         return {
           target: candidate.target,
           path: candidate.path,
-          stand: candidate.stand,
           requestId: request.id,
         }
       }

@@ -65,10 +65,13 @@ export function reopenResolvedAccessRequests(
     if (request.status !== 'resolved') continue
     for (const dwarf of state.dwarves) {
       if (dwarf.task.kind !== 'idle' || dwarf.carrying) continue
-      const candidate = getTargetPlanningSnapshot(context, state, dwarf)
-        .reachableCandidates.find(
-          ({ target }) => taskKey(target) === taskKey(request.target),
-        )
+      const candidate = getTargetPlanningSnapshot(
+        context,
+        state,
+        dwarf,
+      ).reachableCandidates.find(
+        ({ target }) => taskKey(target) === taskKey(request.target),
+      )
       if (!candidate) continue
       const stand = candidate.path.at(-1) ?? dwarf.position
       const safety = assessDigSafety(state, stand, candidate.target)

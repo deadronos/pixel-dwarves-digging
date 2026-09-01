@@ -5,8 +5,8 @@ import { advanceHaul } from './haulAdvancement'
 import { advanceIdle } from './idleAdvancement'
 import type { AdvanceResult } from './recovery'
 import { attemptEmergencyRecovery, recoveryTask } from './recovery'
-import { idleTask, invalidateTask, unchanged, validPath } from './tasks'
 import type { TargetPlanningContext } from './targeting'
+import { idleTask, invalidateTask, unchanged, validPath } from './tasks'
 
 function advanceMovement(
   state: SimulationState,

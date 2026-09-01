@@ -320,7 +320,7 @@ describe('stepSimulation', () => {
       context,
     )
 
-    expect(snapshotAccessor).toHaveBeenCalled()
+    expect(snapshotAccessor).toHaveBeenCalledTimes(3)
     expect(sharedPlanned).toEqual(isolatedPlanned)
     expect(sharedAdvanced).toEqual(isolatedAdvanced)
     expect(
