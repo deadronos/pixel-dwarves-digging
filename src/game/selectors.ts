@@ -211,9 +211,19 @@ export function getPrestigeSummary(
   }
 }
 
+const hudViewModelCache = new WeakMap<SimulationState, HudViewModel>()
+const inspectorViewModelCache = new WeakMap<
+  SimulationState,
+  InspectorViewModel
+>()
+
 export function getHudViewModel(simulation: SimulationState): HudViewModel {
+  const cached = hudViewModelCache.get(simulation)
+  if (cached) {
+    return cached
+  }
   const { inventory, aggregateStored } = getHudInventorySummary(simulation)
-  return {
+  const result: HudViewModel = {
     runNumber: simulation.world.runNumber,
     seed: simulation.world.seed,
     tick: simulation.tick,
@@ -227,11 +237,17 @@ export function getHudViewModel(simulation: SimulationState): HudViewModel {
     openAccessRequests: getOpenAccessRequestsCount(simulation.accessRequests),
     safetySummary: formatSafetySummary(simulation.safety),
   }
+  hudViewModelCache.set(simulation, result)
+  return result
 }
 
 export function getInspectorViewModel(
   simulation: SimulationState,
 ): InspectorViewModel {
+  const cached = inspectorViewModelCache.get(simulation)
+  if (cached) {
+    return cached
+  }
   const excavation = getExcavationSummary(
     simulation.world,
     simulation.totalCleared,
@@ -251,7 +267,7 @@ export function getInspectorViewModel(
   )
   const prestige = getPrestigeSummary(simulation)
 
-  return {
+  const result: InspectorViewModel = {
     progress: excavation.progress,
     totalCleared: simulation.totalCleared,
     remainingSolids: excavation.remaining,
@@ -268,6 +284,8 @@ export function getInspectorViewModel(
     prestige,
     upgrades: simulation.upgrades,
   }
+  inspectorViewModelCache.set(simulation, result)
+  return result
 }
 
 export function selectHudViewModel(state: GameStore): HudViewModel {

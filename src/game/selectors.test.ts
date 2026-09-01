@@ -387,4 +387,15 @@ describe('view model selectors', () => {
     expect(selectHudViewModel(mockStore).seed).toBe('state-vm-seed')
     expect(selectInspectorViewModel(mockStore).dwarfCounts.total).toBe(3)
   })
+
+  it('provides stable snapshot references when simulation identity does not change', () => {
+    const simulation = createInitialSimulation('snapshot-stability-seed')
+    const hud1 = getHudViewModel(simulation)
+    const hud2 = getHudViewModel(simulation)
+    expect(hud1).toBe(hud2)
+
+    const inspector1 = getInspectorViewModel(simulation)
+    const inspector2 = getInspectorViewModel(simulation)
+    expect(inspector1).toBe(inspector2)
+  })
 })
