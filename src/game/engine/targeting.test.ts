@@ -16,8 +16,8 @@ describe('targeting helpers', () => {
     const dwarf = state.dwarves[0]
     const context = createTargetPlanningContext(state)
 
-    const first = getTargetPlanningSnapshot(context, dwarf)
-    const second = getTargetPlanningSnapshot(context, dwarf)
+    const first = getTargetPlanningSnapshot(context, state, dwarf)
+    const second = getTargetPlanningSnapshot(context, state, dwarf)
 
     expect(second).toBe(first)
     expect(second.reachableCandidates).toBe(first.reachableCandidates)
@@ -32,6 +32,25 @@ describe('targeting helpers', () => {
           second.rankedWorkCandidates[index - 1].score >= candidate.score,
       ),
     ).toBe(true)
+  })
+
+  it('invalidates the shared snapshot when the world changes during a tick', () => {
+    const state = createInitialSimulation('targeting-context-invalidation')
+    const dwarf = state.dwarves[0]
+    const context = createTargetPlanningContext(state)
+    const initial = getTargetPlanningSnapshot(context, state, dwarf)
+    const target = initial.reachableCandidates[0]?.target
+    if (!target) throw new Error('targeting fixture has no exposed work')
+
+    const nextState = { ...state, world: clearCell(state.world, target) }
+    const next = getTargetPlanningSnapshot(context, nextState, dwarf)
+
+    expect(next).not.toBe(initial)
+    expect(
+      next.reachableCandidates.some(
+        (candidate) => taskKey(candidate.target) === taskKey(target),
+      ),
+    ).toBe(false)
   })
 
   it('ranks reachable work once while excluding reserved targets', () => {

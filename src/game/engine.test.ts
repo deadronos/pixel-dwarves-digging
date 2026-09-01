@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { stepSimulation } from './engine'
+import { planAccessRequests } from './engine/accessRequests'
+import { advanceDwarf } from './engine/advancement'
+import {
+  createTargetPlanningContext,
+  getTargetPlanningSnapshot,
+} from './engine/targeting'
 import {
   type Cell,
   EMPTY_INVENTORY,
@@ -280,6 +286,48 @@ function makeStrandedStockRecoveryState(
 }
 
 describe('stepSimulation', () => {
+  it('shares target planning across access and idle phases without changing decisions', () => {
+    const makeUnsafeState = () => {
+      const state = makeState(['.....', '.....', '.....'])
+      state.world.buildings = state.world.buildings.filter(
+        (building) =>
+          building.position.x !== state.dwarves[0].position.x ||
+          building.position.y !== state.dwarves[0].position.y,
+      )
+      state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+      return state
+    }
+
+    const isolatedState = makeUnsafeState()
+    const isolatedPlanned = planAccessRequests(isolatedState)
+    const isolatedAdvanced = advanceDwarf(
+      isolatedPlanned,
+      isolatedPlanned.dwarves[0],
+    )
+
+    const sharedState = makeUnsafeState()
+    const context = createTargetPlanningContext(sharedState)
+    const snapshot = getTargetPlanningSnapshot(
+      context,
+      sharedState,
+      sharedState.dwarves[0],
+    )
+    const snapshotAccessor = vi.spyOn(context, 'getSnapshot')
+    const sharedPlanned = planAccessRequests(sharedState, context)
+    const sharedAdvanced = advanceDwarf(
+      sharedPlanned,
+      sharedPlanned.dwarves[0],
+      context,
+    )
+
+    expect(snapshotAccessor).toHaveBeenCalled()
+    expect(sharedPlanned).toEqual(isolatedPlanned)
+    expect(sharedAdvanced).toEqual(isolatedAdvanced)
+    expect(
+      getTargetPlanningSnapshot(context, sharedState, sharedState.dwarves[0]),
+    ).toBe(snapshot)
+  })
+
   it('moves, digs, hauls, and increments global inventory', () => {
     const initial = makeState(['.....', '..d..', '.....'])
     const result = stepSimulation(initial, 30)

@@ -7,8 +7,9 @@ import {
 import { findAdjacentPaths, type ReachableExposedSolid } from '../pathfinding'
 import type { AccessRequest, Position, SimulationState } from '../types'
 import {
+  createTargetPlanningContext,
   findUnsafeTarget,
-  reachableTargets,
+  getTargetPlanningSnapshot,
   scoreTarget,
   taskKey,
 } from './targeting'
@@ -57,15 +58,17 @@ function reopenAccessRequest(
 
 export function reopenResolvedAccessRequests(
   state: SimulationState,
+  context = createTargetPlanningContext(state),
 ): SimulationState {
   let next = state
   for (const request of state.accessRequests) {
     if (request.status !== 'resolved') continue
     for (const dwarf of state.dwarves) {
       if (dwarf.task.kind !== 'idle' || dwarf.carrying) continue
-      const candidate = reachableTargets(state.world, dwarf.position).find(
-        ({ target }) => taskKey(target) === taskKey(request.target),
-      )
+      const candidate = getTargetPlanningSnapshot(context, state, dwarf)
+        .reachableCandidates.find(
+          ({ target }) => taskKey(target) === taskKey(request.target),
+        )
       if (!candidate) continue
       const stand = candidate.path.at(-1) ?? dwarf.position
       const safety = assessDigSafety(state, stand, candidate.target)
@@ -113,9 +116,12 @@ function trimOpenAccessRequests(state: SimulationState): SimulationState {
   return unrecoveredDiscardedOrder ? state : recovered
 }
 
-export function planAccessRequests(state: SimulationState): SimulationState {
+export function planAccessRequests(
+  state: SimulationState,
+  context = createTargetPlanningContext(state),
+): SimulationState {
   let next = trimOpenAccessRequests(
-    reopenResolvedAccessRequests(resolveAccessRequests(state)),
+    reopenResolvedAccessRequests(resolveAccessRequests(state), context),
   )
   let openRequestCount = next.accessRequests.filter(
     (request) => request.status === 'open',
@@ -124,7 +130,7 @@ export function planAccessRequests(state: SimulationState): SimulationState {
   for (const dwarf of next.dwarves) {
     if (openRequestCount >= MAX_OPEN_ACCESS_REQUESTS) break
     if (dwarf.task.kind !== 'idle' || dwarf.carrying) continue
-    const unsafe = findUnsafeTarget(next, dwarf)
+    const unsafe = findUnsafeTarget(next, dwarf, context)
     if (!unsafe || unsafe.failure === 'storage-route') continue
     const requestId = `access-${taskKey(unsafe.target)}`
     const existingRequest = next.accessRequests.find(

@@ -24,7 +24,10 @@ export type TargetPlanningSnapshot = {
 }
 
 export type TargetPlanningContext = {
-  getSnapshot: (dwarf: DwarfState) => TargetPlanningSnapshot
+  getSnapshot: (
+    state: SimulationState,
+    dwarf: DwarfState,
+  ) => TargetPlanningSnapshot
 }
 
 const reachableWorkCache = new WeakMap<
@@ -100,21 +103,32 @@ export function createTargetPlanningContext(
   state: SimulationState,
 ): TargetPlanningContext {
   const snapshots = new Map<string, TargetPlanningSnapshot>()
+  let plannedWorld = state.world
+  let plannedPolicy = state.policy
 
   return {
-    getSnapshot(dwarf) {
+    getSnapshot(currentState, dwarf) {
+      if (
+        currentState.world !== plannedWorld ||
+        currentState.policy !== plannedPolicy
+      ) {
+        snapshots.clear()
+        plannedWorld = currentState.world
+        plannedPolicy = currentState.policy
+      }
+
       const key = `${dwarf.id}:${taskKey(dwarf.position)}`
       const cached = snapshots.get(key)
       if (cached) return cached
 
       const reachableCandidates = reachableTargets(
-        state.world,
+        currentState.world,
         dwarf.position,
       ).map(({ target, path }) => ({
         target,
         path,
         stand: path.at(-1) ?? dwarf.position,
-        score: scoreTarget(state, target, path.length),
+        score: scoreTarget(currentState, target, path.length),
       }))
       const snapshot = {
         reachableCandidates,
@@ -132,9 +146,10 @@ export function createTargetPlanningContext(
 
 export function getTargetPlanningSnapshot(
   context: TargetPlanningContext,
+  state: SimulationState,
   dwarf: DwarfState,
 ): TargetPlanningSnapshot {
-  return context.getSnapshot(dwarf)
+  return context.getSnapshot(state, dwarf)
 }
 
 export function rankedWorkCandidates(
@@ -152,6 +167,7 @@ export function rankedWorkCandidates(
 
   const snapshot = getTargetPlanningSnapshot(
     context ?? createTargetPlanningContext(state),
+    state,
     dwarf,
   )
   return snapshot.rankedWorkCandidates.filter(
@@ -211,6 +227,7 @@ export function chooseAccessTarget(
   for (const request of requests) {
     const candidates = getTargetPlanningSnapshot(
       context ?? createTargetPlanningContext(state),
+      state,
       dwarf,
     ).reachableCandidates
       .filter(({ target }) => taskKey(target) !== taskKey(request.target))

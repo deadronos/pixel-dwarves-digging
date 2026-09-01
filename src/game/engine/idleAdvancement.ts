@@ -10,12 +10,17 @@ import type {
 import { assignBuildTask } from './buildAdvancement'
 import type { AdvanceResult } from './recovery'
 import { attemptEmergencyRecovery, recoveryTask } from './recovery'
-import { chooseAccessTarget, chooseTarget } from './targeting'
+import {
+  chooseAccessTarget,
+  chooseTarget,
+  type TargetPlanningContext,
+} from './targeting'
 import { chooseBuildOrder, unchanged } from './tasks'
 
 export function advanceIdle(
   state: SimulationState,
   dwarf: DwarfState,
+  context?: TargetPlanningContext,
 ): AdvanceResult {
   if (dwarf.carrying) {
     const destination = selectStorageDestination(
@@ -103,7 +108,7 @@ export function advanceIdle(
     }
   }
 
-  const accessAssignment = chooseAccessTarget(state, dwarf)
+  const accessAssignment = chooseAccessTarget(state, dwarf, context)
   if (accessAssignment) {
     return {
       dwarf: {
@@ -122,7 +127,7 @@ export function advanceIdle(
     }
   }
 
-  const assignment = chooseTarget(state, dwarf)
+  const assignment = chooseTarget(state, dwarf, context)
   return assignment
     ? {
         dwarf: {
