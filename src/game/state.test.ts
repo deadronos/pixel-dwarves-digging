@@ -13,6 +13,20 @@ describe('createGameStore', () => {
     expect(state.simulation.world.seed).toBe('state-seed')
     expect(state.simulation.policy.workPreference).toBe('nearest')
     expect(state.simulation.dwarves).toHaveLength(3)
+    expect(state.dynamicCameraEnabled).toBe(true)
+  })
+
+  it('toggles dynamic camera without changing simulation or save data', () => {
+    const store = createGameStore('dynamic-camera-state-seed')
+    const simulation = store.getState().simulation
+
+    store.getState().setDynamicCameraEnabled(false)
+
+    expect(store.getState().dynamicCameraEnabled).toBe(false)
+    expect(store.getState().simulation).toBe(simulation)
+    expect(JSON.stringify(store.getState().simulation)).not.toContain(
+      'dynamicCamera',
+    )
   })
 
   it('increments the run number for each manual new run', () => {
