@@ -8,7 +8,7 @@ describe('dynamic camera adapter seams', () => {
   it('pauses after manual input and resumes after the idle window', () => {
     const pause = createCameraPauseController()
 
-    pause.onInput(1_000)
+    pause.onDragEnd(1_000)
 
     expect(pause.isPaused(1_001)).toBe(true)
     expect(pause.isPaused(3_499)).toBe(true)

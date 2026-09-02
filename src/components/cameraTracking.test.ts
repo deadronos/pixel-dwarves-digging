@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { dampCameraValue, getCameraTarget } from './cameraTracking'
+import {
+  createCameraPauseController,
+  dampCameraValue,
+  getCameraTarget,
+  syncCameraControlTarget,
+} from './cameraTracking'
 
 const world = { width: 100, height: 40 }
 
@@ -14,6 +19,14 @@ const dwarf = (position: { x: number; y: number }, active = false) => ({
 })
 
 describe('camera tracking', () => {
+  it('keeps the controls target aligned with the camera center without changing depth', () => {
+    const controlsTarget = { x: 0, y: 0, z: 0 }
+
+    syncCameraControlTarget(controlsTarget, { x: 18, y: -7 })
+
+    expect(controlsTarget).toEqual({ x: 18, y: -7, z: 0 })
+  })
+
   it('weights active dwarf work more strongly than idle anchors', () => {
     const target = getCameraTarget(
       world,
@@ -47,5 +60,18 @@ describe('camera tracking', () => {
     const fast = dampCameraValue(10, 5, 1 / 60, 5.5)
 
     expect(10 - fast).toBeGreaterThan(10 - slow)
+  })
+
+  it('keeps dynamic tracking paused for the entire manual drag', () => {
+    const pause = createCameraPauseController()
+
+    pause.onDragStart(1_000)
+
+    expect(pause.isPaused(4_000)).toBe(true)
+
+    pause.onDragEnd(4_000)
+
+    expect(pause.isPaused(6_499)).toBe(true)
+    expect(pause.isPaused(6_500)).toBe(false)
   })
 })

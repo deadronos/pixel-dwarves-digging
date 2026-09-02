@@ -1,6 +1,7 @@
 import { OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useRef } from 'react'
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type { DwarfState, World } from '../game/types'
 import BuildingLayer from './BuildingLayer'
 import {
@@ -8,6 +9,7 @@ import {
   dampCameraValue,
   getCameraTarget,
   isDynamicCameraActive,
+  syncCameraControlTarget,
 } from './cameraTracking'
 import DwarfLayer from './DwarfLayer'
 import TerrainLayer from './TerrainLayer'
@@ -26,6 +28,7 @@ function WorldScene({
   onTemporaryPauseChange,
 }: WorldCanvasProps) {
   const { camera, size } = useThree()
+  const controlsRef = useRef<OrbitControlsImpl>(null)
   const pauseController = useRef(createCameraPauseController())
   const temporaryPaused = useRef(false)
 
@@ -52,10 +55,18 @@ function WorldScene({
     const zoomRate = target.zoom < camera.zoom ? 5.5 : 2.2
     camera.zoom = dampCameraValue(camera.zoom, target.zoom, delta, zoomRate)
     camera.updateProjectionMatrix()
+    if (controlsRef.current) {
+      syncCameraControlTarget(controlsRef.current.target, camera.position)
+    }
   })
 
-  const registerManualInput = () => {
-    pauseController.current.onInput(performance.now())
+  const registerManualStart = () => {
+    pauseController.current.onDragStart(performance.now())
+    reportPause(true)
+  }
+
+  const registerManualEnd = () => {
+    pauseController.current.onDragEnd(performance.now())
     reportPause(true)
   }
 
@@ -67,12 +78,13 @@ function WorldScene({
         <DwarfLayer dwarves={dwarves} />
       </group>
       <OrbitControls
+        ref={controlsRef}
         enableRotate={false}
         enablePan
         minZoom={5}
         maxZoom={22}
-        onStart={registerManualInput}
-        onEnd={registerManualInput}
+        onStart={registerManualStart}
+        onEnd={registerManualEnd}
         screenSpacePanning
         zoomToCursor
       />

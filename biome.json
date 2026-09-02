@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.9/schema.json",
   "files": {
-    "includes": ["**", "!dist", "!node_modules", "!.superpowers"]
+    "includes": ["**", "!dist", "!node_modules", "!.superpowers", "!.worktrees"]
   },
   "formatter": {
     "enabled": true,

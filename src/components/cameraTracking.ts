@@ -34,6 +34,14 @@ export function dampCameraValue(
   return current + (target - current) * alpha
 }
 
+export function syncCameraControlTarget(
+  controlsTarget: { x: number; y: number },
+  cameraPosition: Position,
+): void {
+  controlsTarget.x = cameraPosition.x
+  controlsTarget.y = cameraPosition.y
+}
+
 export function isDynamicCameraActive(
   enabled: boolean,
   temporarilyPaused: boolean,
@@ -43,13 +51,19 @@ export function isDynamicCameraActive(
 
 export function createCameraPauseController(durationMs = CAMERA_PAUSE_MS) {
   let pausedUntil = 0
+  let dragging = false
 
   return {
-    onInput(now: number) {
+    onDragStart(now: number) {
+      dragging = true
+      pausedUntil = now + durationMs
+    },
+    onDragEnd(now: number) {
+      dragging = false
       pausedUntil = now + durationMs
     },
     isPaused(now: number): boolean {
-      return now < pausedUntil
+      return dragging || now < pausedUntil
     },
   }
 }
