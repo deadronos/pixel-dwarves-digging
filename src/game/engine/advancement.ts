@@ -5,6 +5,7 @@ import { advanceHaul } from './haulAdvancement'
 import { advanceIdle } from './idleAdvancement'
 import type { AdvanceResult } from './recovery'
 import { attemptEmergencyRecovery, recoveryTask } from './recovery'
+import type { TargetPlanningContext } from './targeting'
 import { idleTask, invalidateTask, unchanged, validPath } from './tasks'
 
 function advanceMovement(
@@ -36,6 +37,7 @@ function advanceMovement(
 export function advanceDwarf(
   state: SimulationState,
   dwarf: DwarfState,
+  context?: TargetPlanningContext,
 ): AdvanceResult {
   if (dwarf.movement === 'falling') {
     return unchanged(dwarf, state.world)
@@ -56,7 +58,7 @@ export function advanceDwarf(
     if (recovery) return recovery
   }
 
-  if (task.kind === 'idle') return advanceIdle(state, dwarf)
+  if (task.kind === 'idle') return advanceIdle(state, dwarf, context)
   if (task.kind === 'haul' && !task.target) return advanceHaul(state, dwarf)
   if (task.path.length > 0) return advanceMovement(state, dwarf)
   if (task.kind === 'build') return advanceBuild(state, dwarf)

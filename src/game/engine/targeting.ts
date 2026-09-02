@@ -18,6 +18,18 @@ export type TargetCandidate = ReachableExposedSolid & {
   stand: Position
 }
 
+export type TargetPlanningSnapshot = {
+  reachableCandidates: TargetCandidate[]
+  rankedWorkCandidates: TargetCandidate[]
+}
+
+export type TargetPlanningContext = {
+  getSnapshot: (
+    state: SimulationState,
+    dwarf: DwarfState,
+  ) => TargetPlanningSnapshot
+}
+
 const reachableWorkCache = new WeakMap<
   object,
   Map<string, ReachableExposedSolid[]>
@@ -87,9 +99,64 @@ function compareCandidates(
   )
 }
 
+export function createTargetPlanningContext(
+  state: SimulationState,
+): TargetPlanningContext {
+  const snapshots = new Map<string, TargetPlanningSnapshot>()
+  let plannedTopology = getTopologyKey(state.world)
+  let plannedPolicy = state.policy
+
+  return {
+    getSnapshot(currentState, dwarf) {
+      const currentTopology = getTopologyKey(currentState.world)
+      if (
+        currentTopology !== plannedTopology ||
+        currentState.policy !== plannedPolicy
+      ) {
+        snapshots.clear()
+        plannedTopology = currentTopology
+        plannedPolicy = currentState.policy
+      }
+
+      const key = `${dwarf.id}:${taskKey(dwarf.position)}`
+      const cached = snapshots.get(key)
+      if (cached) return cached
+
+      const reachableCandidates = reachableTargets(
+        currentState.world,
+        dwarf.position,
+      ).map(({ target, path }) => ({
+        target,
+        path,
+        stand: path.at(-1) ?? dwarf.position,
+        score: scoreTarget(currentState, target, path.length),
+      }))
+      const snapshot = {
+        reachableCandidates,
+        rankedWorkCandidates: reachableCandidates
+          .slice()
+          .sort((first, second) =>
+            compareCandidates(first, second, dwarf.position),
+          ),
+      }
+      snapshots.set(key, snapshot)
+      return snapshot
+    },
+  }
+}
+
+export function getTargetPlanningSnapshot(
+  context: TargetPlanningContext,
+  state: SimulationState,
+  dwarf: DwarfState,
+): TargetPlanningSnapshot {
+  return context.getSnapshot(state, dwarf)
+}
+
 export function rankedWorkCandidates(
   state: SimulationState,
   dwarf: DwarfState,
+  context?: TargetPlanningContext,
 ): TargetCandidate[] {
   const reserved = new Set(
     state.dwarves
@@ -99,26 +166,24 @@ export function rankedWorkCandidates(
       ),
   )
 
-  return reachableTargets(state.world, dwarf.position)
-    .filter(
-      ({ target }) =>
-        !reserved.has(taskKey(target)) &&
-        !isBootstrapProtectedTarget(state, target),
-    )
-    .map(({ target, path }) => ({
-      target,
-      path,
-      stand: path.at(-1) ?? dwarf.position,
-      score: scoreTarget(state, target, path.length),
-    }))
-    .sort((first, second) => compareCandidates(first, second, dwarf.position))
+  const snapshot = getTargetPlanningSnapshot(
+    context ?? createTargetPlanningContext(state),
+    state,
+    dwarf,
+  )
+  return snapshot.rankedWorkCandidates.filter(
+    ({ target }) =>
+      !reserved.has(taskKey(target)) &&
+      !isBootstrapProtectedTarget(state, target),
+  )
 }
 
 export function chooseTarget(
   state: SimulationState,
   dwarf: DwarfState,
+  context?: TargetPlanningContext,
 ): ReachableExposedSolid | null {
-  for (const candidate of rankedWorkCandidates(state, dwarf)) {
+  for (const candidate of rankedWorkCandidates(state, dwarf, context)) {
     if (assessDigSafety(state, candidate.stand, candidate.target).safe) {
       return { target: candidate.target, path: candidate.path }
     }
@@ -129,6 +194,7 @@ export function chooseTarget(
 export function findUnsafeTarget(
   state: SimulationState,
   dwarf: DwarfState,
+  context?: TargetPlanningContext,
 ):
   | (ReachableExposedSolid & {
       score: number
@@ -136,7 +202,7 @@ export function findUnsafeTarget(
       failure: AccessRequest['failure']
     })
   | null {
-  for (const candidate of rankedWorkCandidates(state, dwarf)) {
+  for (const candidate of rankedWorkCandidates(state, dwarf, context)) {
     const failure = assessDigSafety(
       state,
       candidate.stand,
@@ -150,6 +216,7 @@ export function findUnsafeTarget(
 export function chooseAccessTarget(
   state: SimulationState,
   dwarf: DwarfState,
+  context?: TargetPlanningContext,
 ): (ReachableExposedSolid & { requestId: string }) | null {
   const requests = state.accessRequests
     .filter(
@@ -159,13 +226,14 @@ export function chooseAccessTarget(
     .sort((first, second) => second.priority - first.priority)
 
   for (const request of requests) {
-    const candidates = reachableTargets(state.world, dwarf.position)
-      .filter(({ target }) => taskKey(target) !== taskKey(request.target))
-      .map(({ target, path }) => ({
-        target,
-        path,
-        stand: path.at(-1) ?? dwarf.position,
-      }))
+    const candidates = getTargetPlanningSnapshot(
+      context ?? createTargetPlanningContext(state),
+      state,
+      dwarf,
+    )
+      .reachableCandidates.filter(
+        ({ target }) => taskKey(target) !== taskKey(request.target),
+      )
       .sort(
         (first, second) =>
           distance(first.target, request.target) -
@@ -175,7 +243,11 @@ export function chooseAccessTarget(
 
     for (const candidate of candidates) {
       if (assessDigSafety(state, candidate.stand, candidate.target).safe) {
-        return { ...candidate, requestId: request.id }
+        return {
+          target: candidate.target,
+          path: candidate.path,
+          requestId: request.id,
+        }
       }
     }
   }

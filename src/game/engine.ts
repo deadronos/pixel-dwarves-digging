@@ -11,6 +11,7 @@ import {
 import { advanceDwarf } from './engine/advancement'
 import { settleDwarf } from './engine/recovery'
 import { deriveSafetyObservation } from './engine/safetyObservation'
+import { createTargetPlanningContext } from './engine/targeting'
 import { hasMineableSolids } from './generation'
 import {
   getAvailableConstructionMaterial,
@@ -133,10 +134,14 @@ function stepOnce(state: SimulationState): SimulationState {
   const recoveredState = recoverStaleAccessOrders(
     recoverStaleOutpostOrders(state),
   )
+  const targetPlanningContext = createTargetPlanningContext(recoveredState)
   const requestedState =
     state.safety.phase === 'blocked'
-      ? planAccessRequests(reopenResolvedAccessRequests(recoveredState))
-      : planAccessRequests(recoveredState)
+      ? planAccessRequests(
+          reopenResolvedAccessRequests(recoveredState, targetPlanningContext),
+          targetPlanningContext,
+        )
+      : planAccessRequests(recoveredState, targetPlanningContext)
   const capacityState = planOverflowDepotOrder(requestedState)
   const upgradedState = planStorageUpgradeOrder(capacityState)
   const plannedState =
@@ -157,7 +162,7 @@ function stepOnce(state: SimulationState): SimulationState {
     const settled = settleDwarf(nextState.world, nextState.dwarves[index])
     nextState.dwarves[index] = settled
     const worldBeforeAdvance = nextState.world
-    const advanced = advanceDwarf(nextState, settled)
+    const advanced = advanceDwarf(nextState, settled, targetPlanningContext)
     const worldChanged =
       advanced.world.cells !== worldBeforeAdvance.cells ||
       advanced.world.buildings !== worldBeforeAdvance.buildings

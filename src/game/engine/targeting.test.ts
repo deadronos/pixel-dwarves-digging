@@ -1,10 +1,77 @@
 import { describe, expect, it } from 'vitest'
 import { addMaterialToStorage, removeFromStorage } from '../buildings/storage'
 import { clearCell } from '../generation'
+import { appendPlannedConstruction } from '../logistics/expansionPlanning'
 import { createInitialSimulation } from '../state'
-import { rankedWorkCandidates, reachableTargets, taskKey } from './targeting'
+import {
+  createTargetPlanningContext,
+  getTargetPlanningSnapshot,
+  rankedWorkCandidates,
+  reachableTargets,
+  taskKey,
+} from './targeting'
 
 describe('targeting helpers', () => {
+  it('shares one enriched and ranked snapshot across target consumers', () => {
+    const state = createInitialSimulation('targeting-context-reuse')
+    const dwarf = state.dwarves[0]
+    const context = createTargetPlanningContext(state)
+
+    const first = getTargetPlanningSnapshot(context, state, dwarf)
+    const second = getTargetPlanningSnapshot(context, state, dwarf)
+
+    expect(second).toBe(first)
+    expect(second.reachableCandidates).toBe(first.reachableCandidates)
+    expect(second.rankedWorkCandidates).toBe(first.rankedWorkCandidates)
+    expect(second.rankedWorkCandidates).toEqual(
+      expect.arrayContaining(second.reachableCandidates),
+    )
+    expect(
+      second.rankedWorkCandidates.every(
+        (candidate, index) =>
+          index === 0 ||
+          second.rankedWorkCandidates[index - 1].score >= candidate.score,
+      ),
+    ).toBe(true)
+  })
+
+  it('invalidates the shared snapshot when topology changes during a tick', () => {
+    const state = createInitialSimulation('targeting-context-invalidation')
+    const dwarf = state.dwarves[0]
+    const context = createTargetPlanningContext(state)
+    const initial = getTargetPlanningSnapshot(context, state, dwarf)
+    const target = initial.reachableCandidates[0]?.target
+    if (!target) throw new Error('targeting fixture has no exposed work')
+
+    const nextState = { ...state, world: clearCell(state.world, target) }
+    const next = getTargetPlanningSnapshot(context, nextState, dwarf)
+
+    expect(next).not.toBe(initial)
+    expect(
+      next.reachableCandidates.some(
+        (candidate) => taskKey(candidate.target) === taskKey(target),
+      ),
+    ).toBe(false)
+  })
+
+  it('preserves the shared snapshot when planned construction keeps the topology', () => {
+    const state = createInitialSimulation('targeting-context-planned-building')
+    const dwarf = state.dwarves[0]
+    const context = createTargetPlanningContext(state)
+    const initial = getTargetPlanningSnapshot(context, state, dwarf)
+
+    const plannedState = appendPlannedConstruction(
+      state,
+      'outpost',
+      state.world.start,
+    )
+    const planned = getTargetPlanningSnapshot(context, plannedState, dwarf)
+
+    expect(plannedState.world).not.toBe(state.world)
+    expect(plannedState.world.topologyKey).toBe(state.world.topologyKey)
+    expect(planned).toBe(initial)
+  })
+
   it('ranks reachable work once while excluding reserved targets', () => {
     const state = createInitialSimulation('targeting-helper')
     state.safety.phase = 'operational'
