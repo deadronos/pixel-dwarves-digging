@@ -1,60 +1,22 @@
-import { useRef, useState } from 'react'
 import { BLOCK_LABELS } from '../game/content'
 import type { SimulationSpeed } from '../game/state'
 import { useGameStore } from '../game/state'
 import type { ConstructionPolicy } from '../game/types'
 
-function downloadSave(payload: string) {
-  const blob = new Blob([payload], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = 'pixel-dwarves-save.json'
-  anchor.click()
-  URL.revokeObjectURL(url)
-}
-
-type ControlBarProps = {
-  dynamicCameraPaused?: boolean
-}
-
-export default function ControlBar({
-  dynamicCameraPaused = false,
-}: ControlBarProps) {
+export default function ControlBar() {
   const paused = useGameStore((state) => state.paused)
   const speed = useGameStore((state) => state.speed)
-  const dynamicCameraEnabled = useGameStore(
-    (state) => state.dynamicCameraEnabled,
-  )
   const policy = useGameStore((state) => state.simulation.policy)
   const constructionPolicy = useGameStore(
     (state) => state.simulation.constructionPolicy,
   )
-  const saveError = useGameStore((state) => state.saveError)
   const setPaused = useGameStore((state) => state.setPaused)
   const setSpeed = useGameStore((state) => state.setSpeed)
-  const setDynamicCameraEnabled = useGameStore(
-    (state) => state.setDynamicCameraEnabled,
-  )
   const setPolicy = useGameStore((state) => state.setPolicy)
   const setMaterialPriority = useGameStore((state) => state.setMaterialPriority)
   const setConstructionPolicy = useGameStore(
     (state) => state.setConstructionPolicy,
   )
-  const saveLocally = useGameStore((state) => state.saveLocally)
-  const exportSave = useGameStore((state) => state.exportSave)
-  const importSave = useGameStore((state) => state.importSave)
-  const newRun = useGameStore((state) => state.newRun)
-  const resetProgress = useGameStore((state) => state.resetProgress)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [importing, setImporting] = useState(false)
-
-  const handleImport = async (file: File | undefined) => {
-    if (!file) return
-    setImporting(true)
-    importSave(await file.text())
-    setImporting(false)
-  }
 
   return (
     <section className="control-bar" aria-label="Colony controls">
@@ -81,75 +43,62 @@ export default function ControlBar({
         ))}
       </div>
 
-      <div className="control-group camera-controls">
-        <span className="control-label">CAMERA</span>
-        <label className="dynamic-camera-toggle">
-          <input
-            type="checkbox"
-            checked={dynamicCameraEnabled}
-            onChange={(event) => setDynamicCameraEnabled(event.target.checked)}
-          />
-          DYNAMIC CAMERA
-        </label>
-        {dynamicCameraPaused ? (
-          <span className="camera-pause-status">manual pause</span>
-        ) : null}
-      </div>
+      <div className="control-group policy-selects">
+        <div className="policy-field">
+          <label className="control-label" htmlFor="work-preference">
+            WORK
+          </label>
+          <select
+            id="work-preference"
+            value={policy.workPreference}
+            onChange={(event) =>
+              setPolicy({
+                workPreference: event.target
+                  .value as typeof policy.workPreference,
+              })
+            }
+          >
+            <option value="nearest">nearest exposed</option>
+            <option value="ore-first">ore first</option>
+            <option value="deepest-first">deepest first</option>
+          </select>
+        </div>
 
-      <div className="control-group">
-        <label className="control-label" htmlFor="work-preference">
-          WORK
-        </label>
-        <select
-          id="work-preference"
-          value={policy.workPreference}
-          onChange={(event) =>
-            setPolicy({
-              workPreference: event.target
-                .value as typeof policy.workPreference,
-            })
-          }
-        >
-          <option value="nearest">nearest exposed</option>
-          <option value="ore-first">ore first</option>
-          <option value="deepest-first">deepest first</option>
-        </select>
-      </div>
+        <div className="policy-field">
+          <label className="control-label" htmlFor="construction-policy">
+            BUILD
+          </label>
+          <select
+            id="construction-policy"
+            value={constructionPolicy}
+            onChange={(event) =>
+              setConstructionPolicy(event.target.value as ConstructionPolicy)
+            }
+          >
+            <option value="conserve">essential routes</option>
+            <option value="balanced">routes + outposts</option>
+            <option value="expand">expand logistics</option>
+          </select>
+        </div>
 
-      <div className="control-group">
-        <label className="control-label" htmlFor="construction-policy">
-          BUILD
-        </label>
-        <select
-          id="construction-policy"
-          value={constructionPolicy}
-          onChange={(event) =>
-            setConstructionPolicy(event.target.value as ConstructionPolicy)
-          }
-        >
-          <option value="conserve">essential routes</option>
-          <option value="balanced">routes + outposts</option>
-          <option value="expand">expand logistics</option>
-        </select>
-      </div>
-
-      <div className="control-group">
-        <label className="control-label" htmlFor="hauling-preference">
-          HAUL
-        </label>
-        <select
-          id="hauling-preference"
-          value={policy.haulingPreference}
-          onChange={(event) =>
-            setPolicy({
-              haulingPreference: event.target
-                .value as typeof policy.haulingPreference,
-            })
-          }
-        >
-          <option value="nearest-stockpile">main stockpile first</option>
-          <option value="finish-current-route">finish current route</option>
-        </select>
+        <div className="policy-field">
+          <label className="control-label" htmlFor="hauling-preference">
+            HAUL
+          </label>
+          <select
+            id="hauling-preference"
+            value={policy.haulingPreference}
+            onChange={(event) =>
+              setPolicy({
+                haulingPreference: event.target
+                  .value as typeof policy.haulingPreference,
+              })
+            }
+          >
+            <option value="nearest-stockpile">main stockpile first</option>
+            <option value="finish-current-route">finish current route</option>
+          </select>
+        </div>
       </div>
 
       <div className="control-group material-priority">
@@ -174,75 +123,6 @@ export default function ControlBar({
           </label>
         ))}
       </div>
-
-      <div className="control-group save-controls">
-        <span className="control-label">RUN FILE</span>
-        <button type="button" className="control-button" onClick={saveLocally}>
-          save
-        </button>
-        <button
-          type="button"
-          className="control-button"
-          onClick={() => downloadSave(exportSave())}
-        >
-          export
-        </button>
-        <button
-          type="button"
-          className="control-button"
-          onClick={() => inputRef.current?.click()}
-          disabled={importing}
-        >
-          {importing ? 'reading…' : 'import'}
-        </button>
-        <input
-          ref={inputRef}
-          className="visually-hidden"
-          type="file"
-          accept="application/json,.json"
-          onChange={(event) => {
-            void handleImport(event.target.files?.[0])
-            event.target.value = ''
-          }}
-        />
-      </div>
-
-      <div className="control-group destructive-controls">
-        <button
-          type="button"
-          className="control-button subtle"
-          onClick={() => {
-            if (
-              window.confirm(
-                'Start a new generated map while keeping permanent upgrades?',
-              )
-            )
-              newRun()
-          }}
-        >
-          new run
-        </button>
-        <button
-          type="button"
-          className="control-button danger"
-          onClick={() => {
-            if (
-              window.confirm(
-                'Reset all progress and start over? This cannot be undone.',
-              )
-            )
-              resetProgress()
-          }}
-        >
-          reset
-        </button>
-      </div>
-
-      {saveError ? (
-        <p className="save-error" role="alert">
-          {saveError}
-        </p>
-      ) : null}
     </section>
   )
 }
