@@ -2,6 +2,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createInitialSimulation, useGameStore } from '../game/state'
+import ControlBar from './ControlBar'
 import Hud from './Hud'
 import Inspector from './Inspector'
 
@@ -17,6 +18,7 @@ describe('live UI panel components', () => {
       simulation: createInitialSimulation('panel-test-seed'),
       paused: false,
       speed: 1,
+      dynamicCameraEnabled: true,
       saveStatus: 'SAVED',
       saveError: null,
     })
@@ -55,6 +57,29 @@ describe('live UI panel components', () => {
     })
 
     expect(container?.textContent).toContain('tick 1')
+  })
+
+  it('renders a default-on dynamic camera toggle and temporary pause status', () => {
+    expect(() => {
+      act(() => {
+        root?.render(<ControlBar dynamicCameraPaused />)
+      })
+    }).not.toThrow()
+
+    const dynamicInput = Array.from(
+      container?.querySelectorAll<HTMLInputElement>('input') ?? [],
+    ).find((input) =>
+      input.parentElement?.textContent?.includes('DYNAMIC CAMERA'),
+    )
+
+    expect(dynamicInput).toBeDefined()
+    expect(dynamicInput?.checked).toBe(true)
+    expect(container?.textContent).toContain('manual pause')
+
+    act(() => {
+      dynamicInput?.click()
+    })
+    expect(useGameStore.getState().dynamicCameraEnabled).toBe(false)
   })
 
   it('renders Inspector stably without infinite snapshot loops', () => {

@@ -6,7 +6,11 @@ const world = { width: 100, height: 40 }
 const dwarf = (position: { x: number; y: number }, active = false) => ({
   position,
   movement: active ? ('falling' as const) : ('grounded' as const),
-  task: { kind: active ? ('dig' as const) : ('idle' as const), path: [], progress: 0 },
+  task: {
+    kind: active ? ('dig' as const) : ('idle' as const),
+    path: [],
+    progress: 0,
+  },
 })
 
 describe('camera tracking', () => {

@@ -411,6 +411,27 @@ select {
   accent-color: #dfbd62;
 }
 
+.dynamic-camera-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #f1e7c8;
+  cursor: pointer;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.dynamic-camera-toggle input {
+  accent-color: #dfbd62;
+}
+
+.camera-pause-status {
+  color: #b89d64;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 select {
   min-width: 130px;
 }

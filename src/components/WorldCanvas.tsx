@@ -47,18 +47,8 @@ function WorldScene({
     )
     const centerX = target.center.x - world.width / 2
     const centerY = target.center.y - world.height / 2
-    camera.position.x = dampCameraValue(
-      camera.position.x,
-      centerX,
-      delta,
-      2.2,
-    )
-    camera.position.y = dampCameraValue(
-      camera.position.y,
-      centerY,
-      delta,
-      2.2,
-    )
+    camera.position.x = dampCameraValue(camera.position.x, centerX, delta, 2.2)
+    camera.position.y = dampCameraValue(camera.position.y, centerY, delta, 2.2)
     const zoomRate = target.zoom < camera.zoom ? 5.5 : 2.2
     camera.zoom = dampCameraValue(camera.zoom, target.zoom, delta, zoomRate)
     camera.updateProjectionMatrix()
@@ -82,7 +72,7 @@ function WorldScene({
         minZoom={5}
         maxZoom={22}
         onStart={registerManualInput}
-        onChange={registerManualInput}
+        onEnd={registerManualInput}
         screenSpacePanning
         zoomToCursor
       />
