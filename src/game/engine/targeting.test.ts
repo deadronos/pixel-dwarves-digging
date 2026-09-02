@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { addMaterialToStorage, removeFromStorage } from '../buildings/storage'
 import { clearCell } from '../generation'
+import { appendPlannedConstruction } from '../logistics/expansionPlanning'
 import { createInitialSimulation } from '../state'
 import {
   createTargetPlanningContext,
@@ -34,7 +35,7 @@ describe('targeting helpers', () => {
     ).toBe(true)
   })
 
-  it('invalidates the shared snapshot when the world changes during a tick', () => {
+  it('invalidates the shared snapshot when topology changes during a tick', () => {
     const state = createInitialSimulation('targeting-context-invalidation')
     const dwarf = state.dwarves[0]
     const context = createTargetPlanningContext(state)
@@ -51,6 +52,24 @@ describe('targeting helpers', () => {
         (candidate) => taskKey(candidate.target) === taskKey(target),
       ),
     ).toBe(false)
+  })
+
+  it('preserves the shared snapshot when planned construction keeps the topology', () => {
+    const state = createInitialSimulation('targeting-context-planned-building')
+    const dwarf = state.dwarves[0]
+    const context = createTargetPlanningContext(state)
+    const initial = getTargetPlanningSnapshot(context, state, dwarf)
+
+    const plannedState = appendPlannedConstruction(
+      state,
+      'outpost',
+      state.world.start,
+    )
+    const planned = getTargetPlanningSnapshot(context, plannedState, dwarf)
+
+    expect(plannedState.world).not.toBe(state.world)
+    expect(plannedState.world.topologyKey).toBe(state.world.topologyKey)
+    expect(planned).toBe(initial)
   })
 
   it('ranks reachable work once while excluding reserved targets', () => {

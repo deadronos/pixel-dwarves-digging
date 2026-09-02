@@ -103,17 +103,18 @@ export function createTargetPlanningContext(
   state: SimulationState,
 ): TargetPlanningContext {
   const snapshots = new Map<string, TargetPlanningSnapshot>()
-  let plannedWorld = state.world
+  let plannedTopology = getTopologyKey(state.world)
   let plannedPolicy = state.policy
 
   return {
     getSnapshot(currentState, dwarf) {
+      const currentTopology = getTopologyKey(currentState.world)
       if (
-        currentState.world !== plannedWorld ||
+        currentTopology !== plannedTopology ||
         currentState.policy !== plannedPolicy
       ) {
         snapshots.clear()
-        plannedWorld = currentState.world
+        plannedTopology = currentTopology
         plannedPolicy = currentState.policy
       }
 
