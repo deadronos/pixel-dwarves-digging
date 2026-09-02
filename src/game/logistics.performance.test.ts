@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { getStorageDiagnostics } from './logistics'
 import { createInitialSimulation } from './state'
 
+// Deliberately coarse so slower CI hardware does not make this benchmark flaky.
+const STORAGE_DIAGNOSTICS_BUDGET_MS = 500
+
 describe('storage diagnostics performance', () => {
   it('benchmarks repeated storage diagnostics across ticking simulation', () => {
     const baseSimulation = createInitialSimulation('storage-perf-seed')
@@ -41,5 +44,6 @@ describe('storage diagnostics performance', () => {
     expect(diagnosticCount).toBe(iterations)
     expect(initialExpansion).toBeDefined()
     expect(initialExpansion?.length).toBeGreaterThan(0)
+    expect(elapsed).toBeLessThan(STORAGE_DIAGNOSTICS_BUDGET_MS)
   })
 })
