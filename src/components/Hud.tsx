@@ -1,12 +1,19 @@
+import { useState } from 'react'
 import { BLOCK_COLORS, BLOCK_LABELS, MINEABLE_BLOCKS } from '../game/content'
 import { selectHudViewModel } from '../game/selectors'
 import { useGameStore } from '../game/state'
+import SettingsModal from './SettingsModal'
 
-export default function Hud() {
+type HudProps = {
+  dynamicCameraPaused?: boolean
+}
+
+export default function Hud({ dynamicCameraPaused = false }: HudProps) {
   const paused = useGameStore((state) => state.paused)
   const speed = useGameStore((state) => state.speed)
   const saveStatus = useGameStore((state) => state.saveStatus)
   const hud = useGameStore(selectHudViewModel)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   return (
     <header className="hud">
@@ -22,10 +29,27 @@ export default function Hud() {
           </p>
         </div>
         <div className="run-status">
-          <span className="status-chip">{hud.statusChip}</span>
-          <span className="save-state">{saveStatus}</span>
+          <div className="status-badges">
+            <span className="status-chip">{hud.statusChip}</span>
+            <span className="save-state">{saveStatus}</span>
+          </div>
+          <button
+            type="button"
+            className="gear-btn"
+            onClick={() => setIsSettingsOpen(true)}
+            aria-label="Open settings"
+            title="Settings"
+          >
+            ⚙
+          </button>
         </div>
       </div>
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        dynamicCameraPaused={dynamicCameraPaused}
+      />
 
       <section className="inventory-strip" aria-label="Global inventory">
         <div className="inventory-heading">
@@ -49,8 +73,6 @@ export default function Hud() {
         <div className="inventory-summary">
           <span>remaining</span>
           <strong>{hud.remainingSolids.toLocaleString()}</strong>
-          <span>{hud.openAccessRequests} access requests</span>
-          <span>safety: {hud.safetySummary}</span>
         </div>
       </section>
     </header>

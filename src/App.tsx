@@ -22,7 +22,7 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <Hud />
+      <Hud dynamicCameraPaused={dynamicCameraPaused} />
       <div className="main-layout">
         <section className="world-stage" aria-label="Terrain workspace">
           <Suspense
@@ -46,7 +46,7 @@ export default function App() {
         </section>
         <Inspector />
       </div>
-      <ControlBar dynamicCameraPaused={dynamicCameraPaused} />
+      <ControlBar />
     </main>
   )
 }
