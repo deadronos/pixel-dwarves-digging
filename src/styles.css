@@ -557,6 +557,9 @@ dialog.settings-modal {
   color: #f1e7c8;
   max-width: 480px;
   width: calc(100% - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  scrollbar-color: #5a604c #1c211c;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.85);
   margin: auto;
 }

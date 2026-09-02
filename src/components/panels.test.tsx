@@ -70,15 +70,20 @@ describe('live UI panel components', () => {
     expect(gearBtn).toBeDefined()
     expect(gearBtn?.getAttribute('aria-label')).toBe('Open settings')
 
-    // Modal is initially closed
-    expect(container?.querySelector('.settings-modal')).toBeNull()
+    const dialog =
+      container?.querySelector<HTMLDialogElement>('.settings-modal')
+    expect(dialog).toBeDefined()
+    expect(dialog?.hasAttribute('open')).toBe(false)
 
-    // Click gear button to open settings
+    // Focus and click gear button to open settings
+    gearBtn?.focus()
+    expect(document.activeElement).toBe(gearBtn)
+
     act(() => {
       gearBtn?.click()
     })
 
-    expect(container?.querySelector('.settings-modal')).toBeDefined()
+    expect(dialog?.hasAttribute('open')).toBe(true)
     expect(container?.textContent).toContain('VIEWPORT & CAMERA')
     expect(container?.textContent).toContain('manual pause')
     expect(container?.textContent).toContain('panel-test-seed')
@@ -98,13 +103,14 @@ describe('live UI panel components', () => {
     })
     expect(useGameStore.getState().dynamicCameraEnabled).toBe(false)
 
-    // Close button dismisses modal
-    const closeBtn =
-      container?.querySelector<HTMLButtonElement>('.modal-close-btn')
+    // Escape dismisses modal and restores focus to invoking gear button
     act(() => {
-      closeBtn?.click()
+      dialog?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+      )
     })
-    expect(container?.querySelector('.settings-modal')).toBeNull()
+    expect(dialog?.hasAttribute('open')).toBe(false)
+    expect(document.activeElement).toBe(gearBtn)
   })
 
   it('renders streamlined ControlBar with time and policy controls', () => {

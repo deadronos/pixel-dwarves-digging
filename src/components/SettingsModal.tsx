@@ -43,11 +43,18 @@ export default function SettingsModal({
   const seed = useGameStore((state) => state.simulation.world.seed)
   const runNumber = useGameStore((state) => state.simulation.world.runNumber)
 
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null)
+
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
 
     if (isOpen) {
+      previouslyFocusedRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null
+
       if (typeof dialog.showModal === 'function') {
         if (!dialog.open) {
           dialog.showModal()
@@ -62,6 +69,13 @@ export default function SettingsModal({
         }
       } else {
         dialog.removeAttribute('open')
+      }
+
+      if (
+        previouslyFocusedRef.current &&
+        document.contains(previouslyFocusedRef.current)
+      ) {
+        previouslyFocusedRef.current.focus()
       }
     }
   }, [isOpen])
@@ -89,8 +103,6 @@ export default function SettingsModal({
       setCopiedSeed(false)
     }
   }
-
-  if (!isOpen) return null
 
   return (
     <dialog
