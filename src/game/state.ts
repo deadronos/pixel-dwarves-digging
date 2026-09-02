@@ -34,10 +34,12 @@ export type GameStore = {
   simulation: SimulationState
   paused: boolean
   speed: SimulationSpeed
+  dynamicCameraEnabled: boolean
   saveStatus: string
   saveError: string | null
   setPaused: (paused: boolean) => void
   setSpeed: (speed: SimulationSpeed) => void
+  setDynamicCameraEnabled: (enabled: boolean) => void
   setPolicy: (policy: Partial<PolicyState>) => void
   setMaterialPriority: (
     material: keyof PolicyState['materialPriority'],
@@ -122,10 +124,13 @@ export function createGameStore(
     simulation: createInitialSimulation(seed),
     paused: false,
     speed: 1,
+    dynamicCameraEnabled: true,
     saveStatus: 'UNSAVED',
     saveError: null,
     setPaused: (paused) => set({ paused }),
     setSpeed: (speed) => set({ speed }),
+    setDynamicCameraEnabled: (dynamicCameraEnabled) =>
+      set({ dynamicCameraEnabled }),
     setPolicy: (policy) =>
       set((current) => ({
         simulation: {

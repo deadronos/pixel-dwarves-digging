@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import ControlBar from './components/ControlBar'
 import Hud from './components/Hud'
 import Inspector from './components/Inspector'
@@ -8,8 +8,12 @@ const WorldCanvas = lazy(() => import('./components/WorldCanvas'))
 
 export default function App() {
   const simulation = useGameStore((state) => state.simulation)
+  const dynamicCameraEnabled = useGameStore(
+    (state) => state.dynamicCameraEnabled,
+  )
   const startSimulation = useGameStore((state) => state.startSimulation)
   const stopSimulation = useGameStore((state) => state.stopSimulation)
+  const [dynamicCameraPaused, setDynamicCameraPaused] = useState(false)
 
   useEffect(() => {
     startSimulation()
@@ -35,12 +39,14 @@ export default function App() {
             <WorldCanvas
               world={simulation.world}
               dwarves={simulation.dwarves}
+              dynamicCameraEnabled={dynamicCameraEnabled}
+              onTemporaryPauseChange={setDynamicCameraPaused}
             />
           </Suspense>
         </section>
         <Inspector />
       </div>
-      <ControlBar />
+      <ControlBar dynamicCameraPaused={dynamicCameraPaused} />
     </main>
   )
 }

@@ -14,9 +14,18 @@ function downloadSave(payload: string) {
   URL.revokeObjectURL(url)
 }
 
-export default function ControlBar() {
+type ControlBarProps = {
+  dynamicCameraPaused?: boolean
+}
+
+export default function ControlBar({
+  dynamicCameraPaused = false,
+}: ControlBarProps) {
   const paused = useGameStore((state) => state.paused)
   const speed = useGameStore((state) => state.speed)
+  const dynamicCameraEnabled = useGameStore(
+    (state) => state.dynamicCameraEnabled,
+  )
   const policy = useGameStore((state) => state.simulation.policy)
   const constructionPolicy = useGameStore(
     (state) => state.simulation.constructionPolicy,
@@ -24,6 +33,9 @@ export default function ControlBar() {
   const saveError = useGameStore((state) => state.saveError)
   const setPaused = useGameStore((state) => state.setPaused)
   const setSpeed = useGameStore((state) => state.setSpeed)
+  const setDynamicCameraEnabled = useGameStore(
+    (state) => state.setDynamicCameraEnabled,
+  )
   const setPolicy = useGameStore((state) => state.setPolicy)
   const setMaterialPriority = useGameStore((state) => state.setMaterialPriority)
   const setConstructionPolicy = useGameStore(
@@ -67,6 +79,21 @@ export default function ControlBar() {
             {value}×
           </button>
         ))}
+      </div>
+
+      <div className="control-group camera-controls">
+        <span className="control-label">CAMERA</span>
+        <label className="dynamic-camera-toggle">
+          <input
+            type="checkbox"
+            checked={dynamicCameraEnabled}
+            onChange={(event) => setDynamicCameraEnabled(event.target.checked)}
+          />
+          DYNAMIC CAMERA
+        </label>
+        {dynamicCameraPaused ? (
+          <span className="camera-pause-status">manual pause</span>
+        ) : null}
       </div>
 
       <div className="control-group">
