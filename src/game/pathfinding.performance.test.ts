@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import { findPath } from './pathfinding'
 import type { Cell, World } from './types'
 
+// Deliberately coarse so slower CI hardware does not make this benchmark flaky.
+const PATHFINDING_BUDGET_MS = 2_000
+
 function makeStressWorld(): World {
   const width = 160
   const height = 80
@@ -60,5 +63,6 @@ describe('pathfinding performance', () => {
       }),
     )
     expect(routeCount).toBe(24 * 32 * 20)
+    expect(elapsed).toBeLessThan(PATHFINDING_BUDGET_MS)
   })
 })
