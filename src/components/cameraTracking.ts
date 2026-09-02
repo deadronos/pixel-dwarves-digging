@@ -13,6 +13,7 @@ const FOCUS_PADDING = 6
 const BASE_VIEW_SIZE = 100
 const ACTIVE_WEIGHT = 4
 const IDLE_WEIGHT = 1
+export const CAMERA_PAUSE_MS = 2_500
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value))
@@ -31,6 +32,26 @@ export function dampCameraValue(
   if (deltaSeconds <= 0 || rate <= 0) return current
   const alpha = 1 - Math.exp(-rate * deltaSeconds)
   return current + (target - current) * alpha
+}
+
+export function isDynamicCameraActive(
+  enabled: boolean,
+  temporarilyPaused: boolean,
+): boolean {
+  return enabled && !temporarilyPaused
+}
+
+export function createCameraPauseController(durationMs = CAMERA_PAUSE_MS) {
+  let pausedUntil = 0
+
+  return {
+    onInput(now: number) {
+      pausedUntil = now + durationMs
+    },
+    isPaused(now: number): boolean {
+      return now < pausedUntil
+    },
+  }
 }
 
 export function getCameraTarget(
