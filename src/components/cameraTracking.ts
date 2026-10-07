@@ -14,6 +14,8 @@ const BASE_VIEW_SIZE = 100
 const ACTIVE_WEIGHT = 4
 const IDLE_WEIGHT = 1
 export const CAMERA_PAUSE_MS = 2_500
+const CAMERA_POSITION_EPSILON = 0.05
+const CAMERA_ZOOM_EPSILON = 0.01
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value))
@@ -32,6 +34,21 @@ export function dampCameraValue(
   if (deltaSeconds <= 0 || rate <= 0) return current
   const alpha = 1 - Math.exp(-rate * deltaSeconds)
   return current + (target - current) * alpha
+}
+
+export function hasCameraSettled(
+  position: Position,
+  zoom: number,
+  targetPosition: Position,
+  targetZoom: number,
+  positionEpsilon = CAMERA_POSITION_EPSILON,
+  zoomEpsilon = CAMERA_ZOOM_EPSILON,
+): boolean {
+  return (
+    Math.abs(position.x - targetPosition.x) <= positionEpsilon &&
+    Math.abs(position.y - targetPosition.y) <= positionEpsilon &&
+    Math.abs(zoom - targetZoom) <= zoomEpsilon
+  )
 }
 
 export function syncCameraControlTarget(

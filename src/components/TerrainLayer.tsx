@@ -1,3 +1,4 @@
+import { useThree } from '@react-three/fiber'
 import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import type { InstancedMesh } from 'three'
 import { Matrix4 } from 'three'
@@ -22,6 +23,7 @@ const BlockInstances = memo(function BlockInstances({
   positions: TerrainPositions
   block: RenderedBlockType
 }) {
+  const invalidate = useThree((state) => state.invalidate)
   const meshRef = useRef<InstancedMesh>(null)
   const matrix = useMemo(() => new Matrix4(), [])
   const blockPositions = positions.get(block) ?? []
@@ -36,7 +38,10 @@ const BlockInstances = memo(function BlockInstances({
     })
     mesh.instanceMatrix.needsUpdate = true
     mesh.computeBoundingSphere()
-  }, [blockPositions, matrix])
+    // Terrain matrices are mutated directly, so demand rendering needs an
+    // explicit invalidation to pick up mined and generated blocks.
+    invalidate()
+  }, [blockPositions, matrix, invalidate])
 
   if (blockPositions.length === 0) return null
 
