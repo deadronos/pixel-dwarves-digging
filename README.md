@@ -35,6 +35,8 @@ The terrain viewport can be panned and zoomed with the pointer. Fresh runs begin
     npm test -- --run
     npm run build
 
+Every pull request and every push to `main` runs this same command set (plus `git diff --check`) through `.github/workflows/ci.yml`, and stale runs for an updated pull request are cancelled. The tag-triggered Pages deploy reuses that validation before publishing, so a revision that fails any check cannot go live.
+
 The pure simulation core is tested independently of React or Three.js. It covers deterministic terrain, bedrock, biome bands, grounded support-aware reachability, safe post-dig routes, access-first stair-step mining, bridges and ladders, physical storage, autonomous dig/haul/build tasks, recovery behavior, outpost planning, policy scoring, prestige, save migration, and the Zustand simulation store.
 
 ## Architecture
