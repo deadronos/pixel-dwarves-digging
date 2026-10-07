@@ -10,4 +10,22 @@ export default defineConfig({
     host: '127.0.0.1',
   },
   base: isGitHubPagesBuild ? '/pixel-dwarves-digging/' : '/',
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: 'three-vendor',
+              test: /node_modules[\\/](three|three-stdlib)[\\/]/,
+            },
+            {
+              name: 'r3f-vendor',
+              test: /node_modules[\\/]@react-three[\\/]/,
+            },
+          ],
+        },
+      },
+    },
+  },
 })
