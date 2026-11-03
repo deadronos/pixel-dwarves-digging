@@ -22,4 +22,4 @@ The 2026-08-20 in-depth review found four critical/high failures:
 - Malformed cells, buildings, dwarves, tasks, inventories, construction orders, and access requests are rejected by `parseSave` with a user-facing error.
 - Existing behavior remains covered by the full unit suite; typecheck, lint, build, and browser smoke all pass.
 
-The full evidence report is in `docs/reviews/2026-08-20-indepth-review.md`.
+The full evidence report is in `docs/archive/reviews/2026-08-20-indepth-review.md`.

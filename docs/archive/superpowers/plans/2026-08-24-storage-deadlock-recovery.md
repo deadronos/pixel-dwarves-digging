@@ -121,7 +121,7 @@ Expected: all save tests pass, including conservation rejection.
 ### Task 5: Full verification and branch handoff
 
 **Files:**
-- Modify: `docs/superpowers/plans/2026-08-24-storage-deadlock-recovery.md` to mark completed steps
+- Modify: `docs/archive/superpowers/plans/2026-08-24-storage-deadlock-recovery.md` to mark completed steps
 
 - [x] **Step 1: Run the complete verification matrix**
 

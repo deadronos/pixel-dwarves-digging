@@ -287,7 +287,7 @@ git commit -m "feat: execute diagonal recovery mining"
 - Modify: `src/game/engine.test.ts`
 - Modify: `src/game/pathfinding.test.ts`
 - Modify: `src/game/logistics.test.ts`
-- Modify: `docs/superpowers/plans/2026-08-24-support-chain-recovery.md`
+- Modify: `docs/archive/superpowers/plans/2026-08-24-support-chain-recovery.md`
 
 - [x] **Step 1: Add a deterministic support-chain regression**
 

@@ -13,8 +13,8 @@
 ### Task 1: Publish the issue and create the issue branch
 
 **Files:**
-- Read: `docs/issues/2026-08-20-critical-high-remediation.md`
-- Read: `docs/reviews/2026-08-20-indepth-review.md`
+- Read: `docs/archive/issues/2026-08-20-critical-high-remediation.md`
+- Read: `docs/archive/reviews/2026-08-20-indepth-review.md`
 
 - [ ] Create the GitHub issue from the issue body file and record its number.
 - [ ] Create `codex/issue-<number>-remediate-critical-high` from the current reviewed branch so the evidence report remains available.
@@ -25,7 +25,7 @@ Commands:
 ```bash
 gh issue create --repo deadronos/pixel-dwarves-digging \
   --title "Remediate bootstrap deadlock and state integrity failures" \
-  --body-file docs/issues/2026-08-20-critical-high-remediation.md
+  --body-file docs/archive/issues/2026-08-20-critical-high-remediation.md
 git switch -c codex/issue-9-remediate-critical-high
 git status --short --branch
 ```
@@ -88,7 +88,7 @@ git status --short --branch
 
 **Files:**
 - Modify: `README.md` only if startup save behavior needs documentation correction.
-- Update: `docs/issues/2026-08-20-critical-high-remediation.md` with verification results.
+- Update: `docs/archive/issues/2026-08-20-critical-high-remediation.md` with verification results.
 
 - [ ] Run `npm test -- --run` and confirm all tests pass.
 - [ ] Run `npm run typecheck`, `npm run lint`, `npm run build`, and `git diff --check`.

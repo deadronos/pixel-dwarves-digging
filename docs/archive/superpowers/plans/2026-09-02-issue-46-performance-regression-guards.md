@@ -81,7 +81,7 @@ git commit -m "test: guard storage diagnostics performance"
 ### Task 3: Document and validate the guard policy
 
 **Files:**
-- Modify: `docs/issues/2026-08-30-performance-regression-guards.md`
+- Modify: `docs/archive/issues/2026-08-30-performance-regression-guards.md`
 
 - [ ] **Step 1: Document commands and threshold rationale**
 
@@ -109,7 +109,7 @@ Expected: all tests pass, both guards remain below budget, static checks succeed
 - [ ] **Step 3: Commit documentation and verify the branch**
 
 ```bash
-git add docs/issues/2026-08-30-performance-regression-guards.md
+git add docs/archive/issues/2026-08-30-performance-regression-guards.md
 git commit -m "docs: explain performance regression guard policy"
 git status --short --branch
 git log --oneline -4
