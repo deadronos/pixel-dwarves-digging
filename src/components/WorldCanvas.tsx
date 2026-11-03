@@ -46,7 +46,7 @@ function WorldScene({
   }, [])
 
   // Demand rendering: request a frame whenever the rendered simulation changes.
-  // Terrain instance matrices are mutated through refs rather than JSX props,
+  // Terrain texels are written imperatively rather than through JSX props,
   // so this is the reliable wake-up for mining and dwarf movement.
   useEffect(() => {
     if (world && dwarves) invalidate()

@@ -1,103 +1,65 @@
 import { useThree } from '@react-three/fiber'
-import { memo, useLayoutEffect, useMemo, useRef } from 'react'
-import type { InstancedMesh } from 'three'
-import { Matrix4 } from 'three'
-import { BLOCK_COLORS } from '../game/content'
-import type { World } from '../game/types'
+import { memo, useEffect, useLayoutEffect, useMemo } from 'react'
 import {
-  createTerrainPositions,
-  RENDERED_BLOCKS,
-  type RenderedBlockType,
-  type TerrainPositions,
-  updateTerrainPositions,
-} from './terrainPositions'
+  DataTexture,
+  NearestFilter,
+  RGBAFormat,
+  SRGBColorSpace,
+  UnsignedByteType,
+} from 'three'
+import type { World } from '../game/types'
+import { fillTerrainTexels, terrainBufferLength } from './terrainTexture'
 
 type TerrainLayerProps = {
   world: World
 }
 
-const BlockInstances = memo(function BlockInstances({
-  positions,
-  block,
-}: {
-  positions: TerrainPositions
-  block: RenderedBlockType
-}) {
+function createTerrainTexture(width: number, height: number): DataTexture {
+  const texture = new DataTexture(
+    new Uint8Array(terrainBufferLength(width, height)),
+    width,
+    height,
+    RGBAFormat,
+    UnsignedByteType,
+  )
+  // One crisp texel per cell: no filtering, no mipmaps. The bytes are sRGB
+  // palette colours, so tag them as such to match the previous colour output.
+  texture.minFilter = NearestFilter
+  texture.magFilter = NearestFilter
+  texture.generateMipmaps = false
+  texture.colorSpace = SRGBColorSpace
+  return texture
+}
+
+/**
+ * The whole terrain is one world-sized quad sampling a width x height
+ * texture. The texture is allocated once per world size; each cell change
+ * rewrites the texels in place, so there are no per-block meshes to remount.
+ */
+const TerrainLayer = memo(function TerrainLayer({ world }: TerrainLayerProps) {
   const invalidate = useThree((state) => state.invalidate)
-  const meshRef = useRef<InstancedMesh>(null)
-  const matrix = useMemo(() => new Matrix4(), [])
-  const blockPositions = positions.get(block) ?? []
+  const { width, height, cells } = world
+  const texture = useMemo(
+    () => createTerrainTexture(width, height),
+    [width, height],
+  )
+
+  useEffect(() => () => texture.dispose(), [texture])
 
   useLayoutEffect(() => {
-    const mesh = meshRef.current
-    if (!mesh) return
-
-    blockPositions.forEach(([x, y], index) => {
-      matrix.makeTranslation(x + 0.5, y + 0.5, 0)
-      mesh.setMatrixAt(index, matrix)
-    })
-    mesh.instanceMatrix.needsUpdate = true
-    mesh.computeBoundingSphere()
-    // Terrain matrices are mutated directly, so demand rendering needs an
-    // explicit invalidation to pick up mined and generated blocks.
+    fillTerrainTexels(cells, texture.image.data as Uint8Array)
+    texture.needsUpdate = true
+    // Texels are written directly, so demand rendering needs an explicit
+    // invalidation to pick up mined and generated blocks.
     invalidate()
-  }, [blockPositions, matrix, invalidate])
+  }, [cells, texture, invalidate])
 
-  if (blockPositions.length === 0) return null
-
+  // z = 0 keeps the terrain beneath buildings (z >= 0.5) and dwarves (z = 1).
   return (
-    <instancedMesh
-      ref={meshRef}
-      args={[undefined, undefined, blockPositions.length]}
-    >
-      <boxGeometry args={[0.96, 0.96, 0.18]} />
-      <meshBasicMaterial color={BLOCK_COLORS[block]} />
-    </instancedMesh>
-  )
-})
-
-const TerrainLayer = memo(function TerrainLayer({ world }: TerrainLayerProps) {
-  const positionCache = useRef<{
-    cells: Uint8Array
-    width: number
-    positions: TerrainPositions
-  } | null>(null)
-  const positions = useMemo(() => {
-    const previous = positionCache.current
-    const next =
-      previous?.width === world.width
-        ? updateTerrainPositions(
-            previous.positions,
-            previous.cells,
-            world.cells,
-            world.width,
-          )
-        : createTerrainPositions(world.cells, world.width)
-    positionCache.current = {
-      cells: world.cells,
-      width: world.width,
-      positions: next,
-    }
-    return next
-  }, [world.cells, world.width])
-
-  return (
-    <group>
-      {RENDERED_BLOCKS.map((block) => (
-        <BlockInstances
-          key={`${block}-${positions.get(block)?.length ?? 0}`}
-          positions={positions}
-          block={block}
-        />
-      ))}
-      <mesh
-        position={[world.width / 2, world.height / 2, -0.2]}
-        scale={[world.width, world.height, 1]}
-      >
-        <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial color="#20251f" />
-      </mesh>
-    </group>
+    <mesh position={[width / 2, height / 2, 0]} scale={[width, height, 1]}>
+      <planeGeometry args={[1, 1]} />
+      <meshBasicMaterial map={texture} />
+    </mesh>
   )
 })
 
