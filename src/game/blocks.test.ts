@@ -10,7 +10,13 @@ import {
   idToBlock,
 } from './blocks'
 import { BLOCK_COLORS } from './content'
-import { clearCell, generateWorld } from './generation'
+import {
+  clearCell,
+  countMinerals,
+  countSolids,
+  generateWorld,
+  hasMineableSolids,
+} from './generation'
 
 describe('block id table', () => {
   it('covers every block type exactly once and maps both ways', () => {
@@ -55,5 +61,27 @@ describe('clearCell', () => {
     expect(blockAt(next, index)).toBe('air')
     expect(next.cells).not.toBe(world.cells)
     expect(next.topologyKey).not.toBe(world.topologyKey)
+  })
+})
+
+describe('cached solid counts', () => {
+  it('stay correct after clearCell without changing the old count', () => {
+    const world = generateWorld('count-cache', 1)
+    const before = countSolids(world)
+    expect(countSolids(world)).toBe(before)
+    expect(hasMineableSolids(world)).toBe(true)
+
+    const next = clearCell(world, { x: world.start.x + 3, y: world.start.y })
+
+    expect(countSolids(next)).toBe(before - 1)
+    expect(countSolids(world)).toBe(before)
+    expect(countMinerals(next)).toBe(countMinerals(world))
+  })
+
+  it('reports no mineable solids for an all-air world', () => {
+    const world = generateWorld('count-cache', 1)
+    const empty = { ...world, cells: new Uint8Array(world.cells.length) }
+    expect(countSolids(empty)).toBe(0)
+    expect(hasMineableSolids(empty)).toBe(false)
   })
 })
