@@ -1,18 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { parseSave, serializeState } from './serialization'
+import { blockToId, cellsFromBlocks, encodeCells, idToBlock } from './blocks'
+import { parseSave, SAVE_VERSION, serializeState } from './serialization'
+import { createInitialSimulation } from './state'
 import { EMPTY_INVENTORY, type SimulationState } from './types'
+
+/** Serializes like schema 4: Uint8Array cells become `{ block, biome }[]`. */
+function legacyJson(value: unknown): string {
+  return JSON.stringify(value, (_key, item) =>
+    item instanceof Uint8Array
+      ? Array.from(item, (id) => ({ block: idToBlock(id), biome: 'meadow' }))
+      : item,
+  )
+}
 
 function makeState(): SimulationState {
   return {
     world: {
       width: 2,
       height: 2,
-      cells: [
-        { block: 'air', biome: 'meadow' },
-        { block: 'dirt', biome: 'meadow' },
-        { block: 'air', biome: 'meadow' },
-        { block: 'stone', biome: 'meadow' },
-      ],
+      cells: Uint8Array.from([
+        blockToId('air'),
+        blockToId('dirt'),
+        blockToId('air'),
+        blockToId('stone'),
+      ]),
       seed: 'round-trip',
       runNumber: 3,
       surfaceHeights: [1, 1],
@@ -68,7 +79,7 @@ describe('serialization', () => {
       ...legacyState
     } = current
     const result = parseSave(
-      JSON.stringify({ schemaVersion: 2, state: legacyState }),
+      legacyJson({ schemaVersion: 2, state: legacyState }),
     )
 
     expect(result).toEqual({
@@ -76,12 +87,7 @@ describe('serialization', () => {
         accessRequests: [],
         worldRevision: 0,
         world: expect.objectContaining({
-          cells: [
-            expect.objectContaining({ block: 'bedrock' }),
-            expect.objectContaining({ block: 'bedrock' }),
-            expect.objectContaining({ block: 'air' }),
-            expect.objectContaining({ block: 'stone' }),
-          ],
+          cells: cellsFromBlocks(['bedrock', 'bedrock', 'air', 'stone']),
         }),
       }),
     })
@@ -155,7 +161,7 @@ describe('serialization', () => {
     ]
 
     expect(
-      parseSave(JSON.stringify({ schemaVersion: 4, state: original })),
+      parseSave(legacyJson({ schemaVersion: 4, state: original })),
     ).toEqual({
       error: 'Save file is missing required simulation data.',
     })
@@ -178,7 +184,7 @@ describe('serialization', () => {
     const { safety: _safety, ...legacyState } = current
 
     const result = parseSave(
-      JSON.stringify({ schemaVersion: 3, state: legacyState }),
+      legacyJson({ schemaVersion: 3, state: legacyState }),
     )
 
     expect(result).toEqual({
@@ -192,7 +198,7 @@ describe('serialization', () => {
     expect(parseSave('{ nope')).toEqual({
       error: 'Save file is not valid JSON.',
     })
-    expect(parseSave(JSON.stringify({ schemaVersion: 99 }))).toEqual({
+    expect(parseSave(legacyJson({ schemaVersion: 99 }))).toEqual({
       error: 'Save version is not supported.',
     })
   })
@@ -211,23 +217,22 @@ describe('serialization', () => {
       },
     ]
     expect(
-      parseSave(JSON.stringify({ schemaVersion: 4, state: invalidBuilding })),
+      parseSave(legacyJson({ schemaVersion: 4, state: invalidBuilding })),
     ).toEqual({ error: 'Save file is missing required simulation data.' })
 
     const invalidDwarf = makeState()
     invalidDwarf.dwarves = [{} as never]
     expect(
-      parseSave(JSON.stringify({ schemaVersion: 4, state: invalidDwarf })),
+      parseSave(legacyJson({ schemaVersion: 4, state: invalidDwarf })),
     ).toEqual({ error: 'Save file is missing required simulation data.' })
 
-    const invalidCell = makeState()
-    invalidCell.world.cells[0] = {
-      block: 'not-real' as never,
-      biome: 'meadow',
-    }
-    expect(
-      parseSave(JSON.stringify({ schemaVersion: 4, state: invalidCell })),
-    ).toEqual({ error: 'Save file is missing required simulation data.' })
+    const invalidCell = JSON.parse(
+      legacyJson({ schemaVersion: 4, state: makeState() }),
+    )
+    invalidCell.state.world.cells[0] = { block: 'not-real', biome: 'meadow' }
+    expect(parseSave(JSON.stringify(invalidCell))).toEqual({
+      error: 'Save terrain data has an invalid cell at 0.',
+    })
 
     const invalidTask = makeState()
     invalidTask.dwarves = [
@@ -237,7 +242,7 @@ describe('serialization', () => {
       },
     ]
     expect(
-      parseSave(JSON.stringify({ schemaVersion: 4, state: invalidTask })),
+      parseSave(legacyJson({ schemaVersion: 4, state: invalidTask })),
     ).toEqual({ error: 'Save file is missing required simulation data.' })
   })
 
@@ -256,7 +261,7 @@ describe('serialization', () => {
       },
     ]
 
-    expect(parseSave(JSON.stringify({ schemaVersion: 4, state }))).toEqual({
+    expect(parseSave(legacyJson({ schemaVersion: 4, state }))).toEqual({
       error: 'Save file is missing required simulation data.',
     })
   })
@@ -289,7 +294,7 @@ describe('serialization', () => {
       },
     ]
 
-    const result = parseSave(JSON.stringify({ schemaVersion: 4, state }))
+    const result = parseSave(legacyJson({ schemaVersion: 4, state }))
 
     expect(result).toEqual({
       state: expect.objectContaining({
@@ -329,7 +334,7 @@ describe('serialization', () => {
       },
     ]
 
-    const result = parseSave(JSON.stringify({ schemaVersion: 4, state }))
+    const result = parseSave(legacyJson({ schemaVersion: 4, state }))
 
     expect(result).toEqual({
       state: expect.objectContaining({
@@ -358,7 +363,7 @@ describe('serialization', () => {
       },
     ]
 
-    const result = parseSave(JSON.stringify({ schemaVersion: 4, state }))
+    const result = parseSave(legacyJson({ schemaVersion: 4, state }))
 
     expect(result).toEqual({
       state: expect.objectContaining({ constructionOrders: [] }),
@@ -403,7 +408,7 @@ describe('serialization', () => {
       },
     ]
 
-    expect(parseSave(JSON.stringify({ schemaVersion: 4, state }))).toEqual({
+    expect(parseSave(legacyJson({ schemaVersion: 4, state }))).toEqual({
       error: 'Save file is missing required simulation data.',
     })
   })
@@ -414,16 +419,15 @@ describe('serialization', () => {
       ...current.world,
       width: 4,
       height: 3,
-      cells: Array.from({ length: 12 }, (_, index) => ({
-        block: index === 0 ? ('bedrock' as const) : ('air' as const),
-        biome: 'meadow' as const,
-      })),
+      cells: Uint8Array.from({ length: 12 }, (_, index) =>
+        blockToId(index === 0 ? 'bedrock' : 'air'),
+      ),
       surfaceHeights: [1, 1, 1, 1],
       biomes: ['meadow', 'meadow', 'meadow', 'meadow'] as const,
       start: { x: 1, y: 1 },
       stockpile: { x: 0, y: 1 },
     }
-    const legacyPayload = JSON.stringify({
+    const legacyPayload = legacyJson({
       schemaVersion: 1,
       state: {
         ...current,
@@ -448,7 +452,7 @@ describe('serialization', () => {
 
   it('rejects saves with malformed non-object topologyKey', () => {
     const current = makeState()
-    const payload = JSON.stringify({
+    const payload = legacyJson({
       schemaVersion: 4,
       state: {
         ...current,
@@ -467,7 +471,7 @@ describe('serialization', () => {
 
   it('strips stray saveStatus from polluted simulation state on import and re-export', () => {
     const original = makeState()
-    const pollutedPayload = JSON.stringify({
+    const pollutedPayload = legacyJson({
       schemaVersion: 4,
       state: {
         ...original,
@@ -488,5 +492,73 @@ describe('serialization', () => {
       }
       expect('saveStatus' in reExported.state).toBe(false)
     }
+  })
+
+  it('writes schema five with compact base64 cells and no per-cell biome', () => {
+    const original = makeState()
+    const parsed = JSON.parse(serializeState(original))
+
+    expect(parsed.schemaVersion).toBe(SAVE_VERSION)
+    expect(SAVE_VERSION).toBe(5)
+    expect(parsed.state.world.cells).toBe(encodeCells(original.world.cells))
+    expect(typeof parsed.state.world.cells).toBe('string')
+  })
+
+  it('round-trips a generated world byte for byte', () => {
+    const original = createInitialSimulation('save-roundtrip')
+    original.world.cells[5] = blockToId('relic')
+
+    const result = parseSave(serializeState(original))
+
+    expect('state' in result).toBe(true)
+    if ('state' in result) {
+      expect(result.state.world.cells).toBeInstanceOf(Uint8Array)
+      expect(result.state.world.cells).toEqual(original.world.cells)
+      expect(serializeState(result.state)).toBe(serializeState(original))
+    }
+  })
+
+  it('loads a schema-four save with object cells into schema five', () => {
+    const original = makeState()
+    const result = parseSave(legacyJson({ schemaVersion: 4, state: original }))
+
+    expect(result).toEqual({ state: original })
+    if ('state' in result) {
+      expect(result.state.world.cells).toBeInstanceOf(Uint8Array)
+      expect(JSON.parse(serializeState(result.state)).schemaVersion).toBe(5)
+    }
+  })
+
+  it('rejects corrupt schema-five cell data with a clear error', () => {
+    const base = JSON.parse(serializeState(makeState()))
+    const withCells = (cells: unknown) =>
+      JSON.stringify({
+        ...base,
+        state: { ...base.state, world: { ...base.state.world, cells } },
+      })
+
+    expect(parseSave(withCells('!!not base64!!'))).toEqual({
+      error: 'Save terrain data is not valid base64.',
+    })
+    expect(parseSave(withCells(btoa('\u0000\u0001')))).toEqual({
+      error: 'Save terrain data has 2 cells, expected 4.',
+    })
+    expect(parseSave(withCells(btoa('\u0000\u0001\u0063\u0000')))).toEqual({
+      error: 'Save terrain data has unknown block id 99 at cell 2.',
+    })
+    expect(parseSave(withCells(12))).toEqual({
+      error: 'Save terrain data must be a base64 string.',
+    })
+  })
+
+  it('rejects a schema-four save whose cell array has the wrong length', () => {
+    const base = JSON.parse(
+      legacyJson({ schemaVersion: 4, state: makeState() }),
+    )
+    base.state.world.cells.pop()
+
+    expect(parseSave(JSON.stringify(base))).toEqual({
+      error: 'Save terrain data has the wrong number of cells, expected 4.',
+    })
   })
 })

@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import type { Cell } from '../game/types'
+import { blockToId } from '../game/blocks'
 import {
   createTerrainPositions,
   updateTerrainPositions,
 } from './terrainPositions'
 
-const air = (): Cell => ({ block: 'air', biome: 'meadow' })
-const stone = (): Cell => ({ block: 'stone', biome: 'meadow' })
+const air = () => blockToId('air')
+const stone = () => blockToId('stone')
 
 describe('terrain position derivation', () => {
   it('derives positions for rendered block types', () => {
-    const cells = [air(), stone(), air(), stone()]
+    const cells = Uint8Array.from([air(), stone(), air(), stone()])
 
     const positions = createTerrainPositions(cells, 2)
 
@@ -21,7 +21,7 @@ describe('terrain position derivation', () => {
   })
 
   it('retains all position arrays when cells are unchanged', () => {
-    const cells = [air(), stone(), air(), stone()]
+    const cells = Uint8Array.from([air(), stone(), air(), stone()])
     const previous = createTerrainPositions(cells, 2)
 
     const next = updateTerrainPositions(previous, cells, cells, 2)
@@ -30,7 +30,7 @@ describe('terrain position derivation', () => {
   })
 
   it('updates only block lists affected by changed cells', () => {
-    const cells = [air(), stone(), air(), stone()]
+    const cells = Uint8Array.from([air(), stone(), air(), stone()])
     const previous = createTerrainPositions(cells, 2)
     const nextCells = cells.slice()
     nextCells[1] = air()

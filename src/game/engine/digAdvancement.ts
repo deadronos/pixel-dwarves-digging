@@ -1,3 +1,4 @@
+import { blockAt } from '../blocks'
 import { consumeConstructionMaterial } from '../buildings'
 import { DIG_DURATION } from '../content'
 import { clearCell } from '../generation'
@@ -29,13 +30,14 @@ export function advanceDig(
     ) === 1
   if (!adjacent) return invalidateTask(state, dwarf)
 
-  const targetCell =
-    state.world.cells[indexFor(target.x, target.y, state.world.width)]
-  if (targetCell.block === 'air' || targetCell.block === 'bedrock') {
+  const minedBlock = blockAt(
+    state.world,
+    indexFor(target.x, target.y, state.world.width),
+  )
+  if (minedBlock === 'air' || minedBlock === 'bedrock') {
     return unchanged({ ...dwarf, task: idleTask() }, state.world)
   }
 
-  const minedBlock = targetCell.block
   const duration = Math.max(
     1,
     DIG_DURATION[minedBlock] - state.upgrades.toolPower * 2,

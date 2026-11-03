@@ -1,5 +1,6 @@
+import { BLOCK_ID_LIST } from '../game/blocks'
 import { MINEABLE_BLOCKS } from '../game/content'
-import type { BlockType, Cell } from '../game/types'
+import type { BlockType } from '../game/types'
 
 export type RenderedBlockType = Exclude<BlockType, 'air'>
 export type TerrainPosition = [x: number, y: number]
@@ -15,21 +16,22 @@ function emptyPositions(): TerrainPositions {
 }
 
 export function createTerrainPositions(
-  cells: Cell[],
+  cells: Uint8Array,
   width: number,
 ): TerrainPositions {
   const positions = emptyPositions()
-  cells.forEach((cell, index) => {
-    if (cell.block === 'air') return
-    positions.get(cell.block)?.push([index % width, Math.floor(index / width)])
+  cells.forEach((id, index) => {
+    const block = BLOCK_ID_LIST[id]
+    if (block === 'air') return
+    positions.get(block)?.push([index % width, Math.floor(index / width)])
   })
   return positions
 }
 
 export function updateTerrainPositions(
   previous: TerrainPositions,
-  previousCells: Cell[],
-  nextCells: Cell[],
+  previousCells: Uint8Array,
+  nextCells: Uint8Array,
   width: number,
 ): TerrainPositions {
   if (previousCells.length !== nextCells.length) {
@@ -38,13 +40,13 @@ export function updateTerrainPositions(
 
   const changedIndexes: number[] = []
   const touchedBlocks = new Set<RenderedBlockType>()
-  nextCells.forEach((cell, index) => {
-    if (cell === previousCells[index]) return
+  nextCells.forEach((id, index) => {
+    if (id === previousCells[index]) return
     changedIndexes.push(index)
-    if (previousCells[index].block !== 'air') {
-      touchedBlocks.add(previousCells[index].block)
-    }
-    if (cell.block !== 'air') touchedBlocks.add(cell.block)
+    const previousBlock = BLOCK_ID_LIST[previousCells[index]]
+    const block = BLOCK_ID_LIST[id]
+    if (previousBlock !== 'air') touchedBlocks.add(previousBlock)
+    if (block !== 'air') touchedBlocks.add(block)
   })
 
   if (changedIndexes.length === 0) return previous
@@ -56,7 +58,7 @@ export function updateTerrainPositions(
       ([x, y]) => !changed.has(y * width + x),
     )
     for (const index of changedIndexes) {
-      if (nextCells[index].block !== block) continue
+      if (BLOCK_ID_LIST[nextCells[index]] !== block) continue
       positions.push([index % width, Math.floor(index / width)])
     }
     positions.sort(

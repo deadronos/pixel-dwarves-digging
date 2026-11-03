@@ -7,7 +7,6 @@ export {
   isWorld,
 } from './validation/entities'
 export {
-  isCell,
   isInteger,
   isInventoryRecord,
   isNonNegativeInteger,

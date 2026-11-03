@@ -1,5 +1,6 @@
+import { getBlock } from './blocks'
 import { MINEABLE_BLOCK_SET } from './content'
-import { clearCell, getCell } from './generation'
+import { clearCell } from './generation'
 import { isClearedPosition, isInBounds } from './pathfinding/geometry'
 import { indexFor, type Position, type World } from './types'
 
@@ -110,7 +111,7 @@ function hasLadder(world: World, position: Position): boolean {
 function isAir(world: World, position: Position, cleared?: Position): boolean {
   return isClearedPosition(position, cleared)
     ? true
-    : getCell(world, position.x, position.y).block === 'air'
+    : getBlock(world, position.x, position.y) === 'air'
 }
 
 export function isSupported(
@@ -299,7 +300,7 @@ export function findReachableExposedSolids(
       const targetIndex = indexFor(target.x, target.y, world.width)
       if (
         exposed[targetIndex] ||
-        !MINEABLE_BLOCK_SET.has(getCell(world, target.x, target.y).block)
+        !MINEABLE_BLOCK_SET.has(getBlock(world, target.x, target.y))
       ) {
         continue
       }

@@ -1,6 +1,6 @@
+import { getBlock } from '../blocks'
 import { consumeConstructionMaterial } from '../buildings'
 import { getEmergencyReserveMaterial, MINERAL_BLOCKS } from '../content'
-import { getCell } from '../generation'
 import {
   chooseCommonConstructionMaterial,
   findEmergencyLadderPlan,
@@ -132,7 +132,7 @@ export function settleDwarf(world: World, dwarf: DwarfState): DwarfState {
 
   for (let y = dwarf.position.y - 1; y >= 0; y -= 1) {
     const candidate = { x: dwarf.position.x, y }
-    if (getCell(world, candidate.x, candidate.y).block !== 'air') continue
+    if (getBlock(world, candidate.x, candidate.y) !== 'air') continue
     if (!isSupported(world, candidate)) continue
     return {
       ...dwarf,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
+import { blockToId } from './blocks'
 import { findPath } from './pathfinding'
-import type { Cell, World } from './types'
+import type { BlockType, World } from './types'
 
 // Deliberately coarse so slower CI hardware does not make this benchmark flaky.
 const PATHFINDING_BUDGET_MS = 2_000
@@ -8,18 +9,15 @@ const PATHFINDING_BUDGET_MS = 2_000
 function makeStressWorld(): World {
   const width = 160
   const height = 80
-  const cells: Cell[] = Array.from({ length: width * height }, (_, index) => {
+  const cells: number[] = Array.from({ length: width * height }, (_, index) => {
     const y = Math.floor(index / width)
-    return {
-      block: (y === 0 ? 'stone' : 'air') as Cell['block'],
-      biome: 'meadow',
-    }
+    return blockToId((y === 0 ? 'stone' : 'air') as BlockType)
   })
 
   return {
     width,
     height,
-    cells,
+    cells: Uint8Array.from(cells),
     seed: 'pathfinding-performance',
     runNumber: 1,
     surfaceHeights: Array(width).fill(0),

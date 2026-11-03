@@ -7,6 +7,7 @@ connects the two.
 | Path | Owns |
 |---|---|
 | `src/game/engine.ts` | Tick orchestrator; `engine/` has targeting, access requests, recovery and per-task advancement |
+| `src/game/blocks.ts` | Stable block ids, `getBlock`/`blockAt` accessors, cell encode/decode for saves |
 | `src/game/generation.ts` | Deterministic world generation and cell helpers |
 | `src/game/pathfinding.ts` | Grounded paths, ladders, bridges, reachable work |
 | `src/game/logistics.ts` | Public logistics API; `logistics/` has storage, access, safety and expansion |

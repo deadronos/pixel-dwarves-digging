@@ -83,11 +83,12 @@ inventory and run clock but keeps currency and permanent upgrades:
 
 ## Saves
 
-Saves are versioned JSON (schema 4) with autosave to local storage, manual
+Saves are versioned JSON (schema 5) with autosave to local storage, manual
 save, and export/import of `pixel-dwarves-save.json`. Older schemas migrate
 forward, and an invalid file shows an error instead of replacing the run.
-Simulation state is plain JSON-compatible data, so offline catch-up can be
-added later.
+Terrain is stored as one byte per cell, base64-encoded in the save, so
+saves stay small. Simulation state is otherwise plain JSON-compatible data,
+so offline catch-up can be added later.
 
 ## Open questions
 

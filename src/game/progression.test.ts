@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { blockToId } from './blocks'
 import { startPrestige } from './progression'
 import { EMPTY_INVENTORY, type SimulationState } from './types'
 
@@ -7,10 +8,7 @@ function makeState(): SimulationState {
     world: {
       width: 4,
       height: 3,
-      cells: Array.from({ length: 12 }, () => ({
-        block: 'air',
-        biome: 'meadow',
-      })),
+      cells: new Uint8Array(12).fill(blockToId('air')),
       seed: 'test-seed',
       runNumber: 2,
       surfaceHeights: [1, 1, 1, 1],

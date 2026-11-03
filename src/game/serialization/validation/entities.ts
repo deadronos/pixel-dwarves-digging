@@ -1,3 +1,4 @@
+import { isBlockId } from '../../blocks'
 import { BIOME_IDS, MINEABLE_BLOCKS } from '../../content'
 import type {
   AccessRequest,
@@ -13,7 +14,6 @@ import {
   ACCESS_FAILURES,
   BUILDING_CONSTRUCTION,
   BUILDING_TYPES,
-  isCell,
   isInteger,
   isInventoryRecord,
   isNonNegativeInteger,
@@ -242,9 +242,9 @@ export function isWorld(value: unknown): value is SimulationState['world'] {
     height <= MAP_HEIGHT &&
     typeof value.seed === 'string' &&
     isNonNegativeInteger(value.runNumber) &&
-    Array.isArray(value.cells) &&
+    value.cells instanceof Uint8Array &&
     value.cells.length === width * height &&
-    value.cells.every(isCell) &&
+    value.cells.every(isBlockId) &&
     Array.isArray(value.surfaceHeights) &&
     value.surfaceHeights.length === width &&
     value.surfaceHeights.every(

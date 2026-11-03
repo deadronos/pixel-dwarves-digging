@@ -1,4 +1,4 @@
-import { BIOME_IDS, MINEABLE_BLOCKS } from '../../content'
+import { MINEABLE_BLOCKS } from '../../content'
 import type {
   AccessFailure,
   BuildingConstruction,
@@ -8,7 +8,6 @@ import type {
   SimulationState,
 } from '../../types'
 
-export const BLOCK_TYPES = new Set(['air', 'bedrock', ...MINEABLE_BLOCKS])
 export const BUILDING_TYPES: readonly BuildingType[] = [
   'stockpile',
   'outpost',
@@ -72,16 +71,6 @@ export function isInventoryRecord(
   return (
     partial ||
     MINEABLE_BLOCKS.every((material) => isNonNegativeInteger(value[material]))
-  )
-}
-
-export function isCell(value: unknown): boolean {
-  return (
-    isRecord(value) &&
-    typeof value.block === 'string' &&
-    BLOCK_TYPES.has(value.block) &&
-    typeof value.biome === 'string' &&
-    BIOME_IDS.includes(value.biome as (typeof BIOME_IDS)[number])
   )
 }
 

@@ -1,3 +1,4 @@
+import { getBlock } from '../blocks'
 import { isSupported, simulateDigWorld } from '../pathfinding'
 import type {
   AccessFailure,
@@ -74,9 +75,7 @@ function assessSupportDropSafety(
   const recoveryState = { ...state, world: recoveryWorld }
   for (const dropDistance of [1, 2]) {
     const landing = { x: stand.x, y: stand.y - dropDistance }
-    const landingCell =
-      recoveryWorld.cells[landing.y * recoveryWorld.width + landing.x]
-    if (landingCell?.block !== 'air') continue
+    if (getBlock(recoveryWorld, landing.x, landing.y) !== 'air') continue
     if (!isSupported(recoveryWorld, landing)) continue
 
     const storage = selectStorageDestination(recoveryState, block, landing)
@@ -118,22 +117,18 @@ function assessDigSafetyUncached(
   stand: Position,
   target: Position,
 ): DigSafety {
-  const targetCell = state.world.cells[target.y * state.world.width + target.x]
-  if (
-    !targetCell ||
-    targetCell.block === 'air' ||
-    targetCell.block === 'bedrock'
-  ) {
+  const targetBlock = getBlock(state.world, target.x, target.y)
+  if (targetBlock === 'air' || targetBlock === 'bedrock') {
     return { safe: false, failure: 'support' }
   }
 
   if (!isSupported(state.world, stand, target)) {
-    return assessSupportDropSafety(state, stand, target, targetCell.block)
+    return assessSupportDropSafety(state, stand, target, targetBlock)
   }
 
   const storage = selectStorageDestination(
     state,
-    targetCell.block,
+    targetBlock,
     stand,
     undefined,
     target,
