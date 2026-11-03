@@ -11,9 +11,10 @@ React 19, TypeScript 7, Vite and React Three Fiber.
 
 ## Play
 
-The colony runs itself at 10 ticks per second. Right-drag (or Shift-drag) to
-pan and scroll to zoom; on touch, use two fingers. The camera follows active
-dwarves. After you pan or zoom, following pauses for about 2.5 s, then resumes.
+The colony runs itself at 10 ticks per second. Drag to pan and scroll to
+zoom; on touch, drag with one finger and pinch to zoom. The view stays inside
+the map. The camera follows active dwarves. After you pan or zoom, following
+pauses for about 2.5 s, then resumes.
 
 - **Bottom bar:** pause, speed (1×/2×/4×), and directives for work, building,
   hauling and material priority.

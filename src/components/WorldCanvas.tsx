@@ -1,16 +1,20 @@
 import { OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
+import { MOUSE, TOUCH } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type { DwarfState, World } from '../game/types'
 import BuildingLayer from './BuildingLayer'
 import {
   CAMERA_PAUSE_MS,
+  clampCameraCenter,
   createCameraPauseController,
   dampCameraValue,
   getCameraTarget,
   hasCameraSettled,
   isDynamicCameraActive,
+  MAX_ZOOM,
+  MIN_ZOOM,
   syncCameraControlTarget,
 } from './cameraTracking'
 import DwarfLayer from './DwarfLayer'
@@ -65,11 +69,7 @@ function WorldScene({
     reportPause(paused)
     if (!isDynamicCameraActive(dynamicCameraEnabled, paused)) return
 
-    const target = getCameraTarget(
-      world,
-      dwarves,
-      size.width / Math.max(1, size.height),
-    )
+    const target = getCameraTarget(world, dwarves, size)
     const targetX = target.center.x - world.width / 2
     const targetY = target.center.y - world.height / 2
     camera.position.x = dampCameraValue(camera.position.x, targetX, delta, 2.2)
@@ -94,6 +94,26 @@ function WorldScene({
       invalidate()
     }
   })
+
+  // Manual pan and zoom must not reveal empty space beyond the world. The
+  // scene is offset by half the world size, so convert to world coordinates,
+  // clamp, and convert back.
+  const clampManualView = () => {
+    const clamped = clampCameraCenter(
+      {
+        x: camera.position.x + world.width / 2,
+        y: camera.position.y + world.height / 2,
+      },
+      camera.zoom,
+      size,
+      world,
+    )
+    camera.position.x = clamped.x - world.width / 2
+    camera.position.y = clamped.y - world.height / 2
+    if (controlsRef.current) {
+      syncCameraControlTarget(controlsRef.current.target, camera.position)
+    }
+  }
 
   const registerManualStart = () => {
     pauseController.current.onDragStart(performance.now())
@@ -121,8 +141,17 @@ function WorldScene({
         ref={controlsRef}
         enableRotate={false}
         enablePan
-        minZoom={5}
-        maxZoom={22}
+        // Rotation is disabled, so give the primary button and a single
+        // finger the pan gesture instead of the default (unused) rotate.
+        mouseButtons={{
+          LEFT: MOUSE.PAN,
+          MIDDLE: MOUSE.DOLLY,
+          RIGHT: MOUSE.PAN,
+        }}
+        touches={{ ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_PAN }}
+        minZoom={MIN_ZOOM}
+        maxZoom={MAX_ZOOM}
+        onChange={clampManualView}
         onStart={registerManualStart}
         onEnd={registerManualEnd}
         screenSpacePanning

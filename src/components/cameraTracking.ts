@@ -5,12 +5,17 @@ export type CameraTarget = {
   zoom: number
 }
 
+/** Canvas size in CSS pixels. */
+export type Viewport = {
+  width: number
+  height: number
+}
+
 type CameraDwarf = Pick<DwarfState, 'position' | 'task' | 'movement'>
 
-const MIN_ZOOM = 5
-const MAX_ZOOM = 22
+export const MIN_ZOOM = 5
+export const MAX_ZOOM = 22
 const FOCUS_PADDING = 6
-const BASE_VIEW_SIZE = 100
 const ACTIVE_WEIGHT = 4
 const IDLE_WEIGHT = 1
 export const CAMERA_PAUSE_MS = 2_500
@@ -85,14 +90,47 @@ export function createCameraPauseController(durationMs = CAMERA_PAUSE_MS) {
   }
 }
 
+function clampAxis(center: number, visible: number, extent: number): number {
+  if (visible >= extent) return extent / 2
+  return clamp(center, visible / 2, extent - visible / 2)
+}
+
+/**
+ * Keeps an orthographic view inside the world. With R3F's orthographic camera
+ * one world unit spans `zoom` CSS pixels, so the view shows
+ * `viewport / zoom` cells on each axis. An axis wider than the world is
+ * centred instead.
+ */
+export function clampCameraCenter(
+  center: Position,
+  zoom: number,
+  viewport: Viewport,
+  world: Pick<World, 'width' | 'height'>,
+): Position {
+  const safeZoom = zoom > 0 ? zoom : MIN_ZOOM
+  return {
+    x: clampAxis(center.x, viewport.width / safeZoom, world.width),
+    y: clampAxis(center.y, viewport.height / safeZoom, world.height),
+  }
+}
+
 export function getCameraTarget(
   world: Pick<World, 'width' | 'height'>,
   dwarves: ReadonlyArray<CameraDwarf>,
-  aspect: number,
+  viewport: Viewport,
 ): CameraTarget {
+  const safeViewport = {
+    width: Math.max(1, viewport.width),
+    height: Math.max(1, viewport.height),
+  }
   if (dwarves.length === 0) {
     return {
-      center: { x: world.width / 2, y: world.height / 2 },
+      center: clampCameraCenter(
+        { x: world.width / 2, y: world.height / 2 },
+        MIN_ZOOM,
+        safeViewport,
+        world,
+      ),
       zoom: MIN_ZOOM,
     }
   }
@@ -116,15 +154,23 @@ export function getCameraTarget(
     maxY = Math.max(maxY, dwarf.position.y)
   }
 
-  const center = {
-    x: clamp(weightedX / totalWeight, 0, world.width),
-    y: clamp(weightedY / totalWeight, 0, world.height),
-  }
   const paddedWidth = Math.max(1, maxX - minX + FOCUS_PADDING * 2)
   const paddedHeight = Math.max(1, maxY - minY + FOCUS_PADDING * 2)
-  const safeAspect = Number.isFinite(aspect) && aspect > 0 ? aspect : 1
-  const requiredViewSize = Math.max(paddedWidth / safeAspect, paddedHeight)
-  const zoom = clamp(BASE_VIEW_SIZE / requiredViewSize, MIN_ZOOM, MAX_ZOOM)
+  // Pixels per cell that fit the padded focus box on both axes.
+  const zoom = clamp(
+    Math.min(
+      safeViewport.width / paddedWidth,
+      safeViewport.height / paddedHeight,
+    ),
+    MIN_ZOOM,
+    MAX_ZOOM,
+  )
+  const center = clampCameraCenter(
+    { x: weightedX / totalWeight, y: weightedY / totalWeight },
+    zoom,
+    safeViewport,
+    world,
+  )
 
   return { center, zoom }
 }
