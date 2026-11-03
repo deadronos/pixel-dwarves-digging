@@ -3,7 +3,12 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { MOUSE, TOUCH } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import type { DwarfState, UpgradeLevels, World } from '../game/types'
+import type {
+  ConstructionOrder,
+  DwarfState,
+  UpgradeLevels,
+  World,
+} from '../game/types'
 import BuildingLayer from './BuildingLayer'
 import {
   CAMERA_PAUSE_MS,
@@ -18,11 +23,13 @@ import {
   syncCameraControlTarget,
 } from './cameraTracking'
 import DwarfLayer from './DwarfLayer'
+import MiningLayer from './MiningLayer'
 import TerrainLayer from './TerrainLayer'
 
 type WorldCanvasProps = {
   world: World
   dwarves: DwarfState[]
+  constructionOrders: ConstructionOrder[]
   upgrades: UpgradeLevels
   speed: number
   paused: boolean
@@ -33,6 +40,7 @@ type WorldCanvasProps = {
 function WorldScene({
   world,
   dwarves,
+  constructionOrders,
   upgrades,
   speed,
   paused,
@@ -140,7 +148,8 @@ function WorldScene({
     <>
       <group position={[-world.width / 2, -world.height / 2, 0]}>
         <TerrainLayer world={world} />
-        <BuildingLayer world={world} />
+        <MiningLayer world={world} dwarves={dwarves} upgrades={upgrades} />
+        <BuildingLayer world={world} constructionOrders={constructionOrders} />
         <DwarfLayer
           dwarves={dwarves}
           upgrades={upgrades}

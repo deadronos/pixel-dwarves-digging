@@ -17,6 +17,9 @@ function WorldStage({
 }) {
   const world = useGameStore((state) => state.simulation.world)
   const dwarves = useGameStore((state) => state.simulation.dwarves)
+  const constructionOrders = useGameStore(
+    (state) => state.simulation.constructionOrders,
+  )
   const upgrades = useGameStore((state) => state.simulation.upgrades)
   const speed = useGameStore((state) => state.speed)
   const paused = useGameStore((state) => state.paused)
@@ -27,6 +30,7 @@ function WorldStage({
     <WorldCanvas
       world={world}
       dwarves={dwarves}
+      constructionOrders={constructionOrders}
       upgrades={upgrades}
       speed={speed}
       paused={paused}
