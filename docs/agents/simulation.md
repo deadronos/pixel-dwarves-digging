@@ -10,7 +10,9 @@ typecheck but fails, or silently corrupts, at runtime.
   exceptions. `world.topologyKey` is an identity object used only for cache
   lookups. `world.cells` is a `Uint8Array` with one block id per cell
   (row-major, y=0 is the bottom row). Treat it as immutable too: copy with
-  `slice()` before changing a cell, as `clearCell` does. Read it through
+  `slice()` before changing a cell, as `clearCell` does. This matters:
+  `countSolids` and `countMinerals` cache their results per array, so an
+  in-place edit leaves stale counts. Read it through
   `getBlock`/`blockAt` in `src/game/blocks.ts`, which owns the id table.
   Never reorder or remove ids there; append new block types only. Biome lives
   in `world.biomes[x]`, not per cell.
