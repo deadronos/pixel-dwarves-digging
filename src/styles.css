@@ -159,7 +159,7 @@ h1 {
 
 .inventory-strip {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr) auto;
+  grid-template-columns: 150px minmax(0, 1fr) auto auto;
   gap: 16px;
   align-items: center;
   padding: 8px 14px;
@@ -185,24 +185,48 @@ h1 {
   font-size: 12px;
 }
 
+/* Inventory wraps instead of scrolling sideways, so nothing is hidden. */
 .inventory-list {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 6px 8px;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-color: #5a604c #1c211c;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Minerals are the rare, valuable finds: always visible and set apart. */
+.inventory-minerals {
+  grid-template-columns: repeat(2, minmax(88px, 1fr));
+  padding: 6px 8px;
+  border: 1px solid #5a604c;
+  background: #232a22;
+}
+
+.inventory-minerals .inventory-item:nth-child(2n) {
+  border-right: 0;
 }
 
 .inventory-item {
   display: grid;
-  grid-template-columns: 8px auto;
-  gap: 5px 7px;
-  min-width: 75px;
+  grid-template-columns: 8px minmax(0, 1fr);
+  gap: 3px 7px;
+  min-width: 0;
   padding-right: 7px;
   border-right: 1px solid #30382f;
   color: #9ca889;
   font-size: 10px;
   white-space: nowrap;
+}
+
+.inventory-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inventory-item.is-empty {
+  opacity: 0.45;
 }
 
 .inventory-item strong {
@@ -693,6 +717,45 @@ dialog.settings-modal::backdrop {
   border: 0;
 }
 
+/*
+ * On desktop-sized screens the shell fills the viewport: header, a stage
+ * that takes the remaining height, and the control bar. The canvas fills the
+ * stage and the inspector scrolls on its own. Smaller screens keep the
+ * scrolling layout below.
+ */
+@media (min-width: 1101px) and (min-height: 640px) {
+  .app-shell {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    height: 100dvh;
+    min-height: 0;
+    padding-block: 16px;
+  }
+
+  /* Auto inline margins shrink grid items to fit; keep them full width
+     (still capped by max-width and centred). */
+  .app-shell > * {
+    width: 100%;
+  }
+
+  .main-layout {
+    min-height: 0;
+  }
+
+  .main-layout .world-stage {
+    min-height: 0;
+  }
+
+  .world-canvas {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .inspector {
+    min-height: 0;
+  }
+}
+
 @media (max-width: 1100px) {
   .main-layout {
     grid-template-columns: 1fr;
@@ -718,7 +781,15 @@ dialog.settings-modal::backdrop {
 
   .inventory-list {
     grid-column: 1 / -1;
+  }
+
+  .inventory-materials {
     grid-row: 2;
+  }
+
+  .inventory-minerals {
+    grid-row: 3;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }
 
   .inventory-summary {
