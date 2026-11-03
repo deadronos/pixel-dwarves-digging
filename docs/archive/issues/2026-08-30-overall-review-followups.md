@@ -18,11 +18,11 @@ The 2026-08-30 overall review produced five follow-up issues across correctness,
 
 ## Suggested issue split
 
-- `docs/issues/2026-08-30-save-status-dirty-state.md`
-- `docs/issues/2026-08-30-cache-invalidation-topology-vs-inventory.md`
-- `docs/issues/2026-08-30-duplicate-target-search-per-tick.md`
-- `docs/issues/2026-08-30-ui-derived-state-selectors.md`
-- `docs/issues/2026-08-30-performance-regression-guards.md`
+- `docs/archive/issues/2026-08-30-save-status-dirty-state.md`
+- `docs/archive/issues/2026-08-30-cache-invalidation-topology-vs-inventory.md`
+- `docs/archive/issues/2026-08-30-duplicate-target-search-per-tick.md`
+- `docs/archive/issues/2026-08-30-ui-derived-state-selectors.md`
+- `docs/archive/issues/2026-08-30-performance-regression-guards.md`
 
 ## Acceptance criteria
 

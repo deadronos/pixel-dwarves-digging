@@ -13,8 +13,8 @@
 ### Task 1: Establish issue-linked refactor baseline
 
 **Files:**
-- Modify: `docs/superpowers/specs/2026-08-27-refactor-opportunity-scan-followup-design.md`
-- Create: `docs/superpowers/plans/2026-08-27-refactor-opportunity-scan-followup.md`
+- Modify: `docs/archive/superpowers/specs/2026-08-27-refactor-opportunity-scan-followup-design.md`
+- Create: `docs/archive/superpowers/plans/2026-08-27-refactor-opportunity-scan-followup.md`
 - Test: existing suite only
 
 - [ ] **Step 1: Verify the issue and design scope**
@@ -39,7 +39,7 @@ Expected: 16 test files and 164 tests pass with one worker; typecheck, lint, bui
 - [ ] **Step 3: Commit the design and plan**
 
 ```bash
-git add docs/superpowers/specs/2026-08-27-refactor-opportunity-scan-followup-design.md docs/superpowers/plans/2026-08-27-refactor-opportunity-scan-followup.md
+git add docs/archive/superpowers/specs/2026-08-27-refactor-opportunity-scan-followup-design.md docs/archive/superpowers/plans/2026-08-27-refactor-opportunity-scan-followup.md
 git commit -m "docs: plan refactor opportunity follow-up"
 ```
 

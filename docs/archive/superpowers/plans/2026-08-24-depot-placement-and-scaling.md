@@ -183,7 +183,7 @@ git commit -m "feat: allow bounded overflow depot scaling"
 ### Task 5: Full verification and PR update
 
 **Files:**
-- Modify: `docs/superpowers/plans/2026-08-24-depot-placement-and-scaling.md` only to mark completed steps
+- Modify: `docs/archive/superpowers/plans/2026-08-24-depot-placement-and-scaling.md` only to mark completed steps
 
 - [ ] **Step 1: Run the full test suite**
 

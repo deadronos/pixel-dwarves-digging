@@ -6,3 +6,5 @@ dist/
 output/
 .DS_Store
 .vscode/
+.claude/worktrees/
+.claude/settings.local.json
