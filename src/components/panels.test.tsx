@@ -59,6 +59,44 @@ describe('live UI panel components', () => {
     expect(container?.textContent).toContain('tick 1')
   })
 
+  it('groups minerals separately so they are never hidden (#74)', () => {
+    act(() => {
+      root?.render(<Hud />)
+    })
+
+    const minerals = container?.querySelector(
+      '[aria-label="Minerals"]',
+    ) as HTMLElement
+    const materials = container?.querySelector(
+      '[aria-label="Materials"]',
+    ) as HTMLElement
+    expect(minerals).not.toBeNull()
+    expect(materials).not.toBeNull()
+
+    const labels = (group: HTMLElement) =>
+      Array.from(group.querySelectorAll('.inventory-item')).map(
+        (item) => item.querySelector('.inventory-name')?.textContent,
+      )
+    expect(labels(minerals)).toEqual(['Coal', 'Iron', 'Crystal', 'Relic'])
+    expect(labels(materials)).toHaveLength(12)
+    expect(labels(materials)).toContain('Mushroom cap')
+    expect(labels(materials)).not.toContain('Coal')
+  })
+
+  it('dims empty inventory entries but keeps stocked ones bright (#74)', () => {
+    act(() => {
+      root?.render(<Hud />)
+    })
+
+    const item = (name: string) =>
+      Array.from(container?.querySelectorAll('.inventory-item') ?? []).find(
+        (entry) => entry.querySelector('.inventory-name')?.textContent === name,
+      )
+    // A fresh run starts with stone in the stockpile and no relics.
+    expect(item('Stone')?.classList.contains('is-empty')).toBe(false)
+    expect(item('Relic')?.classList.contains('is-empty')).toBe(true)
+  })
+
   it('renders a settings button in Hud that opens SettingsModal with camera controls', () => {
     expect(() => {
       act(() => {
