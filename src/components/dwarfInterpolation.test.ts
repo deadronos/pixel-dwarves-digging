@@ -6,9 +6,10 @@ import {
   isAnyTrackMoving,
   isTrackMoving,
   lerpTile,
+  maxWalkPerTick,
   nextTracks,
-  SNAP_DISTANCE_TILES,
-  snapDistanceForSpeed,
+  SNAP_MARGIN_TILES,
+  snapDistanceFor,
   tileDistance,
   trackPosition,
 } from './dwarfInterpolation'
@@ -63,62 +64,144 @@ describe('lerp', () => {
   })
 })
 
+describe('walk budget', () => {
+  const base = { moveSpeed: 0, satchel: 0 }
+
+  it('is one tile per simulation step, times the speed multiplier', () => {
+    expect(maxWalkPerTick(base, 1)).toBe(1)
+    expect(maxWalkPerTick(base, 2)).toBe(2)
+    expect(maxWalkPerTick(base, 4)).toBe(4)
+    expect(maxWalkPerTick({ moveSpeed: 2, satchel: 1 }, 4)).toBe(16)
+  })
+
+  it('adds the margin on top of the budget', () => {
+    expect(snapDistanceFor(base, 1)).toBe(1 + SNAP_MARGIN_TILES)
+    expect(snapDistanceFor({ moveSpeed: 1, satchel: 1 }, 2)).toBe(
+      3 * 2 + SNAP_MARGIN_TILES,
+    )
+  })
+
+  it('ignores nonsense negative upgrade levels', () => {
+    expect(maxWalkPerTick({ moveSpeed: -3, satchel: -1 }, 1)).toBe(1)
+  })
+})
+
 describe('snap threshold', () => {
   it('lerps ordinary single-tile walking', () => {
-    const walk = createTrack({ x: 5, y: 5 }, { x: 6, y: 5 }, 0, TICK_MS)
+    const walk = createTrack(
+      { x: 5, y: 5 },
+      { x: 6, y: 5 },
+      0,
+      TICK_MS,
+      snapDistanceFor({ moveSpeed: 0, satchel: 0 }, 1),
+    )
 
     expect(walk.snap).toBe(false)
     expect(trackPosition(walk, 50)).toEqual({ x: 5.5, y: 5 })
   })
 
-  it('snaps a first sighting and a jump beyond the threshold', () => {
-    expect(createTrack(null, { x: 3, y: 4 }, 0, TICK_MS).snap).toBe(true)
-    expect(createTrack({ x: 0, y: 0 }, { x: 0, y: 4 }, 0, TICK_MS).snap).toBe(
-      true,
+  it('lerps a 2-tile walk with one move-speed level at 1x', () => {
+    const upgrades = { moveSpeed: 1, satchel: 0 }
+    const walk = createTrack(
+      { x: 0, y: 0 },
+      { x: 2, y: 0 },
+      0,
+      TICK_MS,
+      snapDistanceFor(upgrades, 1),
     )
+
+    expect(walk.snap).toBe(false)
+    expect(trackPosition(walk, 50)).toEqual({ x: 1, y: 0 })
+  })
+
+  it('lerps a 3-tile haul with move speed and satchel at 1x', () => {
+    const upgrades = { moveSpeed: 1, satchel: 1 }
+    const haul = createTrack(
+      { x: 4, y: 6 },
+      { x: 4, y: 3 },
+      0,
+      TICK_MS,
+      snapDistanceFor(upgrades, 1),
+    )
+
+    expect(haul.snap).toBe(false)
+    expect(trackPosition(haul, 50)).toEqual({ x: 4, y: 4.5 })
+  })
+
+  it('snaps a first sighting and a jump beyond the budget', () => {
+    const upgrades = { moveSpeed: 1, satchel: 1 }
+    const snapDistance = snapDistanceFor(upgrades, 1)
+
+    expect(
+      createTrack(null, { x: 3, y: 4 }, 0, TICK_MS, snapDistance).snap,
+    ).toBe(true)
+    // 4 tiles is one more than the 3-tile budget with these upgrades.
+    expect(
+      createTrack({ x: 0, y: 0 }, { x: 4, y: 0 }, 0, TICK_MS, snapDistance)
+        .snap,
+    ).toBe(true)
   })
 
   it('does not snap exactly at the threshold', () => {
     const atThreshold = createTrack(
       { x: 0, y: 0 },
-      { x: SNAP_DISTANCE_TILES, y: 0 },
+      { x: 3.5, y: 0 },
       0,
       TICK_MS,
+      snapDistanceFor({ moveSpeed: 1, satchel: 1 }, 1),
     )
 
     expect(atThreshold.snap).toBe(false)
-    expect(tileDistance(atThreshold.from, atThreshold.to)).toBeCloseTo(
-      SNAP_DISTANCE_TILES,
-    )
+    expect(tileDistance(atThreshold.from, atThreshold.to)).toBeCloseTo(3.5)
   })
 
-  it('scales with simulation speed so 2x and 4x walking still glides', () => {
-    expect(snapDistanceForSpeed(1)).toBe(SNAP_DISTANCE_TILES)
-    expect(snapDistanceForSpeed(2)).toBe(SNAP_DISTANCE_TILES * 2)
-    expect(snapDistanceForSpeed(4)).toBe(SNAP_DISTANCE_TILES * 4)
-
+  it('keeps uncapped upgrades and higher speeds gliding', () => {
+    // 2x with move speed 1: a 4-tile walk is in budget.
     const fast = createTrack(
       { x: 0, y: 0 },
       { x: 4, y: 0 },
       0,
       TICK_MS,
-      snapDistanceForSpeed(4),
+      snapDistanceFor({ moveSpeed: 1, satchel: 0 }, 2),
     )
     expect(fast.snap).toBe(false)
     expect(trackPosition(fast, 50)).toEqual({ x: 2, y: 0 })
+
+    // Heavy upgrades at 4x: 20 tiles per tick, still a straight glide.
+    const heavy = createTrack(
+      { x: 0, y: 0 },
+      { x: 20, y: 0 },
+      0,
+      TICK_MS,
+      snapDistanceFor({ moveSpeed: 3, satchel: 1 }, 4),
+    )
+    expect(heavy.snap).toBe(false)
   })
 
-  it('snaps a fall of several tiles at 1x speed', () => {
+  it('snaps a fall that crosses the whole map at 1x speed', () => {
     const fall = createTrack(
-      { x: 10, y: 20 },
+      { x: 10, y: 70 },
       { x: 10, y: 12 },
       0,
       TICK_MS,
-      snapDistanceForSpeed(1),
+      snapDistanceFor({ moveSpeed: 0, satchel: 0 }, 1),
     )
 
     expect(fall.snap).toBe(true)
     expect(trackPosition(fall, 0)).toEqual({ x: 10, y: 12 })
+  })
+
+  it('lerps a single-tile fall as a quick drop', () => {
+    const drop = createTrack(
+      { x: 7, y: 9 },
+      { x: 7, y: 8 },
+      0,
+      TICK_MS,
+      snapDistanceFor({ moveSpeed: 0, satchel: 0 }, 1),
+    )
+
+    expect(drop.snap).toBe(false)
+    expect(trackPosition(drop, 50)).toEqual({ x: 7, y: 8.5 })
   })
 })
 

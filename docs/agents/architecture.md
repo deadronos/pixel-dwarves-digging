@@ -18,7 +18,7 @@ connects the two.
 | `src/game/selectors.ts` | Cached view models for the HUD and Inspector |
 | `src/game/content.ts` | Tunable data: blocks, colours (blocks and buildings), dig times, building costs |
 | `src/components/WorldCanvas.tsx` | R3F canvas, camera and on-demand rendering; `*Layer.tsx` draw terrain, buildings and dwarves. The canvas is `flat` (no tone mapping), so palette hex values are the literal on-screen colours. `palette.test.ts` enforces minimum perceptual distance between every block and building colour |
-| `src/components/dwarfInterpolation.ts` | Pure interpolation math for dwarf movement between 10 Hz ticks: progress clamping, snap threshold, "is anyone still moving". `DwarfLayer` samples it per frame and drives mesh positions through refs, keeping demand rendering awake only while someone is walking |
+| `src/components/dwarfInterpolation.ts` | Pure interpolation math for dwarf movement between 10 Hz ticks: progress clamping, per-tick walk budget and snap threshold (derived from speed and the move-speed/satchel upgrades), "is anyone still moving". `DwarfLayer` samples it per frame and drives mesh positions through refs, keeping demand rendering awake only while someone is walking |
 | `src/components/Hud.tsx`, `Inspector.tsx`, `ControlBar.tsx`, `SettingsModal.tsx` | DOM UI |
 
 Tests sit next to the code as `*.test.ts(x)`, using Vitest with jsdom.

@@ -3,7 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef } from 'react'
 import { MOUSE, TOUCH } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
-import type { DwarfState, World } from '../game/types'
+import type { DwarfState, UpgradeLevels, World } from '../game/types'
 import BuildingLayer from './BuildingLayer'
 import {
   CAMERA_PAUSE_MS,
@@ -23,6 +23,7 @@ import TerrainLayer from './TerrainLayer'
 type WorldCanvasProps = {
   world: World
   dwarves: DwarfState[]
+  upgrades: UpgradeLevels
   speed: number
   paused: boolean
   dynamicCameraEnabled: boolean
@@ -32,6 +33,7 @@ type WorldCanvasProps = {
 function WorldScene({
   world,
   dwarves,
+  upgrades,
   speed,
   paused,
   dynamicCameraEnabled,
@@ -69,9 +71,9 @@ function WorldScene({
   }
 
   useFrame((_, delta) => {
-    const paused = pauseController.current.isPaused(performance.now())
-    reportPause(paused)
-    if (!isDynamicCameraActive(dynamicCameraEnabled, paused)) return
+    const cameraPaused = pauseController.current.isPaused(performance.now())
+    reportPause(cameraPaused)
+    if (!isDynamicCameraActive(dynamicCameraEnabled, cameraPaused)) return
 
     const target = getCameraTarget(world, dwarves, size)
     const targetX = target.center.x - world.width / 2
@@ -139,7 +141,12 @@ function WorldScene({
       <group position={[-world.width / 2, -world.height / 2, 0]}>
         <TerrainLayer world={world} />
         <BuildingLayer world={world} />
-        <DwarfLayer dwarves={dwarves} speed={speed} paused={paused} />
+        <DwarfLayer
+          dwarves={dwarves}
+          upgrades={upgrades}
+          speed={speed}
+          paused={paused}
+        />
       </group>
       <OrbitControls
         ref={controlsRef}

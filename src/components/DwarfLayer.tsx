@@ -2,12 +2,12 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { memo, useCallback, useLayoutEffect, useRef } from 'react'
 import type { Group } from 'three'
 import { SIMULATION_TICK_MS } from '../game/state'
-import type { DwarfState } from '../game/types'
+import type { DwarfState, UpgradeLevels } from '../game/types'
 import {
   type DwarfTrack,
   isAnyTrackMoving,
   nextTracks,
-  snapDistanceForSpeed,
+  snapDistanceFor,
   trackPosition,
 } from './dwarfInterpolation'
 
@@ -25,6 +25,7 @@ const DWARF_Z = 1
 
 type DwarfLayerProps = {
   dwarves: DwarfState[]
+  upgrades: UpgradeLevels
   speed: number
   paused: boolean
 }
@@ -99,6 +100,7 @@ const DwarfActor = memo(function DwarfActor({
  */
 export default function DwarfLayer({
   dwarves,
+  upgrades,
   speed,
   paused,
 }: DwarfLayerProps) {
@@ -124,7 +126,7 @@ export default function DwarfLayer({
       dwarves,
       now,
       SIMULATION_TICK_MS,
-      snapDistanceForSpeed(speed),
+      snapDistanceFor(upgrades, speed),
     )
     for (const [id, track] of tracks.current) {
       const group = groups.current.get(id)
@@ -133,7 +135,7 @@ export default function DwarfLayer({
     // Dwarves can change while paused (save import, new run), so the new
     // positions have to reach the screen even though no tick will ask for one.
     if (paused) invalidate()
-  }, [dwarves, speed, invalidate, paused])
+  }, [dwarves, upgrades, speed, invalidate, paused])
 
   useFrame(() => {
     // Paused means static: keep the last rendered pose and request no frames.

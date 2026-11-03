@@ -28,23 +28,40 @@ export type DwarfTrack = {
 }
 
 /**
- * A walk covers at most `1 + moveSpeed + satchel` tiles per simulation step.
- * Anything beyond a couple of tiles per step (a fall, a new run, a prestige or
- * a save import) is a teleport, not a movement, and lerping it would drag the
- * dwarf across the map. 2.5 tiles sits above every single-step walk and below
- * the shortest realistic fall, so it separates the two cleanly.
+ * A simulation step moves a dwarf up to `1 + moveSpeed` path tiles, plus the
+ * satchel when it is hauling (`advanceMovement` in `engine/advancement.ts`),
+ * and one tick runs `speed` steps. Upgrades are uncapped, so the threshold
+ * has to be derived from the real budget rather than hard-coded: with any
+ * upgrades a fixed few-tile limit would snap ordinary walking.
  */
-export const SNAP_DISTANCE_TILES = 2.5
+export type WalkUpgrades = {
+  moveSpeed: number
+  satchel: number
+}
+
+/** Slack on top of the per-tick walk budget before a move counts as a jump. */
+export const SNAP_MARGIN_TILES = 0.5
+
+/** Most tiles a dwarf can legally walk in one tick, given upgrades and speed. */
+export function maxWalkPerTick(upgrades: WalkUpgrades, speed: number): number {
+  // The satchel only helps while hauling, but treating it as always-on keeps
+  // this an upper bound, which is what the threshold needs.
+  const tilesPerStep =
+    1 + Math.max(0, upgrades.moveSpeed) + Math.max(0, upgrades.satchel)
+  return tilesPerStep * Math.max(1, speed)
+}
 
 /**
- * The snap threshold for a run at `speed`. A tick runs `speed` simulation
- * steps, so at 2x and 4x a dwarf legitimately covers several tiles in one
- * update and must still glide along the straight line. Scaling the threshold
- * by speed keeps ordinary walking animated at every speed while continuing to
- * snap falls and resets, which cover far more ground than `speed` steps.
+ * Distance above which a single update is a teleport rather than a walk.
+ *
+ * Anything within the walk budget plus a small margin glides. Short falls
+ * (`settleDwarf` can drop a dwarf a single tile) therefore lerp as a quick
+ * drop, which reads correctly, while resets that cross the map, a new run or a
+ * save import land far beyond the budget and snap. A changed dwarf id set
+ * snaps regardless of distance.
  */
-export function snapDistanceForSpeed(speed: number): number {
-  return SNAP_DISTANCE_TILES * Math.max(1, speed)
+export function snapDistanceFor(upgrades: WalkUpgrades, speed: number): number {
+  return maxWalkPerTick(upgrades, speed) + SNAP_MARGIN_TILES
 }
 
 /** Euclidean distance in tiles. */
@@ -90,7 +107,7 @@ export function createTrack(
   to: TilePoint,
   startedAt: number,
   durationMs: number,
-  snapDistance: number = SNAP_DISTANCE_TILES,
+  snapDistance: number,
 ): DwarfTrack {
   const snap = from === null || tileDistance(from, to) > snapDistance
   return {
@@ -146,7 +163,7 @@ export function nextTracks(
   dwarves: readonly { id: string; position: TilePoint }[],
   now: number,
   durationMs: number,
-  snapDistance: number = SNAP_DISTANCE_TILES,
+  snapDistance: number,
 ): Map<string, DwarfTrack> {
   const sameDwarfSet =
     previous.size === dwarves.length &&
