@@ -23,6 +23,8 @@ import TerrainLayer from './TerrainLayer'
 type WorldCanvasProps = {
   world: World
   dwarves: DwarfState[]
+  speed: number
+  paused: boolean
   dynamicCameraEnabled: boolean
   onTemporaryPauseChange: (paused: boolean) => void
 }
@@ -30,6 +32,8 @@ type WorldCanvasProps = {
 function WorldScene({
   world,
   dwarves,
+  speed,
+  paused,
   dynamicCameraEnabled,
   onTemporaryPauseChange,
 }: WorldCanvasProps) {
@@ -135,7 +139,7 @@ function WorldScene({
       <group position={[-world.width / 2, -world.height / 2, 0]}>
         <TerrainLayer world={world} />
         <BuildingLayer world={world} />
-        <DwarfLayer dwarves={dwarves} />
+        <DwarfLayer dwarves={dwarves} speed={speed} paused={paused} />
       </group>
       <OrbitControls
         ref={controlsRef}
