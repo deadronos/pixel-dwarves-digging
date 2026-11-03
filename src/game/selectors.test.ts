@@ -366,7 +366,7 @@ describe('view model selectors', () => {
       paused: false,
       speed: 1 as const,
       dynamicCameraEnabled: true,
-      saveStatus: 'SAVED',
+      saveStatus: 'SAVED' as const,
       saveError: null,
       setPaused: () => {},
       setSpeed: () => {},

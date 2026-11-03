@@ -30,12 +30,24 @@ const DEFAULT_POLICY: PolicyState = {
   materialPriority: { coal: false, iron: false, crystal: false, relic: false },
 }
 
+export type SaveStatus =
+  | 'UNSAVED'
+  | 'DIRTY'
+  | 'SAVED'
+  | 'EXPORTED'
+  | 'IMPORTED'
+  | 'IMPORTED WITH RECOVERY'
+  | 'IMPORT FAILED'
+  | 'NEW RUN'
+  | 'RESET'
+  | 'PRESTIGED'
+
 export type GameStore = {
   simulation: SimulationState
   paused: boolean
   speed: SimulationSpeed
   dynamicCameraEnabled: boolean
-  saveStatus: string
+  saveStatus: SaveStatus
   saveError: string | null
   setPaused: (paused: boolean) => void
   setSpeed: (speed: SimulationSpeed) => void
@@ -170,7 +182,13 @@ export function createGameStore(
       if (current.paused) return
       const simulation = stepSimulation(current.simulation, current.speed)
       const autosaved = simulation.tick % 20 === 0
-      set({ simulation, saveStatus: autosaved ? 'SAVED' : 'DIRTY' })
+      const saveStatus: SaveStatus = autosaved ? 'SAVED' : 'DIRTY'
+      // Only touch saveStatus when it changes, so selectors on it stay quiet.
+      set(
+        saveStatus === current.saveStatus
+          ? { simulation }
+          : { simulation, saveStatus },
+      )
       if (autosaved) writeLocalSave(simulation)
     },
     startSimulation: () => {

@@ -9,7 +9,11 @@ const BUILDING_COLORS: Record<BuildingState['type'], string> = {
   ladder: '#dfbd62',
 }
 
-function BuildingMesh({ building }: { building: BuildingState }) {
+const BuildingMesh = memo(function BuildingMesh({
+  building,
+}: {
+  building: BuildingState
+}) {
   const isComplete = building.construction === 'completed'
   const color = BUILDING_COLORS[building.type]
   const depth = building.type === 'ladder' ? 0.12 : 0.26
@@ -53,7 +57,7 @@ function BuildingMesh({ building }: { building: BuildingState }) {
       ) : null}
     </group>
   )
-}
+})
 
 const BuildingLayer = memo(function BuildingLayer({ world }: { world: World }) {
   return (

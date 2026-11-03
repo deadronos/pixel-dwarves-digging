@@ -114,6 +114,7 @@ export default function ControlBar() {
           >
             <input
               type="checkbox"
+              name={`priority-${material}`}
               checked={policy.materialPriority[material]}
               onChange={(event) =>
                 setMaterialPriority(material, event.target.checked)

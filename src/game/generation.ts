@@ -192,22 +192,50 @@ export function generateWorld(
   }
 }
 
-export function countSolids(world: Pick<World, 'cells'>): number {
+/** 256-entry lookup tables indexed by block id (cheaper than a Set per cell). */
+function buildBlockLut(blocks: ReadonlySet<BlockType>): Uint8Array {
+  const lut = new Uint8Array(256)
+  BLOCK_ID_LIST.forEach((block, id) => {
+    if (blocks.has(block)) lut[id] = 1
+  })
+  return lut
+}
+
+const MINEABLE_LUT = buildBlockLut(MINEABLE_BLOCK_SET)
+const MINERAL_LUT = buildBlockLut(MINERAL_BLOCKS)
+
+function countByLut(cells: Uint8Array, lut: Uint8Array): number {
   let total = 0
-  for (const id of world.cells) {
-    if (MINEABLE_BLOCK_SET.has(BLOCK_ID_LIST[id])) total += 1
+  for (let i = 0; i < cells.length; i += 1) total += lut[cells[i]]
+  return total
+}
+
+/**
+ * Cells are copy-on-write (see `clearCell`), so a new array identity means
+ * the contents changed. Cache the counts per array to avoid a full-grid scan
+ * on every HUD/inspector/engine read.
+ */
+const solidsCache = new WeakMap<Uint8Array, number>()
+const mineralsCache = new WeakMap<Uint8Array, number>()
+
+export function countSolids(world: Pick<World, 'cells'>): number {
+  let total = solidsCache.get(world.cells)
+  if (total === undefined) {
+    total = countByLut(world.cells, MINEABLE_LUT)
+    solidsCache.set(world.cells, total)
   }
   return total
 }
 
-export function hasMineableSolids(world: World): boolean {
-  return world.cells.some((id) => MINEABLE_BLOCK_SET.has(BLOCK_ID_LIST[id]))
+export function hasMineableSolids(world: Pick<World, 'cells'>): boolean {
+  return countSolids(world) > 0
 }
 
-export function countMinerals(world: World): number {
-  let total = 0
-  for (const id of world.cells) {
-    if (MINERAL_BLOCKS.has(BLOCK_ID_LIST[id])) total += 1
+export function countMinerals(world: Pick<World, 'cells'>): number {
+  let total = mineralsCache.get(world.cells)
+  if (total === undefined) {
+    total = countByLut(world.cells, MINERAL_LUT)
+    mineralsCache.set(world.cells, total)
   }
   return total
 }

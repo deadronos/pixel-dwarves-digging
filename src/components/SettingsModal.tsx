@@ -1,14 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { useGameStore } from '../game/state'
 
-function downloadSave(payload: string) {
+const REVOKE_DELAY_MS = 1000
+
+export function downloadSave(payload: string) {
   const blob = new Blob([payload], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = 'pixel-dwarves-save.json'
+  anchor.hidden = true
+  document.body.appendChild(anchor)
   anchor.click()
-  URL.revokeObjectURL(url)
+  anchor.remove()
+  // Revoking synchronously can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), REVOKE_DELAY_MS)
 }
 
 type SettingsModalProps = {
@@ -141,6 +147,7 @@ export default function SettingsModal({
             <label className="dynamic-camera-toggle">
               <input
                 type="checkbox"
+                name="dynamic-camera"
                 checked={dynamicCameraEnabled}
                 onChange={(event) =>
                   setDynamicCameraEnabled(event.target.checked)
@@ -203,6 +210,7 @@ export default function SettingsModal({
             </button>
             <input
               ref={fileInputRef}
+              name="import-save-file"
               className="visually-hidden"
               type="file"
               accept="application/json,.json"

@@ -6,11 +6,31 @@ import { useGameStore } from './game/state'
 
 const WorldCanvas = lazy(() => import('./components/WorldCanvas'))
 
-export default function App() {
-  const simulation = useGameStore((state) => state.simulation)
+/**
+ * Owns the per-tick subscriptions (world, dwarves) so only the canvas subtree
+ * re-renders on a tick, not the whole App shell.
+ */
+function WorldStage({
+  onTemporaryPauseChange,
+}: {
+  onTemporaryPauseChange: (paused: boolean) => void
+}) {
+  const world = useGameStore((state) => state.simulation.world)
+  const dwarves = useGameStore((state) => state.simulation.dwarves)
   const dynamicCameraEnabled = useGameStore(
     (state) => state.dynamicCameraEnabled,
   )
+  return (
+    <WorldCanvas
+      world={world}
+      dwarves={dwarves}
+      dynamicCameraEnabled={dynamicCameraEnabled}
+      onTemporaryPauseChange={onTemporaryPauseChange}
+    />
+  )
+}
+
+export default function App() {
   const startSimulation = useGameStore((state) => state.startSimulation)
   const stopSimulation = useGameStore((state) => state.stopSimulation)
   const [dynamicCameraPaused, setDynamicCameraPaused] = useState(false)
@@ -36,12 +56,7 @@ export default function App() {
               </div>
             }
           >
-            <WorldCanvas
-              world={simulation.world}
-              dwarves={simulation.dwarves}
-              dynamicCameraEnabled={dynamicCameraEnabled}
-              onTemporaryPauseChange={setDynamicCameraPaused}
-            />
+            <WorldStage onTemporaryPauseChange={setDynamicCameraPaused} />
           </Suspense>
         </section>
         <Inspector />
