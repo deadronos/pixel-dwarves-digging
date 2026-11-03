@@ -1,4 +1,10 @@
 import { describe, expect, it } from 'vitest'
+import { parseHexColor, rgbToHex } from '../components/colorMath'
+import {
+  shadeForDepth,
+  DEPTH_DARKEN as TERRAIN_DEPTH_DARKEN,
+  DEPTH_SATURATION_CELLS as TERRAIN_DEPTH_SATURATION_CELLS,
+} from '../components/terrainShading'
 import { BLOCK_ID_LIST } from './blocks'
 import {
   BLOCK_COLORS,
@@ -142,6 +148,86 @@ describe('palette distinctness', () => {
           `${mineral} is too close to ${background} to read at a glance`,
         ).toBeGreaterThanOrEqual(MIN_MINERAL_BACKGROUND_DISTANCE)
       }
+    }
+  })
+})
+
+/**
+ * The terrain texture shades every block by depth (see
+ * `components/terrainShading.ts`), which multiplies its sRGB channels and
+ * therefore shrinks OKLab distances. These checks prove that the shading is
+ * bounded: colours at the same depth stay apart, and a mineral stays clear of
+ * the rock it is embedded in, all the way to the bottom of a shaft.
+ *
+ * The same-depth bound is `MIN_PALETTE_DISTANCE` scaled by the shading
+ * factor, because a uniform multiplicative shade can only shrink distances by
+ * that much. Anything below it means shading has pushed two colours together
+ * more than darkening alone could.
+ */
+describe('shaded palette distinctness', () => {
+  const DEEPEST = TERRAIN_DEPTH_SATURATION_CELLS
+  const SHADE_FLOOR = MIN_PALETTE_DISTANCE * (1 - TERRAIN_DEPTH_DARKEN)
+  // sRGB multiplication is not exactly linear in OKLab, so allow a little
+  // slack under the theoretical floor rather than pretending it is exact.
+  const SHADE_TOLERANCE = 0.92
+
+  function shadedSwatches(depth: number): readonly Swatch[] {
+    return BLOCK_ID_LIST.map((block) => ({
+      name: `${block}@${depth === 0 ? 'surface' : 'deep'}`,
+      hex: rgbToHex(shadeForDepth(parseHexColor(BLOCK_COLORS[block]), depth)),
+      group: 'block' as const,
+    }))
+  }
+
+  it('keeps blocks apart at the surface and at the bottom of a shaft', () => {
+    for (const depth of [0, DEEPEST]) {
+      const worst = closestPair(shadedSwatches(depth))
+      expect(
+        worst.distance,
+        `${worst.a} and ${worst.b} merge at depth ${depth}`,
+      ).toBeGreaterThanOrEqual(SHADE_FLOOR * SHADE_TOLERANCE)
+    }
+  })
+
+  it('never compresses the palette by more than the shading factor', () => {
+    const surface = closestPair(shadedSwatches(0)).distance
+    const deep = closestPair(shadedSwatches(DEEPEST)).distance
+    expect(surface).toBeGreaterThan(0)
+    expect(deep / surface).toBeGreaterThanOrEqual(
+      (1 - TERRAIN_DEPTH_DARKEN) * SHADE_TOLERANCE,
+    )
+  })
+
+  it('keeps deep minerals clear of the deep rock around them', () => {
+    const deep = new Map(
+      shadedSwatches(DEEPEST).map((swatch) => [
+        swatch.name.split('@')[0],
+        swatch.hex,
+      ]),
+    )
+    for (const mineral of MINERAL_BLOCKS) {
+      for (const background of BACKGROUND_BLOCKS) {
+        const value = distance(
+          deep.get(mineral) ?? '',
+          deep.get(background) ?? '',
+        )
+        expect(
+          value,
+          `${mineral} is too close to ${background} at depth`,
+        ).toBeGreaterThanOrEqual(
+          MIN_MINERAL_BACKGROUND_DISTANCE * (1 - TERRAIN_DEPTH_DARKEN) * 0.92,
+        )
+      }
+    }
+  })
+
+  it('shades no block below the configured floor', () => {
+    const stone = parseHexColor(BLOCK_COLORS.stone)
+    const deep = shadeForDepth(stone, DEEPEST * 4)
+    for (let channel = 0; channel < 3; channel += 1) {
+      expect(deep[channel]).toBeGreaterThanOrEqual(
+        Math.floor(stone[channel] * (1 - TERRAIN_DEPTH_DARKEN)),
+      )
     }
   })
 })

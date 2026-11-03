@@ -22,6 +22,8 @@ connects the two.
 | `src/components/dwarfSprite.ts` | Procedural pixel-art dwarf sprites: the 12 x 17 frame art as character grids, pose/frame/indicator selection, and the RGBA sheet builder. No image assets. `dwarfSprite.test.ts` guards the art grid and the animation maths |
 | `src/components/dwarfTexture.ts` | Turns a generated dwarf sheet into a nearest-filtered `DataTexture` whose window slides along the sheet to show one frame. `DwarfLayer` swaps frames through `texture.offset`, so a dwarf is one mesh and one draw call |
 | `src/components/colorMath.ts` | Shared sRGB colour helpers (hex parsing, darken, mix) used by the sprite and terrain textures |
+| `src/components/terrainTexture.ts` | Fills the single terrain `DataTexture`: three texels per cell, depth shading relative to each column's surface, a sky gradient above the surface, darkened air inside tunnels, and lit edges on every block face that touches air. Refilled only when `world` changes, never per frame |
+| `src/components/terrainShading.ts` | The shading maths behind that texture (depth factor, sky and tunnel air, edge lighting) plus the `DEPTH_DARKEN` budget `palette.test.ts` checks the shaded extremes against |
 | `src/components/MiningLayer.tsx` | Cracks on the block each dwarf is digging; `miningFeedback.ts` holds the pure progress/stage maths and `blockArt.ts` + `blockTexture.ts` the crack and carried-block art. One cut-out quad per active dig, never one per block |
 | `src/components/Hud.tsx`, `Inspector.tsx`, `ControlBar.tsx`, `SettingsModal.tsx` | DOM UI |
 

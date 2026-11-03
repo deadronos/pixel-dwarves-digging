@@ -8,6 +8,7 @@ import {
   UnsignedByteType,
 } from 'three'
 import type { World } from '../game/types'
+import { TERRAIN_TEXELS_PER_CELL } from './terrainShading'
 import { fillTerrainTexels, terrainBufferLength } from './terrainTexture'
 
 type TerrainLayerProps = {
@@ -17,8 +18,8 @@ type TerrainLayerProps = {
 function createTerrainTexture(width: number, height: number): DataTexture {
   const texture = new DataTexture(
     new Uint8Array(terrainBufferLength(width, height)),
-    width,
-    height,
+    width * TERRAIN_TEXELS_PER_CELL,
+    height * TERRAIN_TEXELS_PER_CELL,
     RGBAFormat,
     UnsignedByteType,
   )
@@ -32,13 +33,14 @@ function createTerrainTexture(width: number, height: number): DataTexture {
 }
 
 /**
- * The whole terrain is one world-sized quad sampling a width x height
- * texture. The texture is allocated once per world size; each cell change
- * rewrites the texels in place, so there are no per-block meshes to remount.
+ * The whole terrain is one world-sized quad sampling a supersampled texture
+ * (a few texels per cell, so exposed edges can be lit). The texture is
+ * allocated once per world size; each cell change rewrites the texels in
+ * place, so there are no per-block meshes to remount.
  */
 const TerrainLayer = memo(function TerrainLayer({ world }: TerrainLayerProps) {
   const invalidate = useThree((state) => state.invalidate)
-  const { width, height, cells } = world
+  const { width, height } = world
   const texture = useMemo(
     () => createTerrainTexture(width, height),
     [width, height],
@@ -47,12 +49,12 @@ const TerrainLayer = memo(function TerrainLayer({ world }: TerrainLayerProps) {
   useEffect(() => () => texture.dispose(), [texture])
 
   useLayoutEffect(() => {
-    fillTerrainTexels(cells, texture.image.data as Uint8Array)
+    fillTerrainTexels(world, texture.image.data as Uint8Array)
     texture.needsUpdate = true
     // Texels are written directly, so demand rendering needs an explicit
     // invalidation to pick up mined and generated blocks.
     invalidate()
-  }, [cells, texture, invalidate])
+  }, [world, texture, invalidate])
 
   // z = 0 keeps the terrain beneath buildings (z >= 0.5) and dwarves (z = 1).
   return (
