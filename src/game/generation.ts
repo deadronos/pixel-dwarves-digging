@@ -1,3 +1,4 @@
+import { AIR_ID, BLOCK_ID_LIST, BLOCK_IDS } from './blocks'
 import {
   BEDROCK_DEPTH,
   BIOME_DEFINITIONS,
@@ -13,7 +14,6 @@ import { createRng, hashSeed, randomBetween, randomInt } from './rng'
 import {
   type BiomeId,
   type BlockType,
-  type Cell,
   indexFor,
   MAP_HEIGHT,
   MAP_WIDTH,
@@ -21,27 +21,17 @@ import {
   type World,
 } from './types'
 
-const OUT_OF_BOUNDS_CELL: Cell = { block: 'air', biome: 'meadow' }
-
 export function isSolid(block: BlockType): boolean {
   return block !== 'air'
 }
 
-export function getCell(world: World, x: number, y: number): Cell {
-  if (x < 0 || x >= world.width || y < 0 || y >= world.height) {
-    return OUT_OF_BOUNDS_CELL
-  }
-
-  return world.cells[indexFor(x, y, world.width)]
-}
-
 export function clearCell(world: World, target: Position): World {
   const targetIndex = indexFor(target.x, target.y, world.width)
+  const cells = world.cells.slice()
+  cells[targetIndex] = AIR_ID
   return {
     ...world,
-    cells: world.cells.map((cell, index) =>
-      index === targetIndex ? { ...cell, block: 'air' as const } : cell,
-    ),
+    cells,
     topologyKey: createTopologyKey(),
   }
 }
@@ -88,7 +78,7 @@ function blockForDepth(
 }
 
 function carveStarterPocket(
-  cells: Cell[],
+  cells: Uint8Array,
   _surfaceHeights: number[],
   biomes: BiomeId[],
   start: Position,
@@ -96,7 +86,7 @@ function carveStarterPocket(
 ): void {
   const set = (x: number, y: number, block: BlockType) => {
     if (x < 0 || x >= MAP_WIDTH || y < 0 || y >= MAP_HEIGHT) return
-    cells[indexFor(x, y, MAP_WIDTH)] = { block, biome: biomes[x] }
+    cells[indexFor(x, y, MAP_WIDTH)] = BLOCK_IDS[block]
   }
   const starterBlock: BlockType = biomes[start.x] === 'desert' ? 'sand' : 'dirt'
 
@@ -121,22 +111,19 @@ export function generateWorld(
     surfaceHeight(random, x),
   )
   const biomes = Array.from({ length: MAP_WIDTH }, (_, x) => biomeAt(x))
-  const cells: Cell[] = Array.from(
-    { length: MAP_WIDTH * MAP_HEIGHT },
-    (_, index) => {
-      const x = index % MAP_WIDTH
-      const y = Math.floor(index / MAP_WIDTH)
-      const surface = surfaceHeights[x]
-      const biome = biomes[x]
-      const block =
-        y < BEDROCK_DEPTH
-          ? 'bedrock'
-          : y <= surface
-            ? blockForDepth(random, biome, surface - y, x, y, prospecting)
-            : 'air'
-      return { block, biome }
-    },
-  )
+  const cells = new Uint8Array(MAP_WIDTH * MAP_HEIGHT)
+  for (let index = 0; index < cells.length; index += 1) {
+    const x = index % MAP_WIDTH
+    const y = Math.floor(index / MAP_WIDTH)
+    const surface = surfaceHeights[x]
+    const block: BlockType =
+      y < BEDROCK_DEPTH
+        ? 'bedrock'
+        : y <= surface
+          ? blockForDepth(random, biomes[x], surface - y, x, y, prospecting)
+          : 'air'
+    cells[index] = BLOCK_IDS[block]
+  }
 
   const startX = 12
   const startY = surfaceHeights[startX] + 1
@@ -147,17 +134,14 @@ export function generateWorld(
   for (let offset = 0; offset < STARTER_STONE_VEIN_LENGTH; offset += 1) {
     const x = start.x + 3 + offset
     if (x < MAP_WIDTH && start.y > BEDROCK_DEPTH) {
-      cells[indexFor(x, start.y, MAP_WIDTH)] = {
-        block: 'stone',
-        biome: biomes[x],
-      }
+      cells[indexFor(x, start.y, MAP_WIDTH)] = BLOCK_IDS.stone
     }
   }
 
-  if (!cells.some((cell) => MINERAL_BLOCKS.has(cell.block))) {
+  if (!cells.some((id) => MINERAL_BLOCKS.has(BLOCK_ID_LIST[id]))) {
     const fallbackX = Math.floor(MAP_WIDTH * 0.6)
     const fallback = indexFor(fallbackX, 26, MAP_WIDTH)
-    cells[fallback] = { block: 'iron', biome: biomes[fallbackX] }
+    cells[fallback] = BLOCK_IDS.iron
   }
 
   const stockpileDefinition = BUILDING_DEFINITIONS.stockpile
@@ -209,21 +193,23 @@ export function generateWorld(
 }
 
 export function countSolids(world: Pick<World, 'cells'>): number {
-  return world.cells.reduce(
-    (total, cell) => total + (MINEABLE_BLOCK_SET.has(cell.block) ? 1 : 0),
-    0,
-  )
+  let total = 0
+  for (const id of world.cells) {
+    if (MINEABLE_BLOCK_SET.has(BLOCK_ID_LIST[id])) total += 1
+  }
+  return total
 }
 
 export function hasMineableSolids(world: World): boolean {
-  return world.cells.some((cell) => MINEABLE_BLOCK_SET.has(cell.block))
+  return world.cells.some((id) => MINEABLE_BLOCK_SET.has(BLOCK_ID_LIST[id]))
 }
 
 export function countMinerals(world: World): number {
-  return world.cells.reduce(
-    (total, cell) => total + (MINERAL_BLOCKS.has(cell.block) ? 1 : 0),
-    0,
-  )
+  let total = 0
+  for (const id of world.cells) {
+    if (MINERAL_BLOCKS.has(BLOCK_ID_LIST[id])) total += 1
+  }
+  return total
 }
 
 export function randomStarterSeed(): string {

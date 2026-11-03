@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { blockToId } from './blocks'
 import { completeConstruction } from './buildings'
 import { addMaterialToStorage, removeFromStorage } from './buildings/storage'
 import { clearCell } from './generation'
@@ -9,7 +10,6 @@ import {
   findReachableExposedSolids,
 } from './pathfinding'
 import {
-  type Cell,
   cloneInventory,
   EMPTY_INVENTORY,
   type SimulationState,
@@ -19,9 +19,9 @@ import {
 function makeWorld(rows: string[]): World {
   const height = rows.length
   const width = rows[0].length
-  const cells: Cell[] = rows.flatMap((row) =>
-    [...row].map((value) => ({
-      block:
+  const cells: number[] = rows.flatMap((row) =>
+    [...row].map((value) =>
+      blockToId(
         value === '.'
           ? 'air'
           : value === 'b'
@@ -29,14 +29,14 @@ function makeWorld(rows: string[]): World {
             : value === 'stone'
               ? 'stone'
               : 'dirt',
-      biome: 'meadow',
-    })),
+      ),
+    ),
   )
 
   return {
     width,
     height,
-    cells,
+    cells: Uint8Array.from(cells),
     seed: 'test',
     runNumber: 1,
     surfaceHeights: Array(width).fill(2),

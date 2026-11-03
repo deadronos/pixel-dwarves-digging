@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { blockToId } from '../blocks'
 import { getPrimaryStockpile } from '../buildings'
 import type { World } from '../types'
 import { getBuildingById, getCompletedStorageBuildings } from './selectors'
@@ -8,10 +9,9 @@ const world = {
   height: 4,
   seed: 'selectors',
   runNumber: 1,
-  cells: Array.from({ length: 16 }, (_, index) => ({
-    block: index < 4 ? 'stone' : 'air',
-    biome: 'meadow' as const,
-  })),
+  cells: Uint8Array.from({ length: 16 }, (_, index) =>
+    blockToId(index < 4 ? 'stone' : 'air'),
+  ),
   surfaceHeights: [1, 1, 1, 1],
   biomes: ['meadow', 'meadow', 'meadow', 'meadow'] as const,
   start: { x: 1, y: 1 },

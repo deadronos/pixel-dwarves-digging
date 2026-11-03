@@ -1,3 +1,4 @@
+import { blockAt } from '../blocks'
 import { MINERAL_BLOCKS } from '../content'
 import { assessDigSafety, isBootstrapProtectedTarget } from '../logistics'
 import {
@@ -68,12 +69,12 @@ export function scoreTarget(
   target: Position,
   pathLength: number,
 ): number {
-  const cell = state.world.cells[target.y * state.world.width + target.x]
-  const mineralBonus = MINERAL_BLOCKS.has(cell.block) ? 50 : 0
+  const block = blockAt(state.world, target.y * state.world.width + target.x)
+  const mineralBonus = MINERAL_BLOCKS.has(block) ? 50 : 0
   const preferredBonus =
-    cell.block in state.policy.materialPriority &&
+    block in state.policy.materialPriority &&
     state.policy.materialPriority[
-      cell.block as keyof typeof state.policy.materialPriority
+      block as keyof typeof state.policy.materialPriority
     ]
       ? 35
       : 0

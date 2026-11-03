@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { blockToId } from './blocks'
 import { stepSimulation } from './engine'
 import {
   assessDigSafety,
@@ -18,33 +19,27 @@ import {
 } from './logistics'
 import { removeRecoveredConstructionOrder } from './logistics/constructionRecovery'
 import { getAvailableCapacity as getFocusedAvailableCapacity } from './logistics/storage'
-import { type Cell, EMPTY_INVENTORY, type SimulationState } from './types'
+import { EMPTY_INVENTORY, type SimulationState } from './types'
 
 function makeStorageState(): SimulationState {
   const width = 6
   const height = 3
   const cells = [
-    ...Array.from({ length: width }, () => ({
-      block: 'stone' as const,
-      biome: 'meadow' as const,
-    })),
-    { block: 'air' as const, biome: 'meadow' as const },
-    { block: 'air' as const, biome: 'meadow' as const },
-    { block: 'dirt' as const, biome: 'meadow' as const },
-    { block: 'air' as const, biome: 'meadow' as const },
-    { block: 'air' as const, biome: 'meadow' as const },
-    { block: 'air' as const, biome: 'meadow' as const },
-    { block: 'air' as const, biome: 'meadow' as const },
-    ...Array.from({ length: width }, () => ({
-      block: 'air' as const,
-      biome: 'meadow' as const,
-    })),
+    ...Array.from({ length: width }, () => blockToId('stone' as const)),
+    blockToId('air' as const),
+    blockToId('air' as const),
+    blockToId('dirt' as const),
+    blockToId('air' as const),
+    blockToId('air' as const),
+    blockToId('air' as const),
+    blockToId('air' as const),
+    ...Array.from({ length: width }, () => blockToId('air' as const)),
   ]
   return {
     world: {
       width,
       height,
-      cells,
+      cells: Uint8Array.from(cells),
       seed: 'storage-fixture',
       runNumber: 1,
       surfaceHeights: Array(width).fill(0),
@@ -121,14 +116,11 @@ function makeDropState(
   const width = 6
   const height = 5
   const targetY = dropDistance
-  const cells: Cell[] = Array.from({ length: width * height }, (_, index) => {
+  const cells: number[] = Array.from({ length: width * height }, (_, index) => {
     const y = Math.floor(index / width)
-    return {
-      block: y === 0 ? ('stone' as const) : ('air' as const),
-      biome: 'meadow' as const,
-    }
+    return blockToId(y === 0 ? ('stone' as const) : ('air' as const))
   })
-  cells[targetY * width + 2] = { block: 'dirt', biome: 'meadow' }
+  cells[targetY * width + 2] = blockToId('dirt')
 
   const primary = {
     id: 'stockpile-1',
@@ -163,7 +155,7 @@ function makeDropState(
     world: {
       width,
       height,
-      cells,
+      cells: Uint8Array.from(cells),
       seed: `drop-${dropDistance}`,
       runNumber: 1,
       surfaceHeights: Array(width).fill(0),
@@ -246,10 +238,7 @@ describe('logistics helpers', () => {
 
   it('prioritizes the main stockpile for nearest-stockpile hauling', () => {
     const state = makeStorageState()
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'air',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 2] = blockToId('air')
     state.dwarves[0].position = { x: 3, y: 1 }
     state.world.buildings.push({
       id: 'outpost-1',
@@ -274,10 +263,7 @@ describe('logistics helpers', () => {
 
   it('finishes a dwarf current haul route before choosing another storage', () => {
     const state = makeStorageState()
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'air',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 2] = blockToId('air')
     state.policy.haulingPreference = 'finish-current-route'
     state.dwarves[0].position = { x: 3, y: 1 }
     state.dwarves[0].carrying = 'dirt'
@@ -313,10 +299,7 @@ describe('logistics helpers', () => {
   it('plans an anchored reachable ladder for an access request', () => {
     const state = makeStorageState()
     state.inventory.stone = 1
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'air',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 2] = blockToId('air')
     state.world.buildings.push({
       id: 'bridge-anchor',
       type: 'bridge',
@@ -350,10 +333,7 @@ describe('logistics helpers', () => {
   it('plans a ladder from common material when no stone is available', () => {
     const state = makeStorageState()
     state.inventory.dirt = 1
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'air',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 2] = blockToId('air')
     state.world.buildings.push({
       id: 'bridge-anchor',
       type: 'bridge',
@@ -412,10 +392,7 @@ describe('logistics helpers', () => {
 
   it('keeps an unfunded access request visible without creating an order', () => {
     const state = makeStorageState()
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'air',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 2] = blockToId('air')
     state.world.buildings.push({
       id: 'bridge-anchor',
       type: 'bridge',
@@ -543,7 +520,7 @@ describe('logistics helpers', () => {
 
   it('does not count a mined block as stored until deposit', () => {
     const state = makeStorageState()
-    state.world.cells[1] = { block: 'bedrock', biome: 'meadow' }
+    state.world.cells[1] = blockToId('bedrock')
     const afterMining = stepUntilCarrying(state)
     const stockpile = afterMining.world.buildings[0]
 
@@ -630,10 +607,7 @@ describe('logistics helpers', () => {
     const state = makeStorageState()
     state.constructionPolicy = 'expand'
     state.inventory.stone = 12
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'air',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 2] = blockToId('air')
 
     const planned = planExpansionOrder(state)
 
@@ -680,14 +654,11 @@ describe('logistics helpers', () => {
   it('plans an overflow depot on an alternate perimeter cell', () => {
     const state = makeStorageState()
     state.world.height = 5
-    state.world.cells = Array.from(
+    state.world.cells = Uint8Array.from(
       { length: state.world.width * 5 },
       (_, index) => {
         const y = Math.floor(index / state.world.width)
-        return {
-          block: y === 0 ? ('stone' as const) : ('air' as const),
-          biome: 'meadow' as const,
-        }
+        return blockToId(y === 0 ? ('stone' as const) : ('air' as const))
       },
     )
     state.world.stockpile = { x: 1, y: 1 }
@@ -710,10 +681,8 @@ describe('logistics helpers', () => {
       { x: 1, y: 3 },
       { x: 1, y: 0 },
     ]) {
-      state.world.cells[position.y * state.world.width + position.x] = {
-        block: 'stone',
-        biome: 'meadow',
-      }
+      state.world.cells[position.y * state.world.width + position.x] =
+        blockToId('stone')
     }
 
     const planned = planOverflowDepotOrder(state)
@@ -820,10 +789,7 @@ describe('logistics helpers', () => {
       blockedReason: 'storage-full',
     }
     state.inventory.stone = 12
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'air',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 2] = blockToId('air')
     const stockpile = state.world.buildings[0]
     stockpile.level = 3
     stockpile.storage = { capacity: 168, inventory: { stone: 168 } }
@@ -996,22 +962,10 @@ describe('logistics helpers', () => {
 
   it('recovers a planned access order with no reachable builder route', () => {
     const state = makeStorageState()
-    state.world.cells[1 * state.world.width + 3] = {
-      block: 'stone',
-      biome: 'meadow',
-    }
-    state.world.cells[1 * state.world.width + 5] = {
-      block: 'stone',
-      biome: 'meadow',
-    }
-    state.world.cells[0 * state.world.width + 4] = {
-      block: 'stone',
-      biome: 'meadow',
-    }
-    state.world.cells[2 * state.world.width + 4] = {
-      block: 'stone',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 3] = blockToId('stone')
+    state.world.cells[1 * state.world.width + 5] = blockToId('stone')
+    state.world.cells[0 * state.world.width + 4] = blockToId('stone')
+    state.world.cells[2 * state.world.width + 4] = blockToId('stone')
     state.world.buildings.push({
       id: 'unreachable-access',
       type: 'ladder',

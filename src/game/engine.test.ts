@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { blockAt, blockToId } from './blocks'
 import { stepSimulation } from './engine'
 import { planAccessRequests } from './engine/accessRequests'
 import { advanceDwarf } from './engine/advancement'
@@ -6,21 +7,15 @@ import {
   createTargetPlanningContext,
   getTargetPlanningSnapshot,
 } from './engine/targeting'
-import {
-  type Cell,
-  EMPTY_INVENTORY,
-  type SimulationState,
-  type World,
-} from './types'
+import { EMPTY_INVENTORY, type SimulationState, type World } from './types'
 
 function makeState(rows: string[]): SimulationState {
   const height = rows.length
   const width = rows[0].length
-  const cells: Cell[] = rows.flatMap((row) =>
-    [...row].map((value) => ({
-      block: value === '.' ? 'air' : value === 'I' ? 'iron' : 'dirt',
-      biome: 'meadow',
-    })),
+  const cells: number[] = rows.flatMap((row) =>
+    [...row].map((value) =>
+      blockToId(value === '.' ? 'air' : value === 'I' ? 'iron' : 'dirt'),
+    ),
   )
   const supportBuildings = [
     ...Array.from({ length: width }, (_, x) => ({
@@ -46,7 +41,7 @@ function makeState(rows: string[]): SimulationState {
   const world: World = {
     width,
     height,
-    cells,
+    cells: Uint8Array.from(cells),
     seed: 'fixture',
     runNumber: 1,
     surfaceHeights: Array(width).fill(1),
@@ -102,14 +97,11 @@ function makeEmergencyDropState(dropDistance: number): SimulationState {
   const width = 6
   const targetY = dropDistance === 3 ? 4 : dropDistance
   const height = targetY + 2
-  const cells: Cell[] = Array.from({ length: width * height }, (_, index) => {
+  const cells: number[] = Array.from({ length: width * height }, (_, index) => {
     const y = Math.floor(index / width)
-    return {
-      block: y === 0 ? ('bedrock' as const) : ('air' as const),
-      biome: 'meadow' as const,
-    }
+    return blockToId(y === 0 ? ('bedrock' as const) : ('air' as const))
   })
-  cells[targetY * width + 2] = { block: 'dirt', biome: 'meadow' }
+  cells[targetY * width + 2] = blockToId('dirt')
 
   const stockpile = {
     id: 'stockpile-1',
@@ -126,7 +118,7 @@ function makeEmergencyDropState(dropDistance: number): SimulationState {
     world: {
       width,
       height,
-      cells,
+      cells: Uint8Array.from(cells),
       seed: `engine-drop-${dropDistance}`,
       runNumber: 1,
       surfaceHeights: Array(width).fill(0),
@@ -190,15 +182,13 @@ function makeStrandedStockRecoveryState(
   const cells = Array.from({ length: width * height }, (_, index) => {
     const y = Math.floor(index / width)
     const x = index % width
-    return {
-      block:
-        x === 1 && y === 2
-          ? ('dirt' as const)
-          : x === 4 && y === 2 && withActiveDwarf
-            ? ('relic' as const)
-            : ('air' as const),
-      biome: 'meadow' as const,
-    }
+    return blockToId(
+      x === 1 && y === 2
+        ? ('dirt' as const)
+        : x === 4 && y === 2 && withActiveDwarf
+          ? ('relic' as const)
+          : ('air' as const),
+    )
   })
   const stockpile = {
     id: 'stockpile-1',
@@ -244,7 +234,7 @@ function makeStrandedStockRecoveryState(
     world: {
       width,
       height,
-      cells,
+      cells: Uint8Array.from(cells),
       seed: 'stranded-stock-recovery',
       runNumber: 1,
       surfaceHeights: Array(width).fill(0),
@@ -294,7 +284,7 @@ describe('stepSimulation', () => {
           building.position.x !== state.dwarves[0].position.x ||
           building.position.y !== state.dwarves[0].position.y,
       )
-      state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+      state.world.cells[1] = blockToId('dirt')
       return state
     }
 
@@ -334,7 +324,7 @@ describe('stepSimulation', () => {
 
     expect(result.inventory.dirt).toBe(1)
     expect(result.totalCleared).toBe(1)
-    expect(result.world.cells[1 * result.world.width + 2].block).toBe('air')
+    expect(blockAt(result.world, 1 * result.world.width + 2)).toBe('air')
     expect(result.dwarves[0].position).toEqual(result.world.stockpile)
     expect(result.dwarves[0].carrying).toBeNull()
   })
@@ -358,9 +348,7 @@ describe('stepSimulation', () => {
 
   it('assigns a diagonal mining target and reaches its diagonal stand', () => {
     const state = makeState(['#####', '.....', '..d..'])
-    state.world.cells = state.world.cells.map((cell, index) =>
-      index < state.world.width ? { ...cell, block: 'bedrock' as const } : cell,
-    )
+    state.world.cells.fill(blockToId('bedrock'), 0, state.world.width)
     state.dwarves[0].position = { x: 0, y: 1 }
 
     const assigned = stepSimulation(state, 1)
@@ -375,14 +363,12 @@ describe('stepSimulation', () => {
 
   it('completes a diagonal dig instead of invalidating it', () => {
     const state = makeState(['#####', '.....', '..d..'])
-    state.world.cells = state.world.cells.map((cell, index) =>
-      index < state.world.width ? { ...cell, block: 'bedrock' as const } : cell,
-    )
+    state.world.cells.fill(blockToId('bedrock'), 0, state.world.width)
 
     const result = stepSimulation(state, 6)
 
     expect(result.totalCleared).toBe(1)
-    expect(result.world.cells[2 * result.world.width + 2].block).toBe('air')
+    expect(blockAt(result.world, 2 * result.world.width + 2)).toBe('air')
     expect(result.dwarves[0].carrying).toBe('dirt')
     expect(result.dwarves[0].task.kind).toBe('haul')
   })
@@ -584,9 +570,7 @@ describe('stepSimulation', () => {
 
   it('returns a grounded stranded dwarf to ordinary work without rescue resources', () => {
     const state = makeState(['#####', '.....', '..d..'])
-    state.world.cells = state.world.cells.map((cell, index) =>
-      index < state.world.width ? { ...cell, block: 'bedrock' as const } : cell,
-    )
+    state.world.cells.fill(blockToId('bedrock'), 0, state.world.width)
     state.dwarves[0] = {
       ...state.dwarves[0],
       position: { x: 1, y: 1 },
@@ -662,21 +646,18 @@ describe('stepSimulation', () => {
         building.position.x !== state.dwarves[0].position.x ||
         building.position.y !== state.dwarves[0].position.y,
     )
-    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+    state.world.cells[1] = blockToId('dirt')
 
     const result = stepSimulation(state, 1)
 
     expect(result.dwarves[0].task.kind).toBe('idle')
-    expect(result.world.cells[1].block).toBe('dirt')
+    expect(blockAt(result.world, 1)).toBe('dirt')
   })
 
   it('chooses safe work over a deeper unsafe target', () => {
     const state = makeState(['.....', '.....', '.....'])
-    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'dirt',
-      biome: 'meadow',
-    }
+    state.world.cells[1] = blockToId('dirt')
+    state.world.cells[1 * state.world.width + 2] = blockToId('dirt')
 
     const result = stepSimulation(state, 1)
 
@@ -690,7 +671,7 @@ describe('stepSimulation', () => {
         building.position.x !== state.dwarves[0].position.x ||
         building.position.y !== state.dwarves[0].position.y,
     )
-    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+    state.world.cells[1] = blockToId('dirt')
 
     const result = stepSimulation(state, 2)
 
@@ -710,7 +691,7 @@ describe('stepSimulation', () => {
         building.position.x !== state.dwarves[0].position.x ||
         building.position.y !== state.dwarves[0].position.y,
     )
-    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
+    state.world.cells[1] = blockToId('dirt')
     const created = stepSimulation(state, 1)
     expect(created.accessRequests).toHaveLength(1)
     const resolved = {
@@ -744,11 +725,8 @@ describe('stepSimulation', () => {
     state.world.buildings = state.world.buildings.filter(
       (building) => building.type === 'stockpile' || building.position.x !== 1,
     )
-    state.world.cells[1] = { block: 'dirt', biome: 'meadow' }
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'dirt',
-      biome: 'meadow',
-    }
+    state.world.cells[1] = blockToId('dirt')
+    state.world.cells[1 * state.world.width + 2] = blockToId('dirt')
 
     const result = stepSimulation(state, 1)
 
@@ -758,10 +736,7 @@ describe('stepSimulation', () => {
 
   it('does not clear a target when storage is unreachable or full', () => {
     const state = makeState(['.....', '.....', '.....'])
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'dirt',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 2] = blockToId('dirt')
     const stockpile = state.world.buildings.find(
       (building) => building.type === 'stockpile',
     )
@@ -770,7 +745,7 @@ describe('stepSimulation', () => {
 
     const result = stepSimulation(state, 1)
 
-    expect(result.world.cells[1 * result.world.width + 2].block).toBe('dirt')
+    expect(blockAt(result.world, 1 * result.world.width + 2)).toBe('dirt')
     expect(result.dwarves[0].task.kind).toBe('idle')
   })
 
@@ -896,15 +871,9 @@ describe('stepSimulation', () => {
         blockedReason: 'waiting-for-stone',
       },
     ]
-    state.world.cells = state.world.cells.map((cell) => ({
-      ...cell,
-      block: 'air',
-    }))
-    state.world.cells[1 * state.world.width + 4] = {
-      block: 'air',
-      biome: 'meadow',
-    }
-    state.world.cells[4] = { block: 'dirt', biome: 'meadow' }
+    state.world.cells.fill(blockToId('air'))
+    state.world.cells[1 * state.world.width + 4] = blockToId('air')
+    state.world.cells[4] = blockToId('dirt')
     state.world.buildings = state.world.buildings.filter(
       (building) => building.type === 'stockpile' || building.position.x !== 4,
     )
@@ -924,7 +893,7 @@ describe('stepSimulation', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.dwarves = []
     state.safety = { phase: 'bootstrap', emergencyStone: 1 }
-    state.world.cells[0] = { block: 'dirt', biome: 'meadow' }
+    state.world.cells[0] = blockToId('dirt')
 
     const result = stepSimulation(state, 3)
 
@@ -943,10 +912,7 @@ describe('stepSimulation', () => {
     )
     if (!stockpile?.storage) throw new Error('stockpile storage missing')
     stockpile.storage = { capacity: 0, inventory: {} }
-    state.world.cells[1 * state.world.width + 2] = {
-      block: 'dirt',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 2] = blockToId('dirt')
 
     const result = stepSimulation(state, 1)
 
@@ -996,8 +962,8 @@ describe('stepSimulation', () => {
     state.world.buildings = state.world.buildings.filter(
       (building) => building.id !== 'bridge-4' && building.id !== 'bridge-5',
     )
-    state.world.cells[4] = { block: 'stone', biome: 'meadow' }
-    state.world.cells[5] = { block: 'stone', biome: 'meadow' }
+    state.world.cells[4] = blockToId('stone')
+    state.world.cells[5] = blockToId('stone')
     state.safety = {
       phase: 'blocked',
       emergencyStone: 0,
@@ -1086,22 +1052,10 @@ describe('stepSimulation', () => {
     state.world.buildings = state.world.buildings.filter(
       (building) => building.id !== 'bridge-3',
     )
-    state.world.cells[1 * state.world.width + 3] = {
-      block: 'bedrock',
-      biome: 'meadow',
-    }
-    state.world.cells[0 * state.world.width + 4] = {
-      block: 'bedrock',
-      biome: 'meadow',
-    }
-    state.world.cells[2 * state.world.width + 4] = {
-      block: 'bedrock',
-      biome: 'meadow',
-    }
-    state.world.cells[2 * state.world.width + 3] = {
-      block: 'bedrock',
-      biome: 'meadow',
-    }
+    state.world.cells[1 * state.world.width + 3] = blockToId('bedrock')
+    state.world.cells[0 * state.world.width + 4] = blockToId('bedrock')
+    state.world.cells[2 * state.world.width + 4] = blockToId('bedrock')
+    state.world.cells[2 * state.world.width + 3] = blockToId('bedrock')
     state.world.buildings.push(
       {
         id: 'unreachable-access-ladder',
@@ -1176,7 +1130,7 @@ describe('stepSimulation', () => {
   it('reports an unroutable access request instead of silently idling', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.dwarves = []
-    state.world.cells[0] = { block: 'dirt', biome: 'meadow' }
+    state.world.cells[0] = blockToId('dirt')
     state.accessRequests = [
       {
         id: 'unroutable-access',
@@ -1355,9 +1309,9 @@ describe('stepSimulation', () => {
 
   it('assigns a builder and completes a reserved outpost order', () => {
     const state = makeState(['.....', '.....', '.....'])
-    state.world.cells[0] = { block: 'stone', biome: 'meadow' }
-    state.world.cells[3] = { block: 'stone', biome: 'meadow' }
-    state.world.cells[4] = { block: 'stone', biome: 'meadow' }
+    state.world.cells[0] = blockToId('stone')
+    state.world.cells[3] = blockToId('stone')
+    state.world.cells[4] = blockToId('stone')
     state.inventory.stone = 12
     state.world.buildings = state.world.buildings.filter(
       (building) =>

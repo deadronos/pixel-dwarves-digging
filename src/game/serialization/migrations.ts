@@ -1,3 +1,9 @@
+import {
+  BLOCK_IDS,
+  CellDataError,
+  cellsFromLegacyArray,
+  decodeCells,
+} from '../blocks'
 import { BUILDING_DEFINITIONS, STARTER_BOOTSTRAP_CLEAR_COUNT } from '../content'
 import { recoverOrphanedAccessOrders } from '../logistics/access'
 import {
@@ -53,16 +59,48 @@ function normalizeSafety(
   }
 }
 
+/**
+ * Schema 5 stores cells as a base64 string; older schemas store an array of
+ * `{ block, biome }` objects. Both become a Uint8Array of block ids here
+ * (a Uint8Array passes through, as after the V1 migration). Throws
+ * CellDataError, reported by parseSave, on corrupt terrain data.
+ */
+function resolveCells(world: {
+  width: number
+  height: number
+  cells?: unknown
+}): Uint8Array {
+  const expectedLength = world.width * world.height
+  if (world.cells instanceof Uint8Array) {
+    if (world.cells.length !== expectedLength) {
+      throw new CellDataError(
+        `Save terrain data has ${world.cells.length} cells, expected ${expectedLength}.`,
+      )
+    }
+    return world.cells.slice()
+  }
+  return Array.isArray(world.cells)
+    ? cellsFromLegacyArray(world.cells, expectedLength)
+    : decodeCells(world.cells, expectedLength)
+}
+
 export function migrateV1State(value: unknown): SimulationState | null {
   if (!isRecord(value)) return null
   const { saveStatus: _straySaveStatus, ...cleanValue } = value
   const world = cleanValue.world
   if (
     !isRecord(world) ||
+    typeof world.width !== 'number' ||
+    typeof world.height !== 'number'
+  ) {
+    return null
+  }
+  const cells = resolveCells(world as { width: number; height: number })
+  if (
     !isRecord(cleanValue.inventory) ||
     !isSimulationState({
       ...cleanValue,
-      world: { ...world, buildings: [] },
+      world: { ...world, cells, buildings: [] },
       constructionOrders: [],
       constructionPolicy: 'balanced',
       accessRequests: [],
@@ -101,6 +139,7 @@ export function migrateV1State(value: unknown): SimulationState | null {
     ...(cleanValue as SimulationState),
     world: {
       ...(world as SimulationState['world']),
+      cells,
       buildings: [stockpile],
     },
     dwarves: (cleanValue.dwarves as SimulationState['dwarves']).map(
@@ -127,18 +166,16 @@ export function normalizeV3State(
   if (
     !isRecord(world) ||
     typeof world.width !== 'number' ||
-    !Array.isArray(world.cells)
+    typeof world.height !== 'number'
   ) {
     return null
   }
 
   const width = world.width
-  if (typeof width !== 'number') return null
-  const cells = world.cells.map((cell, index) =>
-    addBedrockFloor && Math.floor(index / width) === 0 && isRecord(cell)
-      ? { ...cell, block: 'bedrock' as const }
-      : cell,
-  )
+  const cells = resolveCells(world as { width: number; height: number })
+  if (addBedrockFloor) {
+    cells.fill(BLOCK_IDS.bedrock, 0, Math.min(width, cells.length))
+  }
   const { saveStatus: _straySaveStatus, ...cleanValue } = value
   const normalized = {
     ...cleanValue,

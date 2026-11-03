@@ -63,15 +63,11 @@ export type SafetyState = {
   noProgressTicks?: number
 }
 
-export type Cell = {
-  block: BlockType
-  biome: BiomeId
-}
-
 export type World = {
   width: number
   height: number
-  cells: Cell[]
+  /** One byte per cell (row-major, y=0 is the bottom row); see `blocks.ts`. */
+  cells: Uint8Array
   seed: string
   runNumber: number
   surfaceHeights: number[]
@@ -194,9 +190,12 @@ export type UpgradeLevels = {
 
 export type PrestigeMode = 'full-clear' | 'relic'
 
+/** On-disk shape: identical to the live state except cells are base64. */
 export type SerializedSave = {
   schemaVersion: number
-  state: SimulationState
+  state: Omit<SimulationState, 'world'> & {
+    world: Omit<World, 'cells'> & { cells: string }
+  }
 }
 
 export const EMPTY_INVENTORY: Inventory = {

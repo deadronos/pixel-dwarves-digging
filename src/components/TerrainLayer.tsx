@@ -3,7 +3,7 @@ import { memo, useLayoutEffect, useMemo, useRef } from 'react'
 import type { InstancedMesh } from 'three'
 import { Matrix4 } from 'three'
 import { BLOCK_COLORS } from '../game/content'
-import type { Cell, World } from '../game/types'
+import type { World } from '../game/types'
 import {
   createTerrainPositions,
   RENDERED_BLOCKS,
@@ -58,7 +58,7 @@ const BlockInstances = memo(function BlockInstances({
 
 const TerrainLayer = memo(function TerrainLayer({ world }: TerrainLayerProps) {
   const positionCache = useRef<{
-    cells: Cell[]
+    cells: Uint8Array
     width: number
     positions: TerrainPositions
   } | null>(null)

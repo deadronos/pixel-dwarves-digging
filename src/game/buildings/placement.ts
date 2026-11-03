@@ -1,3 +1,4 @@
+import { blockAt } from '../blocks'
 import { BUILDING_DEFINITIONS } from '../content'
 import type { BuildingType, Position, World } from '../types'
 
@@ -42,8 +43,7 @@ function hasSupport(world: World, position: Position): boolean {
   ) {
     return false
   }
-  const cell = world.cells[below.y * world.width + below.x]
-  if (cell.block !== 'air') return true
+  if (blockAt(world, below.y * world.width + below.x) !== 'air') return true
 
   return world.buildings.some(
     (building) =>
@@ -78,7 +78,7 @@ function hasHorizontalAnchor(world: World, position: Position): boolean {
       return false
     }
     return (
-      world.cells[neighbor.y * world.width + neighbor.x].block !== 'air' ||
+      blockAt(world, neighbor.y * world.width + neighbor.x) !== 'air' ||
       hasCompletedBuildingAt(world, neighbor)
     )
   })
@@ -103,8 +103,9 @@ function hasLadderAnchor(world: World, position: Position): boolean {
     ) {
       return false
     }
-    const cell = world.cells[neighbor.y * world.width + neighbor.x]
-    if (cell.block !== 'air') return true
+    if (blockAt(world, neighbor.y * world.width + neighbor.x) !== 'air') {
+      return true
+    }
     if (hasCompletedBuildingAt(world, neighbor)) return true
     return (
       offsetX === 0 &&
@@ -157,7 +158,7 @@ export function canPlaceBuilding(
     cellsFor(footprint).some(
       (cell) =>
         occupied.has(`${cell.x}:${cell.y}`) ||
-        world.cells[cell.y * world.width + cell.x].block !== 'air',
+        blockAt(world, cell.y * world.width + cell.x) !== 'air',
     )
   ) {
     return false

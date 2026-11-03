@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { BLOCK_ID_LIST, blockToId, getBlock } from './blocks'
 import {
   BIOME_IDS,
   MINEABLE_BLOCKS,
@@ -10,7 +11,6 @@ import {
   countMinerals,
   countSolids,
   generateWorld,
-  getCell,
   isSolid,
 } from './generation'
 import { findReachableExposedSolids } from './pathfinding'
@@ -39,29 +39,25 @@ describe('generateWorld', () => {
     expect(world.surfaceHeights).toHaveLength(world.width)
 
     for (const x of [8, 40, 72, 104, 136]) {
-      const surface = getCell(world, x, world.surfaceHeights[x])
-      expect(surface.biome).toBe(world.biomes[x])
-      expect(isSolid(surface.block)).toBe(true)
+      expect(isSolid(getBlock(world, x, world.surfaceHeights[x]))).toBe(true)
     }
   })
 
   it('leaves a walkable start pocket beside an exposed low-tier block', () => {
     const world = generateWorld('starter-pocket', 2)
-    const start = getCell(world, world.start.x, world.start.y)
+    const start = getBlock(world, world.start.x, world.start.y)
     const adjacent = [
-      getCell(world, world.start.x + 1, world.start.y),
-      getCell(world, world.start.x - 1, world.start.y),
-      getCell(world, world.start.x, world.start.y + 1),
-      getCell(world, world.start.x, world.start.y - 1),
+      getBlock(world, world.start.x + 1, world.start.y),
+      getBlock(world, world.start.x - 1, world.start.y),
+      getBlock(world, world.start.x, world.start.y + 1),
+      getBlock(world, world.start.x, world.start.y - 1),
     ]
 
-    expect(start.block).toBe('air')
-    expect(getCell(world, world.stockpile.x, world.stockpile.y).block).toBe(
-      'air',
+    expect(start).toBe('air')
+    expect(getBlock(world, world.stockpile.x, world.stockpile.y)).toBe('air')
+    expect(adjacent.some((block) => block === 'dirt' || block === 'sand')).toBe(
+      true,
     )
-    expect(
-      adjacent.some((cell) => cell.block === 'dirt' || cell.block === 'sand'),
-    ).toBe(true)
   })
 
   it('creates a deterministic visible level-one stockpile in the starter pocket', () => {
@@ -82,7 +78,7 @@ describe('generateWorld', () => {
     )
     expect(stockpile?.position).toEqual({ x: 11, y: world.start.y })
     expect(
-      world.cells.filter((cell) => cell.block === 'air').length,
+      world.cells.filter((id) => id === blockToId('air')).length,
     ).toBeGreaterThan(0)
   })
 
@@ -90,16 +86,16 @@ describe('generateWorld', () => {
     const world = generateWorld('starter-stone', 1)
 
     for (let offset = 0; offset < STARTER_STONE_VEIN_LENGTH; offset += 1) {
-      expect(
-        getCell(world, world.start.x + 3 + offset, world.start.y).block,
-      ).toBe('stone')
+      expect(getBlock(world, world.start.x + 3 + offset, world.start.y)).toBe(
+        'stone',
+      )
     }
   })
 
   it('places at least one mineral in a generated map', () => {
     const world = generateWorld('mineral-pocket', 8)
-    const mineralCount = world.cells.filter((cell) =>
-      MINERAL_BLOCKS.has(cell.block),
+    const mineralCount = world.cells.filter((id) =>
+      MINERAL_BLOCKS.has(BLOCK_ID_LIST[id]),
     ).length
 
     expect(mineralCount).toBeGreaterThan(0)
@@ -108,15 +104,15 @@ describe('generateWorld', () => {
   it('generates an indestructible bedrock floor beneath the mineable world', () => {
     const world = generateWorld('bedrock-floor', 1)
 
-    expect(getCell(world, 0, 0).block).toBe('bedrock')
+    expect(getBlock(world, 0, 0)).toBe('bedrock')
     expect(isSolid('bedrock')).toBe(true)
     expect(MINEABLE_BLOCKS).not.toContain('bedrock')
   })
 
   it('does not count bedrock as remaining clearable terrain', () => {
     const world = generateWorld('bedrock-count', 1)
-    world.cells = world.cells.map((cell) => ({ ...cell, block: 'air' }))
-    world.cells[0] = { ...world.cells[0], block: 'bedrock' }
+    world.cells.fill(blockToId('air'))
+    world.cells[0] = blockToId('bedrock')
 
     expect(countSolids(world)).toBe(0)
   })
@@ -133,7 +129,7 @@ describe('generateWorld', () => {
       expect(
         reachable.some(
           ({ target }) =>
-            getCell(initial.world, target.x, target.y).block === 'stone',
+            getBlock(initial.world, target.x, target.y) === 'stone',
         ),
         `${seed} should expose a reachable starter stone block`,
       ).toBe(true)

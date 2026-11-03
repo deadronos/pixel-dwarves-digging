@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { blockToId } from './blocks'
 import {
   canPlaceBuilding,
   completeConstruction,
@@ -14,15 +15,12 @@ function makeBuildingState(): SimulationState {
   const height = 6
   const cells = Array.from({ length: width * height }, (_, index) => {
     const y = Math.floor(index / width)
-    return {
-      block: y <= 2 ? ('stone' as const) : ('air' as const),
-      biome: 'meadow' as const,
-    }
+    return blockToId(y <= 2 ? ('stone' as const) : ('air' as const))
   })
   const world: World = {
     width,
     height,
-    cells,
+    cells: Uint8Array.from(cells),
     seed: 'building-fixture',
     runNumber: 1,
     surfaceHeights: Array(width).fill(2),
@@ -170,12 +168,9 @@ describe('building helpers', () => {
     ).toBe(false)
     const ladderWorld = {
       ...state.world,
-      cells: state.world.cells.map((cell, index) =>
-        index === 3 * state.world.width + 2
-          ? { ...cell, block: 'stone' as const }
-          : cell,
-      ),
+      cells: state.world.cells.slice(),
     }
+    ladderWorld.cells[3 * state.world.width + 2] = blockToId('stone')
     expect(
       canPlaceBuilding(ladderWorld, {
         type: 'ladder',
@@ -202,6 +197,7 @@ describe('building helpers', () => {
       ],
     }
 
+    ladderWorld.cells[3 * state.world.width + 2] = blockToId('stone')
     expect(
       canPlaceBuilding(ladderWorld, {
         type: 'ladder',
