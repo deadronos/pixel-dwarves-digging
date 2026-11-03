@@ -1,9 +1,10 @@
 # Archive
 
-Historical design notes for work that has shipped. Every GitHub issue these
-files describe is closed. Keep them for context, but don't treat them as
-current: the code, tests and [`../game-design.md`](../game-design.md) are the
-source of truth.
+Historical design notes for work that has shipped. Most issues these files
+describe are closed, but a few review findings are still open (for example
+#14), so check GitHub before relying on them. Keep them for context, not as
+current guidance: the code, tests and [`../game-design.md`](../game-design.md)
+are the source of truth.
 
 | Folder | Contents |
 |---|---|

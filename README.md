@@ -11,15 +11,16 @@ React 19, TypeScript 7, Vite and React Three Fiber.
 
 ## Play
 
-The colony runs itself at 10 ticks per second. Drag to pan and scroll to zoom
-the terrain; the camera follows active dwarves until you move it.
+The colony runs itself at 10 ticks per second. Right-drag (or Shift-drag) to
+pan and scroll to zoom; on touch, use two fingers. The camera follows active
+dwarves. After you pan or zoom, following pauses for about 2.5 s, then resumes.
 
 - **Bottom bar:** pause, speed (1×/2×/4×), and directives for work, building,
   hauling and material priority.
 - **Inspector:** colony and storage status (Colony tab), plus prestige and
   permanent upgrades (Upgrades tab).
 - **Settings (⚙):** save, export/import a JSON save, new run (keeps upgrades),
-  reset everything, and toggle the follow camera.
+  reset everything, and toggle the dynamic camera.
 
 Clear every mineable block for a full prestige, or find a relic for a smaller
 early reset. See [docs/game-design.md](docs/game-design.md) for the full rules.

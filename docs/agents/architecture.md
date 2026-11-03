@@ -21,5 +21,6 @@ connects the two.
 
 Tests sit next to the code as `*.test.ts(x)`, using Vitest with jsdom.
 Lint and formatting use Biome (single quotes, no semicolons, trailing commas).
+Don't add ESLint: typescript-eslint doesn't support TypeScript 7 yet.
 
 Keep this table current when you add, move or remove a module.

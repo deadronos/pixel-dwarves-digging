@@ -6,7 +6,9 @@ typecheck but fails, or silently corrupts, at runtime.
 - **Deterministic.** Generation and ticks use the seeded RNG in
   `src/game/rng.ts`. `Math.random()` is only for picking a new run's seed.
 - **Immutable, JSON-compatible state.** Return new objects; don't mutate
-  `SimulationState`. No classes, `Map`s or functions in state.
+  `SimulationState`. No classes, `Map`s or functions in state. The one
+  exception is `world.topologyKey`, an identity object used only for cache
+  lookups.
 - **Walkability changes need a new topology key.** Pathfinding and targeting
   caches are keyed on `world.topologyKey`. Anything that changes walkability
   (clearing cells, completing a building) must set a new one with
@@ -14,7 +16,8 @@ typecheck but fails, or silently corrupts, at runtime.
   Inventory-only and planned-building changes must keep the old key.
 - **Save shape changes need a migration.** Bump `SAVE_VERSION`, add a step in
   `serialization/migrations.ts`, and test loading the previous version.
-- **Performance budgets are guards.** `*.performance.test.ts` enforce time
-  budgets. Fix the slowdown; don't loosen the budget.
+- **Performance budgets are guards.** A tick should take well under 100 ms
+  so 4× speed keeps headroom for rendering. `*.performance.test.ts` enforce
+  time budgets. Fix the slowdown; don't loosen the budget.
 - **Gameplay changes update the design doc.** Keep `docs/game-design.md` in
   step with rules and balance in `content.ts` and `engine/`.

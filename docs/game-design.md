@@ -11,16 +11,20 @@ routes and biome order all matter.
 
 ## World
 
-Runs are generated deterministically from a seed and run number. The map is
-split into horizontal biome bands:
+Runs are generated deterministically from a seed and run number. Five biomes
+run left to right across the map, each with its own soil layers:
 
-| Biome | Blocks |
+| Biome | Surface → subsoil → deep |
 |---|---|
-| Meadow | grass, dirt, stone, iron, crystal |
-| Desert | sand, sandstone, stone, coal, iron |
-| Red-rock | red stone, compact stone, coal, iron, relics |
-| Frozen | snow, packed soil, ice, stone, crystal |
-| Mushroom | mushroom caps, loam, clay, stone, rare relics |
+| Meadow | grass, dirt, stone |
+| Desert | sand, sandstone, stone |
+| Red-rock | red stone, stone |
+| Frozen | snow, packed soil, ice, stone |
+| Mushroom | mushroom cap, loam, clay, stone |
+
+Below the subsoil, coal, iron, crystal and relic veins appear in every biome
+at the same odds. Relics only appear in the deeper part of the map, and
+prospecting upgrades raise the mineral odds.
 
 A permanent one-cell bedrock floor can't be mined and doesn't count toward a
 full clear. Every run starts with three dwarves, a surface start pocket, a
@@ -40,7 +44,9 @@ On each fixed simulation tick, a dwarf:
 **Movement.** Dwarves only walk through supported air. Solid terrain,
 stockpile floors, outposts and bridges support horizontal movement; ladders
 support vertical movement. A dwarf that loses its support falls to the
-nearest supported cell or becomes stranded until access is restored.
+nearest supported cell or becomes stranded until access is restored. A
+dwarf that loses its route first secures the material it carries, and may
+place one anchored emergency ladder from carried or reserved stone.
 
 **Safety.** Before accepting a dig, a dwarf simulates the block becoming air
 and checks that it still has support and a route to storage. Unsafe targets
@@ -71,7 +77,7 @@ inventory and run clock but keeps currency and permanent upgrades:
 
 - **Stronger tools:** shorter dig cycles.
 - **Lightweight gear:** faster travel.
-- **Bigger satchels:** faster hauling.
+- **Bigger satchels:** faster travel while hauling.
 - **Extra bunk:** one more starting dwarf.
 - **Better prospecting:** better mineral and relic odds.
 
