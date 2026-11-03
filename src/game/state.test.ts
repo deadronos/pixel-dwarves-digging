@@ -191,6 +191,24 @@ describe('createGameStore', () => {
     expect(store.getState().saveStatus).toBe('DIRTY')
   })
 
+  it('keeps saveStatus stable between autosaves and flips it on the autosave tick', () => {
+    const store = createGameStore('save-status-churn-seed')
+    store.getState().saveLocally()
+
+    store.getState().tickSimulation()
+    expect(store.getState().saveStatus).toBe('DIRTY')
+    store.getState().tickSimulation()
+    expect(store.getState().saveStatus).toBe('DIRTY')
+
+    while (store.getState().simulation.tick < 20) {
+      store.getState().tickSimulation()
+    }
+    expect(store.getState().saveStatus).toBe('SAVED')
+
+    store.getState().tickSimulation()
+    expect(store.getState().saveStatus).toBe('DIRTY')
+  })
+
   it('marks the top-level save status as dirty when updating work preference', () => {
     const store = createGameStore('policy-work-pref-seed')
     store.getState().saveLocally()
