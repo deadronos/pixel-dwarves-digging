@@ -8,8 +8,18 @@ import {
   useRef,
 } from 'react'
 import { DoubleSide, type Group, type Texture } from 'three'
+import { BLOCK_COLORS } from '../game/content'
 import { SIMULATION_TICK_MS } from '../game/state'
-import type { DwarfState, UpgradeLevels } from '../game/types'
+import type {
+  DwarfState,
+  MineableBlockType,
+  UpgradeLevels,
+} from '../game/types'
+import {
+  BLOCK_CHIP_HEIGHT,
+  BLOCK_CHIP_PLANE_SIZE,
+  createBlockChipTexture,
+} from './blockTexture'
 import {
   type DwarfTrack,
   isAnyTrackMoving,
@@ -67,6 +77,8 @@ type DwarfVisual = {
 type DwarfActorProps = {
   id: string
   color: string
+  /** Block being hauled, or null. Drives the carried chip above the head. */
+  carrying: MineableBlockType | null
   register: (
     id: string,
     visual: { group: Group; texture: Texture } | null,
@@ -74,17 +86,26 @@ type DwarfActorProps = {
 }
 
 /**
- * One dwarf: a single quad showing one frame of the generated sprite sheet.
- * Position, facing and frame are driven imperatively by the layer's render
- * loop, so a simulation tick does not have to re-render (or re-mount) it.
+ * One dwarf: a single quad showing one frame of the generated sprite sheet,
+ * plus the block chip when it is hauling something. Position, facing and
+ * frame are driven imperatively by the layer's render loop, so a simulation
+ * tick does not have to re-render (or re-mount) it.
  */
 const DwarfActor = memo(function DwarfActor({
   id,
   color,
+  carrying,
   register,
 }: DwarfActorProps) {
   const texture = useMemo(() => createDwarfSpriteTexture(color), [color])
   useEffect(() => () => texture.dispose(), [texture])
+
+  const chipColor = carrying ? BLOCK_COLORS[carrying] : null
+  const chipTexture = useMemo(
+    () => (chipColor ? createBlockChipTexture(chipColor) : null),
+    [chipColor],
+  )
+  useEffect(() => () => chipTexture?.dispose(), [chipTexture])
 
   const attach = useCallback(
     (group: Group | null) => {
@@ -108,6 +129,21 @@ const DwarfActor = memo(function DwarfActor({
           toneMapped={false}
         />
       </mesh>
+      {chipTexture ? (
+        // Above the raised hands of the carry pose, in the hauled block's own
+        // terrain colour so the load is identifiable at a glance.
+        <mesh position={[0, BLOCK_CHIP_HEIGHT - 0.5, 0.01]}>
+          <planeGeometry
+            args={[BLOCK_CHIP_PLANE_SIZE, BLOCK_CHIP_PLANE_SIZE]}
+          />
+          <meshBasicMaterial
+            map={chipTexture}
+            alphaTest={0.5}
+            side={DoubleSide}
+            toneMapped={false}
+          />
+        </mesh>
+      ) : null}
     </group>
   )
 })
@@ -254,6 +290,7 @@ export default function DwarfLayer({
           key={dwarf.id}
           id={dwarf.id}
           color={DWARF_COLORS[index % DWARF_COLORS.length]}
+          carrying={dwarf.carrying}
           register={register}
         />
       ))}

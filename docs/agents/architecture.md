@@ -22,6 +22,7 @@ connects the two.
 | `src/components/dwarfSprite.ts` | Procedural pixel-art dwarf sprites: the 12 x 17 frame art as character grids, pose/frame/indicator selection, and the RGBA sheet builder. No image assets. `dwarfSprite.test.ts` guards the art grid and the animation maths |
 | `src/components/dwarfTexture.ts` | Turns a generated dwarf sheet into a nearest-filtered `DataTexture` whose window slides along the sheet to show one frame. `DwarfLayer` swaps frames through `texture.offset`, so a dwarf is one mesh and one draw call |
 | `src/components/colorMath.ts` | Shared sRGB colour helpers (hex parsing, darken, mix) used by the sprite and terrain textures |
+| `src/components/MiningLayer.tsx` | Cracks on the block each dwarf is digging; `miningFeedback.ts` holds the pure progress/stage maths and `blockArt.ts` + `blockTexture.ts` the crack and carried-block art. One cut-out quad per active dig, never one per block |
 | `src/components/Hud.tsx`, `Inspector.tsx`, `ControlBar.tsx`, `SettingsModal.tsx` | DOM UI |
 
 Tests sit next to the code as `*.test.ts(x)`, using Vitest with jsdom.

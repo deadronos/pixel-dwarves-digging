@@ -18,6 +18,7 @@ import {
   syncCameraControlTarget,
 } from './cameraTracking'
 import DwarfLayer from './DwarfLayer'
+import MiningLayer from './MiningLayer'
 import TerrainLayer from './TerrainLayer'
 
 type WorldCanvasProps = {
@@ -140,6 +141,7 @@ function WorldScene({
     <>
       <group position={[-world.width / 2, -world.height / 2, 0]}>
         <TerrainLayer world={world} />
+        <MiningLayer world={world} dwarves={dwarves} upgrades={upgrades} />
         <BuildingLayer world={world} />
         <DwarfLayer
           dwarves={dwarves}
