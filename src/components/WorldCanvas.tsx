@@ -171,6 +171,9 @@ export default function WorldCanvas(props: WorldCanvasProps) {
       <Canvas
         orthographic
         camera={{ position: [0, 0, 100], zoom: 9 }}
+        // `flat` disables tone mapping, so `BLOCK_COLORS` values reach the
+        // screen unchanged and the HUD swatches match the map exactly.
+        flat
         dpr={[1, 1.5]}
         frameloop="demand"
         gl={{ antialias: false }}

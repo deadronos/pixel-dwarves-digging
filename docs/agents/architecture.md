@@ -16,8 +16,8 @@ connects the two.
 | `src/game/serialization.ts` | Versioned save envelope; `serialization/` has migrations and validation |
 | `src/game/state.ts` | Zustand store, 100 ms tick timer, local persistence |
 | `src/game/selectors.ts` | Cached view models for the HUD and Inspector |
-| `src/game/content.ts` | Tunable data: blocks, colours, dig times, building costs |
-| `src/components/WorldCanvas.tsx` | R3F canvas, camera and on-demand rendering; `*Layer.tsx` draw terrain, buildings and dwarves |
+| `src/game/content.ts` | Tunable data: blocks, colours (blocks and buildings), dig times, building costs |
+| `src/components/WorldCanvas.tsx` | R3F canvas, camera and on-demand rendering; `*Layer.tsx` draw terrain, buildings and dwarves. The canvas is `flat` (no tone mapping), so palette hex values are the literal on-screen colours. `palette.test.ts` enforces minimum perceptual distance between every block and building colour |
 | `src/components/Hud.tsx`, `Inspector.tsx`, `ControlBar.tsx`, `SettingsModal.tsx` | DOM UI |
 
 Tests sit next to the code as `*.test.ts(x)`, using Vitest with jsdom.

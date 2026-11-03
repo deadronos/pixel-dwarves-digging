@@ -1,13 +1,6 @@
 import { memo } from 'react'
+import { BUILDING_COLORS } from '../game/content'
 import type { BuildingState, World } from '../game/types'
-
-const BUILDING_COLORS: Record<BuildingState['type'], string> = {
-  stockpile: '#b89d64',
-  outpost: '#75b7ae',
-  depot: '#8ebc75',
-  bridge: '#a27b53',
-  ladder: '#dfbd62',
-}
 
 const BuildingMesh = memo(function BuildingMesh({
   building,
