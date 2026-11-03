@@ -17,6 +17,9 @@ function WorldStage({
 }) {
   const world = useGameStore((state) => state.simulation.world)
   const dwarves = useGameStore((state) => state.simulation.dwarves)
+  const upgrades = useGameStore((state) => state.simulation.upgrades)
+  const speed = useGameStore((state) => state.speed)
+  const paused = useGameStore((state) => state.paused)
   const dynamicCameraEnabled = useGameStore(
     (state) => state.dynamicCameraEnabled,
   )
@@ -24,6 +27,9 @@ function WorldStage({
     <WorldCanvas
       world={world}
       dwarves={dwarves}
+      upgrades={upgrades}
+      speed={speed}
+      paused={paused}
       dynamicCameraEnabled={dynamicCameraEnabled}
       onTemporaryPauseChange={onTemporaryPauseChange}
     />

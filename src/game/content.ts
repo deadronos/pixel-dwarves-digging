@@ -1,6 +1,7 @@
 import type {
   BiomeId,
   BlockType,
+  BuildingType,
   CommonBuildingMaterial,
   Inventory,
   MineableBlockType,
@@ -153,25 +154,48 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   relic: 'Relic',
 }
 
+/**
+ * Terrain palette. These are the literal on-screen colours: the canvas
+ * renders without tone mapping, so a block appears exactly as written here
+ * (and the HUD swatches match the map). `palette.test.ts` enforces that every
+ * pair stays perceptually distinct — re-tune in OKLab, not by eye.
+ *
+ * Minerals sit away from the soils on lightness *and* chroma, so ore reads at
+ * a glance instead of by hue alone: coal is a dark saturated slate, iron a
+ * rust orange, crystal a saturated teal and relic a saturated gold.
+ */
 export const BLOCK_COLORS: Record<BlockType, string> = {
   air: '#20251f',
-  bedrock: '#171b1a',
-  grass: '#6f9464',
-  dirt: '#87644c',
-  sand: '#c8a36b',
-  sandstone: '#a27b53',
-  'red-stone': '#9b5545',
-  snow: '#c8d6ce',
-  'packed-soil': '#73818b',
-  ice: '#7ca8b7',
-  mushroom: '#a76c88',
-  loam: '#725c61',
-  clay: '#a16a62',
-  stone: '#59615c',
-  coal: '#2d3330',
-  iron: '#a66c51',
-  crystal: '#75b7ae',
-  relic: '#dfbd62',
+  bedrock: '#0b0f11',
+  grass: '#71a66e',
+  dirt: '#8d6841',
+  sand: '#cfac64',
+  sandstone: '#a1896c',
+  'red-stone': '#98352c',
+  snow: '#eef4fb',
+  'packed-soil': '#657d94',
+  ice: '#6cc7dc',
+  mushroom: '#bd6f9b',
+  loam: '#684258',
+  clay: '#dcb1b2',
+  stone: '#606863',
+  coal: '#383955',
+  iron: '#bf623d',
+  crystal: '#1ed4ae',
+  relic: '#eec94d',
+}
+
+/**
+ * Building colours. Kept out of `BLOCK_COLORS` on purpose: a building must
+ * never reuse a block colour, and the palette test checks that the two sets
+ * stay apart.
+ */
+export const BUILDING_COLORS: Record<BuildingType, string> = {
+  stockpile: '#e4d9b4',
+  outpost: '#4d6eba',
+  depot: '#9dc664',
+  bridge: '#82a2c3',
+  ladder: '#997fd3',
 }
 
 export const DIG_DURATION: Record<BlockType, number> = {
