@@ -52,7 +52,9 @@ export function isBuilding(
 export function isTask(value: unknown, width: number, height: number): boolean {
   if (!isRecord(value) || !Array.isArray(value.path)) return false
   if (
-    !['idle', 'dig', 'haul', 'build'].includes(value.kind as string) ||
+    !['idle', 'dig', 'haul', 'build', 'anchor'].includes(
+      value.kind as string,
+    ) ||
     !isNonNegativeInteger(value.progress) ||
     !value.path.every((position) => isPosition(position, width, height))
   ) {
@@ -111,6 +113,15 @@ export function isTask(value: unknown, width: number, height: number): boolean {
       typeof value.block === 'string' &&
       typeof value.buildingId === 'string' &&
       typeof value.constructionOrderId === 'string'
+    )
+  }
+
+  if (value.kind === 'anchor') {
+    return (
+      value.target !== undefined &&
+      typeof value.block === 'string' &&
+      value.buildingId === undefined &&
+      value.constructionOrderId === undefined
     )
   }
 

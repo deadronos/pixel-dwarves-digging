@@ -7,7 +7,8 @@ connects the two.
 ## Simulation
 
 - `src/game/engine.ts` — tick orchestrator; `engine/` has targeting, access
-  requests, recovery and per-task advancement
+  requests, recovery and per-task advancement (dig, haul, build, and the
+  anchor task that rebuilds a return ladder after a straight-down dig)
 - `src/game/blocks.ts` — stable block ids, `getBlock`/`blockAt` accessors, cell
   encode/decode for saves
 - `src/game/generation.ts` — deterministic world generation and cell helpers

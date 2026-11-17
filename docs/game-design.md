@@ -52,9 +52,12 @@ place one anchored emergency ladder from carried or reserved stone.
 and checks that it still has support and a route to storage. Unsafe targets
 become access requests instead. The colony prefers a safe side tunnel or
 stair-step route. If a shaft or gap needs infrastructure, builders reserve
-stone and build an anchored ladder or bridge first. Unfunded requests wait
-visibly for stone rather than deadlocking. New colonies start in a short
-bootstrap phase that protects the ground under the stockpile and start pocket.
+stone and build an anchored ladder or bridge first. A dig straight down that
+would drop a dwarf below its route still goes ahead: the dwarf mines, then
+anchors the return ladder over a few ticks before hauling its load out, so the
+descent is safe but not instant. Unfunded requests wait visibly for stone
+rather than deadlocking. New colonies start in a short bootstrap phase that
+protects the ground under the stockpile and start pocket.
 
 **Buildings.** Storage is physical and finite. Any dwarf can become a
 builder: builders reserve stone, carry it to a planned site and build bridges,

@@ -49,9 +49,33 @@ export function advanceDig(
     if (!safety.safe || !safety.storage) {
       return unchanged({ ...dwarf, task: idleTask() }, state.world)
     }
+    const haulOrigin = safety.landing ?? dwarf.position
+
+    // A straight-down dig drops the dwarf below its route to storage, so the
+    // safety pass planned a return ladder. Mine first, then anchor it over a
+    // few ticks: the descent stays safe, but it is no longer instant.
+    if (safety.ladderPosition && safety.recoveryMaterial) {
+      return {
+        dwarf: {
+          ...dwarf,
+          position: haulOrigin,
+          carrying: minedBlock,
+          task: {
+            kind: 'anchor',
+            target: safety.ladderPosition,
+            path: [],
+            progress: 0,
+            block: safety.recoveryMaterial,
+          },
+        },
+        world: clearCell(state.world, target),
+        minedBlock,
+        progressed: true,
+      }
+    }
+
     const nextWorld = safety.recoveryWorld ?? clearCell(state.world, target)
     const haulTarget = safety.storage.position
-    const haulOrigin = safety.landing ?? dwarf.position
     const haulPath = findPath(nextWorld, haulOrigin, haulTarget)
     if (!haulPath) {
       return unchanged({ ...dwarf, task: idleTask() }, state.world)

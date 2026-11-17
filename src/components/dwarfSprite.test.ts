@@ -193,6 +193,9 @@ describe('dwarf pose selection', () => {
     expect(
       dwarfPoseFor({ taskKind: 'build', carrying: true, moving: false }),
     ).toBe('work')
+    expect(
+      dwarfPoseFor({ taskKind: 'anchor', carrying: true, moving: false }),
+    ).toBe('work')
   })
 
   it('falls back to carry then idle', () => {
