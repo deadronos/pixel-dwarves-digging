@@ -1,5 +1,9 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand'
-import { STARTER_EMERGENCY_STONE, STARTER_STONE_SUPPLY } from './content'
+import {
+  STARTER_DWARVES,
+  STARTER_EMERGENCY_STONE,
+  STARTER_STONE_SUPPLY,
+} from './content'
 import { stepSimulation } from './engine'
 import { generateWorld, randomStarterSeed } from './generation'
 import {
@@ -97,7 +101,7 @@ export function createInitialSimulation(
   inventory.stone = STARTER_STONE_SUPPLY
   return {
     world,
-    dwarves: createDwarves(world, 3 + upgrades.extraBunks),
+    dwarves: createDwarves(world, STARTER_DWARVES + upgrades.extraBunks),
     inventory,
     policy: {
       ...policy,

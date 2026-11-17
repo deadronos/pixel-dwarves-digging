@@ -190,7 +190,8 @@ function stepOnce(state: SimulationState): SimulationState {
       if (advanced.minedBlock === 'relic') nextState.discoveredRelics += 1
     }
     if (advanced.depositedBlock) {
-      nextState.inventory[advanced.depositedBlock] += 1
+      nextState.inventory[advanced.depositedBlock] +=
+        advanced.depositedCount ?? 1
     }
   }
 

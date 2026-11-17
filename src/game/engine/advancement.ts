@@ -1,3 +1,4 @@
+import { BASE_MOVEMENT_STEPS } from '../content'
 import type { DwarfState, SimulationState } from '../types'
 import { advanceAnchorBuild } from './anchorAdvancement'
 import { advanceBuild } from './buildAdvancement'
@@ -16,9 +17,7 @@ function advanceMovement(
   const task = dwarf.task
   const movementSteps = Math.min(
     task.path.length,
-    1 +
-      state.upgrades.moveSpeed +
-      (task.kind === 'haul' ? state.upgrades.satchel : 0),
+    BASE_MOVEMENT_STEPS + state.upgrades.moveSpeed,
   )
   if (!validPath(state.world, dwarf.position, task.path, movementSteps)) {
     return invalidateTask(state, dwarf)

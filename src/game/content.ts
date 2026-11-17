@@ -15,6 +15,21 @@ export const BUILDING_DEFINITIONS = {
   ladder: { width: 1, height: 1, stone: 1 },
 } as const
 
+/**
+ * Dwarves a fresh colony starts with. Pacing is dominated by travel, so hands
+ * on the frontier matter more than a single dwarf working faster.
+ */
+export const STARTER_DWARVES = 6
+
+/** Cells a dwarf crosses per tick before move-speed upgrades. */
+export const BASE_MOVEMENT_STEPS = 2
+
+/**
+ * Blocks a dwarf carries per haul trip. Bigger satchels add one per level:
+ * travel is the dominant cost, so fewer trips matters more than haul speed.
+ */
+export const BASE_CARRY_CAPACITY = 3
+
 export const BEDROCK_DEPTH = 1
 export const STARTER_BOOTSTRAP_CLEAR_COUNT = 4
 export const STARTER_PROTECTED_RADIUS = 2
@@ -208,20 +223,20 @@ export const BUILD_TICKS_PER_MATERIAL = 6
 export const DIG_DURATION: Record<BlockType, number> = {
   air: 0,
   bedrock: 0,
-  grass: 3,
-  dirt: 5,
-  sand: 4,
-  sandstone: 8,
-  'red-stone': 9,
-  snow: 3,
-  'packed-soil': 6,
-  ice: 7,
-  mushroom: 4,
-  loam: 5,
-  clay: 7,
-  stone: 12,
-  coal: 14,
-  iron: 18,
-  crystal: 24,
-  relic: 30,
+  grass: 2,
+  dirt: 3,
+  sand: 3,
+  sandstone: 5,
+  'red-stone': 6,
+  snow: 2,
+  'packed-soil': 4,
+  ice: 4,
+  mushroom: 3,
+  loam: 3,
+  clay: 4,
+  stone: 7,
+  coal: 8,
+  iron: 11,
+  crystal: 14,
+  relic: 18,
 }

@@ -18,6 +18,7 @@ export type AdvanceResult = {
   world: World
   minedBlock: MineableBlockType | null
   depositedBlock?: MineableBlockType | null
+  depositedCount?: number
   inventory?: SimulationState['inventory']
   constructionOrders?: SimulationState['constructionOrders']
   safety?: SimulationState['safety']
@@ -94,7 +95,16 @@ export function attemptEmergencyRecovery(
     recoveryWorld = consumed.world
     inventory = consumed.inventory
   }
-  const retainedCarriedMaterial = usesCarriedMaterial ? null : dwarf.carrying
+  // Using the carried block for the ladder spends one; the rest of the load stays.
+  const carriedCount = dwarf.carryingCount ?? 1
+  const keepsCarried =
+    !usesCarriedMaterial || (dwarf.carrying !== null && carriedCount > 1)
+  const retainedCarriedMaterial = keepsCarried ? dwarf.carrying : null
+  const retainedCarriedCount = retainedCarriedMaterial
+    ? usesCarriedMaterial
+      ? carriedCount - 1
+      : carriedCount
+    : undefined
   const task = {
     kind: 'haul' as const,
     target: plan.destination.position,
@@ -113,6 +123,9 @@ export function attemptEmergencyRecovery(
       ...dwarf,
       movement: 'grounded',
       carrying: retainedCarriedMaterial,
+      ...(retainedCarriedCount !== undefined
+        ? { carryingCount: retainedCarriedCount }
+        : {}),
       task,
     },
     world: recoveryWorld,

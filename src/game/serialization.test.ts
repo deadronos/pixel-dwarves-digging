@@ -147,6 +147,22 @@ describe('serialization', () => {
     expect(parseSave(serializeState(original))).toEqual({ state: original })
   })
 
+  it('round-trips a multi-block load', () => {
+    const original = makeState()
+    original.dwarves = [
+      {
+        id: 'dwarf-1',
+        position: { x: 0, y: 0 },
+        movement: 'grounded',
+        task: { kind: 'idle', path: [], progress: 0 },
+        carrying: 'dirt',
+        carryingCount: 3,
+      },
+    ]
+
+    expect(parseSave(serializeState(original))).toEqual({ state: original })
+  })
+
   it('round-trips an anchor task', () => {
     const original = makeState()
     original.dwarves = [
