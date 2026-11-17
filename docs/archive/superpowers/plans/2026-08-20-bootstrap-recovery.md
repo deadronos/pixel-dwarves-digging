@@ -13,6 +13,7 @@
 ## Task 1: Add safety state and starter constants
 
 **Files:**
+
 - Modify: `src/game/types.ts`
 - Modify: `src/game/content.ts`
 - Modify: `src/game/state.ts`
@@ -31,6 +32,7 @@
 ## Task 2: Guarantee starter material and protect the starter foundation
 
 **Files:**
+
 - Modify: `src/game/generation.ts`
 - Modify: `src/game/logistics.ts`
 - Test: `src/game/generation.test.ts`
@@ -47,6 +49,7 @@
 ## Task 3: Make access requests wait for affordable material
 
 **Files:**
+
 - Modify: `src/game/types.ts`
 - Modify: `src/game/logistics.ts`
 - Modify: `src/game/engine.ts`
@@ -65,6 +68,7 @@
 ## Task 4: Add emergency ladder self-rescue
 
 **Files:**
+
 - Modify: `src/game/logistics.ts`
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/buildings.ts` if a small completed-building helper is needed
@@ -82,6 +86,7 @@
 ## Task 5: Add safety status and deadlock guard
 
 **Files:**
+
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/logistics.ts`
 - Modify: `src/components/Hud.tsx`
@@ -98,6 +103,7 @@
 ## Task 6: Migrate saves and update documentation
 
 **Files:**
+
 - Modify: `src/game/serialization.ts`
 - Modify: `src/game/serialization.test.ts`
 - Modify: `README.md`
@@ -113,6 +119,7 @@
 ## Task 7: Full verification and browser smoke test
 
 **Files:**
+
 - No additional production files unless verification finds a focused defect.
 
 - [ ] Run `npm test -- --run` and record the full passing count.

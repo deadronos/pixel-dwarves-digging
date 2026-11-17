@@ -39,6 +39,7 @@
 ### Task 1: Bootstrap the Vite application and toolchain
 
 **Files:**
+
 - Create: package.json
 - Create: tsconfig.json
 - Create: tsconfig.node.json
@@ -71,14 +72,15 @@ Run npm install, npm run typecheck, npm run lint, npm test -- --run, and npm run
 
 - [ ] **Step 6: Commit**
 
-    git add package.json package-lock.json tsconfig.json tsconfig.node.json vite.config.ts index.html eslint.config.js src/main.tsx src/App.tsx src/styles.css
-    git commit -m "chore: bootstrap pixel dwarves app"
+  git add package.json package-lock.json tsconfig.json tsconfig.node.json vite.config.ts index.html eslint.config.js src/main.tsx src/App.tsx src/styles.css
+  git commit -m "chore: bootstrap pixel dwarves app"
 
 ---
 
 ### Task 2: Define domain content and deterministic terrain
 
 **Files:**
+
 - Create: src/game/types.ts
 - Create: src/game/rng.ts
 - Create: src/game/content.ts
@@ -88,6 +90,7 @@ Run npm install, npm run typecheck, npm run lint, npm test -- --run, and npm run
 - [ ] **Step 1: Write failing generation tests**
 
 Add tests that assert:
+
 - Same seed and run produces the same map.
 - All requested biome bands exist with matching surface materials.
 - The starting pocket and exposed first work are reachable.
@@ -113,14 +116,15 @@ Run npm test -- src/game/generation.test.ts --run. Expected: all generation test
 
 - [ ] **Step 6: Commit**
 
-    git add src/game/types.ts src/game/rng.ts src/game/content.ts src/game/generation.ts src/game/generation.test.ts
-    git commit -m "feat: add deterministic biome terrain generation"
+  git add src/game/types.ts src/game/rng.ts src/game/content.ts src/game/generation.ts src/game/generation.test.ts
+  git commit -m "feat: add deterministic biome terrain generation"
 
 ---
 
 ### Task 3: Implement pathfinding and autonomous dig/haul simulation
 
 **Files:**
+
 - Create: src/game/pathfinding.ts
 - Create: src/game/engine.ts
 - Test: src/game/pathfinding.test.ts
@@ -129,6 +133,7 @@ Run npm test -- src/game/generation.test.ts --run. Expected: all generation test
 - [ ] **Step 1: Write failing pathfinding and engine tests**
 
 Cover:
+
 - Finds a shortest walkable path around solid blocks.
 - Assigns an exposed block to an idle dwarf.
 - Moves, digs, hauls, and increments global inventory.
@@ -155,14 +160,15 @@ Run npm test -- src/game/pathfinding.test.ts src/game/engine.test.ts --run. Expe
 
 - [ ] **Step 6: Commit**
 
-    git add src/game/pathfinding.ts src/game/engine.ts src/game/pathfinding.test.ts src/game/engine.test.ts
-    git commit -m "feat: simulate autonomous dwarf excavation"
+  git add src/game/pathfinding.ts src/game/engine.ts src/game/pathfinding.test.ts src/game/engine.test.ts
+  git commit -m "feat: simulate autonomous dwarf excavation"
 
 ---
 
 ### Task 4: Add prestige progression and versioned saves
 
 **Files:**
+
 - Create: src/game/progression.ts
 - Create: src/game/serialization.ts
 - Test: src/game/progression.test.ts
@@ -172,6 +178,7 @@ Run npm test -- src/game/pathfinding.test.ts src/game/engine.test.ts --run. Expe
 - [ ] **Step 1: Write failing progression and serialization tests**
 
 Cover:
+
 - Awards a full-clear prestige and preserves permanent upgrades.
 - Allows relic discovery to unlock an early-prestige reward.
 - Rejects a malformed or unsupported save.
@@ -195,20 +202,22 @@ Run npm test -- src/game/progression.test.ts src/game/serialization.test.ts --ru
 
 - [ ] **Step 6: Commit**
 
-    git add src/game/progression.ts src/game/serialization.ts src/game/progression.test.ts src/game/serialization.test.ts src/game/types.ts
-    git commit -m "feat: add prestige and portable saves"
+  git add src/game/progression.ts src/game/serialization.ts src/game/progression.test.ts src/game/serialization.test.ts src/game/types.ts
+  git commit -m "feat: add prestige and portable saves"
 
 ---
 
 ### Task 5: Wire the simulation store and time controls
 
 **Files:**
+
 - Create: src/game/state.ts
 - Test: src/game/state.test.ts
 
 - [ ] **Step 1: Write failing store behavior tests**
 
 Cover:
+
 - Starts a deterministic run with default policies.
 - Advances only when unpaused.
 - Respects 1x, 2x, and 4x speed.
@@ -229,14 +238,15 @@ Run npm test -- src/game/state.test.ts --run. Expected: all store tests pass.
 
 - [ ] **Step 5: Commit**
 
-    git add src/game/state.ts src/game/state.test.ts
-    git commit -m "feat: connect simulation loop and persistence"
+  git add src/game/state.ts src/game/state.test.ts
+  git commit -m "feat: connect simulation loop and persistence"
 
 ---
 
 ### Task 6: Build the R3F world viewport
 
 **Files:**
+
 - Create: src/components/WorldCanvas.tsx
 - Create: src/components/TerrainLayer.tsx
 - Create: src/components/DwarfLayer.tsx
@@ -261,14 +271,15 @@ Run npm run typecheck and npm run build. Expected: both commands exit 0.
 
 - [ ] **Step 5: Commit**
 
-    git add src/components/WorldCanvas.tsx src/components/TerrainLayer.tsx src/components/DwarfLayer.tsx src/App.tsx src/styles.css
-    git commit -m "feat: render the pixel excavation world in r3f"
+  git add src/components/WorldCanvas.tsx src/components/TerrainLayer.tsx src/components/DwarfLayer.tsx src/App.tsx src/styles.css
+  git commit -m "feat: render the pixel excavation world in r3f"
 
 ---
 
 ### Task 7: Build the HUD, policies, controls, inspector, and reset flow
 
 **Files:**
+
 - Create: src/components/Hud.tsx
 - Create: src/components/ControlBar.tsx
 - Create: src/components/Inspector.tsx
@@ -306,14 +317,15 @@ Run npm run typecheck, npm run lint, npm test -- --run, and npm run build. Expec
 
 - [ ] **Step 8: Commit**
 
-    git add src/components/Hud.tsx src/components/ControlBar.tsx src/components/Inspector.tsx src/App.tsx src/styles.css idea.md
-    git commit -m "feat: add autonomous colony controls and hud"
+  git add src/components/Hud.tsx src/components/ControlBar.tsx src/components/Inspector.tsx src/App.tsx src/styles.css idea.md
+  git commit -m "feat: add autonomous colony controls and hud"
 
 ---
 
 ### Task 8: Add browser smoke verification and final documentation
 
 **Files:**
+
 - Create: e2e/smoke.spec.ts if Playwright is available.
 - Create: README.md
 - Modify: package.json only if an e2e script is needed.
@@ -336,6 +348,5 @@ Run git status --short, git diff --stat HEAD~8..HEAD, and git log --oneline -10.
 
 - [ ] **Step 5: Commit**
 
-    git add e2e/smoke.spec.ts README.md package.json
-    git commit -m "test: verify playable pixel dwarves flow"
-
+  git add e2e/smoke.spec.ts README.md package.json
+  git commit -m "test: verify playable pixel dwarves flow"

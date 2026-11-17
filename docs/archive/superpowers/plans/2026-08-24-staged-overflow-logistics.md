@@ -13,6 +13,7 @@
 ### Task 1: Add failing logistics regressions
 
 **Files:**
+
 - Modify: `src/game/logistics.test.ts`
 - Modify: `src/game/engine.test.ts`
 
@@ -35,6 +36,7 @@ Run `npm test -- --run src/game/logistics.test.ts src/game/engine.test.ts` and c
 ### Task 2: Implement the depot domain model and planner
 
 **Files:**
+
 - Modify: `src/game/types.ts`
 - Modify: `src/game/content.ts`
 - Modify: `src/game/logistics.ts`
@@ -67,6 +69,7 @@ Invoke depot planning before outpost planning and rank `capacity` build orders a
 ### Task 3: Render, inspect, and validate saves
 
 **Files:**
+
 - Modify: `src/components/BuildingLayer.tsx`
 - Modify: `src/components/Inspector.tsx`
 - Modify: `src/game/serialization.ts` if depot-specific validation requires an explicit branch
@@ -86,6 +89,7 @@ Run the two modified test files and confirm all new regressions pass.
 ### Task 4: Full verification and browser reproduction
 
 **Files:**
+
 - No source changes expected.
 
 - [ ] **Step 1: Run `npm test -- --run`**

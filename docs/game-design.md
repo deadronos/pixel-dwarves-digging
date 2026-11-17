@@ -14,12 +14,12 @@ routes and biome order all matter.
 Runs are generated deterministically from a seed and run number. Five biomes
 run left to right across the map, each with its own soil layers:
 
-| Biome | Surface → subsoil → deep |
-|---|---|
-| Meadow | grass, dirt, stone |
-| Desert | sand, sandstone, stone |
-| Red-rock | red stone, stone |
-| Frozen | snow, packed soil, ice, stone |
+| Biome    | Surface → subsoil → deep        |
+| -------- | ------------------------------- |
+| Meadow   | grass, dirt, stone              |
+| Desert   | sand, sandstone, stone          |
+| Red-rock | red stone, stone                |
+| Frozen   | snow, packed soil, ice, stone   |
 | Mushroom | mushroom cap, loam, clay, stone |
 
 Below the subsoil, coal, iron, crystal and relic veins appear in every biome

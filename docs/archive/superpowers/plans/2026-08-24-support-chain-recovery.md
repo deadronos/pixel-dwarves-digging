@@ -13,6 +13,7 @@
 ### Task 1: Add eight-direction navigation primitives
 
 **Files:**
+
 - Modify: `src/game/pathfinding.ts`
 - Modify: `src/game/pathfinding.test.ts`
 
@@ -24,10 +25,42 @@ Extend the existing `makeWorld` fixture with tests for a diagonal route and corn
 it('finds a supported diagonal path', () => {
   const world = makeWorld(['#####', '.....', '.....', '#####'])
   world.buildings = [
-    { id: 'bridge-1', type: 'bridge', position: { x: 1, y: 1 }, width: 1, height: 1, level: 1, construction: 'completed' },
-    { id: 'bridge-2', type: 'bridge', position: { x: 2, y: 1 }, width: 1, height: 1, level: 1, construction: 'completed' },
-    { id: 'bridge-3', type: 'bridge', position: { x: 1, y: 2 }, width: 1, height: 1, level: 1, construction: 'completed' },
-    { id: 'bridge-4', type: 'bridge', position: { x: 2, y: 2 }, width: 1, height: 1, level: 1, construction: 'completed' },
+    {
+      id: 'bridge-1',
+      type: 'bridge',
+      position: { x: 1, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    },
+    {
+      id: 'bridge-2',
+      type: 'bridge',
+      position: { x: 2, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    },
+    {
+      id: 'bridge-3',
+      type: 'bridge',
+      position: { x: 1, y: 2 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    },
+    {
+      id: 'bridge-4',
+      type: 'bridge',
+      position: { x: 2, y: 2 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    },
   ]
 
   expect(findPath(world, { x: 1, y: 1 }, { x: 2, y: 2 })).toEqual([
@@ -44,10 +77,42 @@ it('does not move diagonally through a blocked corner', () => {
 it('discovers a diagonally exposed solid target', () => {
   const world = makeWorld(['#####', '.....', '.....', '...d.', '#####'])
   world.buildings = [
-    { id: 'bridge-1', type: 'bridge', position: { x: 1, y: 1 }, width: 1, height: 1, level: 1, construction: 'completed' },
-    { id: 'bridge-2', type: 'bridge', position: { x: 2, y: 1 }, width: 1, height: 1, level: 1, construction: 'completed' },
-    { id: 'bridge-3', type: 'bridge', position: { x: 1, y: 2 }, width: 1, height: 1, level: 1, construction: 'completed' },
-    { id: 'bridge-4', type: 'bridge', position: { x: 2, y: 2 }, width: 1, height: 1, level: 1, construction: 'completed' },
+    {
+      id: 'bridge-1',
+      type: 'bridge',
+      position: { x: 1, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    },
+    {
+      id: 'bridge-2',
+      type: 'bridge',
+      position: { x: 2, y: 1 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    },
+    {
+      id: 'bridge-3',
+      type: 'bridge',
+      position: { x: 1, y: 2 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    },
+    {
+      id: 'bridge-4',
+      type: 'bridge',
+      position: { x: 2, y: 2 },
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed',
+    },
   ]
 
   expect(findReachableExposedSolids(world, { x: 1, y: 1 })).toContainEqual({
@@ -104,6 +169,7 @@ git commit -m "feat: add guarded diagonal navigation"
 ### Task 2: Make recovery ladders legal and plan access while blocked
 
 **Files:**
+
 - Modify: `src/game/buildings.ts`
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/engine.test.ts`
@@ -150,6 +216,7 @@ git commit -m "fix: reopen anchored access recovery while blocked"
 ### Task 3: Model bounded emergency-drop safety
 
 **Files:**
+
 - Modify: `src/game/logistics.ts`
 - Modify: `src/game/logistics.test.ts`
 
@@ -218,6 +285,7 @@ git commit -m "feat: add bounded support-breaking digs"
 ### Task 4: Execute diagonal mining and emergency landings in the engine
 
 **Files:**
+
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/engine.test.ts`
 
@@ -284,6 +352,7 @@ git commit -m "feat: execute diagonal recovery mining"
 ### Task 5: Add the supplied-save regression and finish verification
 
 **Files:**
+
 - Modify: `src/game/engine.test.ts`
 - Modify: `src/game/pathfinding.test.ts`
 - Modify: `src/game/logistics.test.ts`

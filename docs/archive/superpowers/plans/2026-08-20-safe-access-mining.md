@@ -28,6 +28,7 @@
 ### Task 1: Add bedrock and clearable-block semantics
 
 **Files:**
+
 - Modify: `src/game/types.ts`
 - Modify: `src/game/content.ts`
 - Modify: `src/game/generation.ts`
@@ -75,6 +76,7 @@ git commit -m "feat: add indestructible bedrock floor"
 ### Task 2: Add explicit access and task-purpose state
 
 **Files:**
+
 - Modify: `src/game/types.ts`
 - Modify: `src/game/state.ts`
 - Modify: `src/game/progression.ts`
@@ -129,6 +131,7 @@ git commit -m "feat: add access planning state"
 ### Task 3: Add post-dig safety and storage-route checks
 
 **Files:**
+
 - Modify: `src/game/pathfinding.ts`
 - Modify: `src/game/logistics.ts`
 - Modify: `src/game/buildings.ts`
@@ -186,6 +189,7 @@ git commit -m "feat: add post-dig safety checks"
 ### Task 4: Make mining safety-first and preserve haul recovery
 
 **Files:**
+
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/logistics.ts`
 - Test: `src/game/engine.test.ts`
@@ -239,6 +243,7 @@ git commit -m "feat: prevent unsafe mining and recover haulers"
 ### Task 5: Plan stair-step access and access-first construction
 
 **Files:**
+
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/buildings.ts`
 - Modify: `src/game/logistics.ts`
@@ -294,6 +299,7 @@ git commit -m "feat: build access before unsafe excavation"
 ### Task 6: Migrate saves to schema 3
 
 **Files:**
+
 - Modify: `src/game/serialization.ts`
 - Modify: `src/game/state.ts`
 - Test: `src/game/serialization.test.ts`
@@ -339,6 +345,7 @@ git commit -m "feat: migrate saves to schema three"
 ### Task 7: Expose bedrock, access, and recovery in the UI
 
 **Files:**
+
 - Modify: `src/components/TerrainLayer.tsx`
 - Modify: `src/components/Hud.tsx`
 - Modify: `src/components/Inspector.tsx`
@@ -375,6 +382,7 @@ git commit -m "feat: expose mining access status"
 ### Task 8: Full verification and browser smoke test
 
 **Files:**
+
 - Modify: none unless verification finds a defect.
 - Test: all existing simulation tests and browser smoke flow.
 

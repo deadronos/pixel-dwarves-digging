@@ -13,6 +13,7 @@
 ### Task 1: Reproduce and close the bootstrap-pocket deadlock
 
 **Files:**
+
 - Modify: `src/game/generation.ts`
 - Modify: `src/game/generation.test.ts`
 - Modify: `src/game/content.ts` only if a named starter-route constant is needed
@@ -45,6 +46,7 @@ Run `npm test -- --run src/game/generation.test.ts -t "starter|bootstrap|frontie
 ### Task 2: Allow stocked common material to rescue a truly stranded dwarf
 
 **Files:**
+
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/engine.test.ts`
 - Modify: `src/game/logistics.test.ts` if the rescue plan needs a direct logistics regression
@@ -68,6 +70,7 @@ Run `npm test -- --run src/game/engine.test.ts -t "stranded|recovery|rescue"`. E
 ### Task 3: Track per-dwarf liveness and expose recovery stalls
 
 **Files:**
+
 - Modify: `src/game/types.ts`
 - Modify: `src/game/serialization.ts`
 - Modify: `src/game/engine.ts`
@@ -102,6 +105,7 @@ Run `npm test -- --run src/game/engine.test.ts src/game/serialization.test.ts`. 
 ### Task 4: Permit diagonal construction approaches
 
 **Files:**
+
 - Modify: `src/game/pathfinding.ts`
 - Modify: `src/game/pathfinding.test.ts`
 - Modify: `src/game/logistics.test.ts`
@@ -126,6 +130,7 @@ Run `npm test -- --run src/game/pathfinding.test.ts src/game/logistics.test.ts`.
 ### Task 5: Add the deterministic liveness sweep and verify the whole change
 
 **Files:**
+
 - Modify: `src/game/generation.test.ts`
 - Modify: `src/game/engine.test.ts`
 - Modify: `src/game/pathfinding.test.ts`

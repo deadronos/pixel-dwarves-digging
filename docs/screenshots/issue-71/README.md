@@ -3,13 +3,13 @@
 Before/after captures for the visual-polish work, all at a 1440x900 viewport
 and device scale factor 1.
 
-| File | What it shows |
-|---|---|
-| `before-*.png` | `main` at `c85dd42`, before any of this work |
-| `after-part1-*.png` | dwarf sprites (commit 1) |
+| File                | What it shows                                    |
+| ------------------- | ------------------------------------------------ |
+| `before-*.png`      | `main` at `c85dd42`, before any of this work     |
+| `after-part1-*.png` | dwarf sprites (commit 1)                         |
 | `after-part2-*.png` | dig cracks and the carried block chip (commit 2) |
-| `after-part3-*.png` | terrain depth cues (commit 3) |
-| `after-part4-*.png` | building scaffolds (commit 4) |
+| `after-part3-*.png` | terrain depth cues (commit 3)                    |
+| `after-part4-*.png` | building scaffolds (commit 4)                    |
 
 Each set has:
 

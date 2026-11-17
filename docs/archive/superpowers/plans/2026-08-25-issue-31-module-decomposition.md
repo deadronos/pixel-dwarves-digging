@@ -13,6 +13,7 @@
 ### Task 1: Establish the verified baseline and dependency rules
 
 **Files:**
+
 - Modify: no production files
 - Test: existing suite only
 
@@ -41,6 +42,7 @@ No commit is required for this baseline-only task; the approved design and imple
 ### Task 2: Extract logistics subsystems behind the existing facade
 
 **Files:**
+
 - Create: `src/game/logistics/storage.ts`
 - Create: `src/game/logistics/access.ts`
 - Create: `src/game/logistics/safety.ts`
@@ -57,7 +59,9 @@ it('keeps the logistics facade public API intact', () => {
   const state = makeStorageState()
   expect(getAvailableCapacity(state.world)).toBe(120)
   expect(getStorageDiagnostics(state).buildings).toHaveLength(1)
-  expect(assessDigSafety(state, { x: 1, y: 1 }, { x: 2, y: 1 }).safe).toBeTypeOf('boolean')
+  expect(
+    assessDigSafety(state, { x: 1, y: 1 }, { x: 2, y: 1 }).safe,
+  ).toBeTypeOf('boolean')
 })
 ```
 
@@ -107,6 +111,7 @@ git commit -m "refactor: split logistics responsibilities"
 ### Task 3: Extract engine targeting, access requests, and recovery
 
 **Files:**
+
 - Create: `src/game/engine/targeting.ts`
 - Create: `src/game/engine/accessRequests.ts`
 - Create: `src/game/engine/recovery.ts`
@@ -162,6 +167,7 @@ git commit -m "refactor: split engine planning and recovery"
 ### Task 4: Extract serialization validation and migrations
 
 **Files:**
+
 - Create: `src/game/serialization/validation.ts`
 - Create: `src/game/serialization/migrations.ts`
 - Modify: `src/game/serialization.ts`
@@ -203,6 +209,7 @@ git commit -m "refactor: split save validation and migrations"
 ### Task 5: Document boundaries and add focused module coverage
 
 **Files:**
+
 - Modify: `README.md`
 - Create or modify: focused tests beside extracted modules where coverage is currently indirect
 
@@ -232,6 +239,7 @@ git commit -m "docs: describe simulation module boundaries"
 ### Task 6: Final verification and PR preparation
 
 **Files:**
+
 - No production changes expected unless verification exposes a regression.
 
 - [ ] **Step 1: Run all required checks**

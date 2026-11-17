@@ -11,9 +11,9 @@ Vite and React Three Fiber.
 
 ## Read when relevant
 
-| Read | When you are… |
-|---|---|
-| [docs/agents/architecture.md](docs/agents/architecture.md) | finding where code lives, or adding a module |
-| [docs/agents/simulation.md](docs/agents/simulation.md) | changing anything in `src/game/` |
-| [docs/agents/workflow.md](docs/agents/workflow.md) | branching, committing, opening a PR, or writing docs |
-| [docs/game-design.md](docs/game-design.md) | changing gameplay rules or balance |
+| Read                                                       | When you are…                                        |
+| ---------------------------------------------------------- | ---------------------------------------------------- |
+| [docs/agents/architecture.md](docs/agents/architecture.md) | finding where code lives, or adding a module         |
+| [docs/agents/simulation.md](docs/agents/simulation.md)     | changing anything in `src/game/`                     |
+| [docs/agents/workflow.md](docs/agents/workflow.md)         | branching, committing, opening a PR, or writing docs |
+| [docs/game-design.md](docs/game-design.md)                 | changing gameplay rules or balance                   |

@@ -13,6 +13,7 @@
 ### Task 1: Publish the issue and create the issue branch
 
 **Files:**
+
 - Read: `docs/archive/issues/2026-08-20-critical-high-remediation.md`
 - Read: `docs/archive/reviews/2026-08-20-indepth-review.md`
 
@@ -33,6 +34,7 @@ git status --short --branch
 ### Task 2: Lock down generated starter viability
 
 **Files:**
+
 - Test: `src/game/generation.test.ts`
 - Modify: `src/game/generation.ts:76-136`
 
@@ -45,6 +47,7 @@ git status --short --branch
 ### Task 3: Make construction material assignment transactional
 
 **Files:**
+
 - Test: `src/game/engine.test.ts`
 - Modify: `src/game/engine.ts:311-366`, `src/game/engine.ts:595-664`, `src/game/engine.ts:763-806`
 - Modify: `src/game/types.ts` only if an optional persisted claim field is necessary
@@ -60,6 +63,7 @@ git status --short --branch
 ### Task 4: Restore saves during startup and mark changes dirty
 
 **Files:**
+
 - Test: `src/game/state.test.ts`
 - Modify: `src/game/state.ts:106-199`
 - Modify: `src/App.tsx:8-16`
@@ -75,6 +79,7 @@ git status --short --branch
 ### Task 5: Add semantic save validation
 
 **Files:**
+
 - Test: `src/game/serialization.test.ts`
 - Modify: `src/game/serialization.ts:23-233`
 
@@ -87,6 +92,7 @@ git status --short --branch
 ### Task 6: Full verification and handoff
 
 **Files:**
+
 - Modify: `README.md` only if startup save behavior needs documentation correction.
 - Update: `docs/archive/issues/2026-08-20-critical-high-remediation.md` with verification results.
 

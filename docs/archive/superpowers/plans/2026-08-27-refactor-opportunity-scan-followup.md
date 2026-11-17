@@ -13,6 +13,7 @@
 ### Task 1: Establish issue-linked refactor baseline
 
 **Files:**
+
 - Modify: `docs/archive/superpowers/specs/2026-08-27-refactor-opportunity-scan-followup-design.md`
 - Create: `docs/archive/superpowers/plans/2026-08-27-refactor-opportunity-scan-followup.md`
 - Test: existing suite only
@@ -46,6 +47,7 @@ git commit -m "docs: plan refactor opportunity follow-up"
 ### Task 2: Extract shared storage and world-derived helpers
 
 **Files:**
+
 - Create: `src/game/buildings/storage.ts`
 - Modify: `src/game/buildings.ts`, `src/game/logistics/storage.ts`, `src/game/generation.ts`, `src/game/engine.ts`, `src/game/engine/safetyObservation.ts`, `src/components/Hud.tsx`, `src/components/Inspector.tsx`
 - Test: `src/game/buildings.test.ts`, `src/game/logistics.test.ts`, `src/game/generation.test.ts`
@@ -84,6 +86,7 @@ git commit -m "refactor: share storage and world helpers"
 ### Task 3: Deduplicate targeting and path wrappers
 
 **Files:**
+
 - Modify: `src/game/engine/targeting.ts`, `src/game/pathfinding.ts`
 - Test: create `src/game/engine/targeting.test.ts`; modify `src/game/pathfinding.test.ts`
 
@@ -115,6 +118,7 @@ git commit -m "refactor: share targeting and path helpers"
 ### Task 4: Consolidate construction recovery and split expansion modules
 
 **Files:**
+
 - Create: `src/game/logistics/constructionRecovery.ts`, `src/game/logistics/expansionPlanning.ts`, `src/game/logistics/expansionDiagnostics.ts`
 - Modify: `src/game/logistics/access.ts`, `src/game/logistics/expansion.ts`, `src/game/logistics.ts`
 - Test: `src/game/logistics.test.ts`, create focused tests beside new modules
@@ -147,6 +151,7 @@ git commit -m "refactor: split expansion and recovery logistics"
 ### Task 5: Split engine task advancement
 
 **Files:**
+
 - Create: `src/game/engine/advancement.ts`, `src/game/engine/idleAdvancement.ts`, `src/game/engine/buildAdvancement.ts`, `src/game/engine/digAdvancement.ts`, `src/game/engine/haulAdvancement.ts`
 - Modify: `src/game/engine.ts`, `src/game/engine/tasks.ts`, `src/game/engine/recovery.ts`
 - Test: create focused advancement tests; retain `src/game/engine.test.ts` integration coverage
@@ -183,6 +188,7 @@ git commit -m "refactor: split engine task advancement"
 ### Task 6: Decompose serialization validation
 
 **Files:**
+
 - Create: `src/game/serialization/validation/primitives.ts`, `src/game/serialization/validation/entities.ts`, `src/game/serialization/validation/state.ts`
 - Modify: `src/game/serialization/validation.ts`, `src/game/serialization/migrations.ts`
 - Test: create focused validation tests; retain `src/game/serialization.test.ts`
@@ -215,6 +221,7 @@ git commit -m "refactor: split save validation responsibilities"
 ### Task 7: Reorganize tests and document boundaries
 
 **Files:**
+
 - Create: focused tests under `src/game/engine/`, `src/game/logistics/`, and `src/game/serialization/validation/`
 - Modify: `src/game/engine.test.ts`, `src/game/logistics.test.ts`, `README.md`
 
@@ -233,6 +240,7 @@ Run the complete serialized suite and confirm test count is no lower than the 16
 ### Task 8: Final verification and issue update
 
 **Files:**
+
 - Modify: GitHub issue #40 with implementation checklist and verification results
 
 - [ ] **Step 1: Run the complete verification suite**

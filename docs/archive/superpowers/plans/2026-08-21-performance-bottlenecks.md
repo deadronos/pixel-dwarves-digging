@@ -13,6 +13,7 @@
 ### Task 1: Add virtual dig overrides to pathfinding
 
 **Files:**
+
 - Modify: `src/game/pathfinding.ts`
 - Modify: `src/game/logistics.ts`
 - Test: `src/game/pathfinding.test.ts`
@@ -41,6 +42,7 @@ Run the focused tests again, then commit with `perf: evaluate dig safety without
 ### Task 2: Order and cache planner safety work
 
 **Files:**
+
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/logistics.ts`
 - Modify: `src/game/content.ts`
@@ -77,6 +79,7 @@ Run `PATH=/Users/openclaw/.vite-plus/bin:/opt/homebrew/bin:$PATH npm test -- --r
 ### Task 3: Incrementally update terrain instances
 
 **Files:**
+
 - Create: `src/components/terrainPositions.ts`
 - Create: `src/components/terrainPositions.test.ts`
 - Modify: `src/components/TerrainLayer.tsx`
@@ -104,6 +107,7 @@ Run the focused helper test and full suite. Commit with `perf: update terrain in
 ### Task 4: Reduce renderer startup and pixel cost
 
 **Files:**
+
 - Modify: `src/App.tsx`
 - Modify: `src/components/WorldCanvas.tsx`
 
@@ -126,6 +130,7 @@ Commit with `perf: defer and constrain world renderer`.
 ### Task 5: Benchmark and final verification
 
 **Files:**
+
 - Create temporarily: `src/game/performance-investigation.tmp.test.ts`
 - Delete: `src/game/performance-investigation.tmp.test.ts`
 
