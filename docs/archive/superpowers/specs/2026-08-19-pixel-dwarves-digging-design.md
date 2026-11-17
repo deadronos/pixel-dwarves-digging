@@ -144,4 +144,3 @@ Project validation must include:
 - Whether water, cave-ins, heat, or creatures are introduced after the first stable excavation loop.
 - Whether maps eventually become larger than 160 × 80 or support multiple layers.
 - Whether the prestige currency gets a narrative name and whether relics have unique stories.
-

@@ -13,6 +13,7 @@
 ### Task 1: Add the shared targeting boundary
 
 **Files:**
+
 - Modify: `src/game/engine/targeting.ts`
 - Test: `src/game/engine/targeting.test.ts`
 
@@ -48,6 +49,7 @@ git commit -m "perf: add shared per-tick target planning context"
 ### Task 2: Thread the context through access planning and idle assignment
 
 **Files:**
+
 - Modify: `src/game/engine/accessRequests.ts`
 - Modify: `src/game/engine/idleAdvancement.ts`
 - Modify: `src/game/engine/advancement.ts`
@@ -86,6 +88,7 @@ git commit -m "perf: reuse target planning across engine phases"
 ### Task 3: Validate the complete issue scope
 
 **Files:**
+
 - No additional files expected unless validation exposes a targeted regression.
 
 - [ ] **Step 1: Run the complete test suite**

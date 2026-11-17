@@ -13,6 +13,7 @@
 ### Task 1: Establish issue-linked baseline and engine boundaries
 
 **Files:**
+
 - Modify: `src/game/engine.ts`
 - Create: `src/game/engine/safetyState.ts`, `src/game/engine/taskAdvancement.ts`, and focused task helpers as needed
 - Test: `src/game/engine.test.ts` and extracted focused engine tests
@@ -26,6 +27,7 @@
 ### Task 2: Separate building placement, storage, and construction
 
 **Files:**
+
 - Modify: `src/game/buildings.ts`
 - Create: `src/game/buildings/placement.ts`, `src/game/buildings/storage.ts`, `src/game/buildings/construction.ts`
 - Test: `src/game/buildings.test.ts`
@@ -39,6 +41,7 @@
 ### Task 3: Split pathfinding internals
 
 **Files:**
+
 - Modify: `src/game/pathfinding.ts`
 - Create: `src/game/pathfinding/geometry.ts`, `src/game/pathfinding/search.ts`, `src/game/pathfinding/exposedSolids.ts`
 - Test: `src/game/pathfinding.test.ts`
@@ -52,6 +55,7 @@
 ### Task 4: Split serialization validation and derived logistics eligibility
 
 **Files:**
+
 - Modify: `src/game/serialization/validation.ts`, `src/game/logistics/expansion.ts`
 - Create: `src/game/serialization/validation/primitives.ts`, `src/game/serialization/validation/invariants.ts`, `src/game/logistics/expansionEligibility.ts`
 - Test: `src/game/serialization.test.ts`, `src/game/logistics.test.ts`
@@ -65,6 +69,7 @@
 ### Task 5: Reorganize tests and verify the branch
 
 **Files:**
+
 - Modify: `src/game/engine.test.ts`, `src/game/logistics.test.ts`
 - Create: focused test files and shared fixtures only where duplication is demonstrated
 

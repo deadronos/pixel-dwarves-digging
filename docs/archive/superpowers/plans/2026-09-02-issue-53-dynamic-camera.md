@@ -13,6 +13,7 @@
 ### Task 1: Build the pure camera tracking model
 
 **Files:**
+
 - Create: `src/components/cameraTracking.ts`
 - Test: `src/components/cameraTracking.test.ts`
 
@@ -65,6 +66,7 @@ git commit -m "feat: add testable dynamic camera tracking"
 ### Task 2: Add the session-level dynamic-camera toggle
 
 **Files:**
+
 - Modify: `src/game/state.ts`
 - Test: `src/game/state.test.ts`
 
@@ -100,6 +102,7 @@ git commit -m "feat: add default-on dynamic camera toggle"
 ### Task 3: Integrate smooth follow and manual pause into the canvas
 
 **Files:**
+
 - Modify: `src/components/WorldCanvas.tsx`
 - Create: `src/components/WorldCanvas.test.tsx`
 
@@ -135,6 +138,7 @@ git commit -m "feat: smoothly follow active dwarf work"
 ### Task 4: Wire the control and validate the user flow
 
 **Files:**
+
 - Modify: `src/App.tsx`
 - Modify: `src/components/ControlBar.tsx`
 - Modify: `src/styles.css`

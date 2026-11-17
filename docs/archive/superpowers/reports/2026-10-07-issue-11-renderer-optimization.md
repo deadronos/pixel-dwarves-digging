@@ -45,14 +45,14 @@ split `three`/`three-stdlib` and `@react-three/*` into stable vendor chunks.
 
 Production build (`npm run build`), minified / gzip:
 
-| Chunk | Before | After |
-| --- | --- | --- |
-| `index` (app shell) | 293.97 kB / 89.45 kB | 281.46 kB / 85.35 kB |
-| `WorldCanvas` (renderer + three) | 931.53 kB / 247.63 kB | — |
-| `three-vendor` | — | 750.98 kB / 190.67 kB |
-| `r3f-vendor` | — | 186.30 kB / 59.25 kB |
-| `WorldCanvas` (app slice only) | — | 6.66 kB / 2.68 kB |
-| `rolldown-runtime` | — | 0.71 kB / 0.42 kB |
+| Chunk                            | Before                | After                 |
+| -------------------------------- | --------------------- | --------------------- |
+| `index` (app shell)              | 293.97 kB / 89.45 kB  | 281.46 kB / 85.35 kB  |
+| `WorldCanvas` (renderer + three) | 931.53 kB / 247.63 kB | —                     |
+| `three-vendor`                   | —                     | 750.98 kB / 190.67 kB |
+| `r3f-vendor`                     | —                     | 186.30 kB / 59.25 kB  |
+| `WorldCanvas` (app slice only)   | —                     | 6.66 kB / 2.68 kB     |
+| `rolldown-runtime`               | —                     | 0.71 kB / 0.42 kB     |
 
 Total JavaScript is essentially unchanged (~1.23 MB min / ~338 kB gzip); the
 gain is chunk separation for caching, and the renderer-specific app slice
@@ -64,11 +64,11 @@ Vite's 500 kB warning, which reflects Three.js itself rather than app code.
 Measured in Chromium via Playwright against the dev server by counting
 `WebGL2RenderingContext.clear()` calls as a render-frame proxy (1× speed):
 
-| Scenario | Render frames |
-| --- | --- |
-| Active simulation (1×) | ~13.5–16.7 fps (tick-driven; ~900+ draw calls / 1.5 s) |
-| Paused and fully settled | **0 clears / 0 draws over 2 s** |
-| Pan + wheel while paused | 4 clears / 144 draws (interaction renders) |
+| Scenario                           | Render frames                                                     |
+| ---------------------------------- | ----------------------------------------------------------------- |
+| Active simulation (1×)             | ~13.5–16.7 fps (tick-driven; ~900+ draw calls / 1.5 s)            |
+| Paused and fully settled           | **0 clears / 0 draws over 2 s**                                   |
+| Pan + wheel while paused           | 4 clears / 144 draws (interaction renders)                        |
 | Manual pause window → resume timer | 2 clears during window, 1 clear after (loop wakes and re-settles) |
 
 Before this change the canvas rendered continuously at display refresh rate

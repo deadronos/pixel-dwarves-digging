@@ -13,6 +13,7 @@
 ### Task 1: Configure the Vite Pages base path
 
 **Files:**
+
 - Modify: `vite.config.ts`
 
 - [x] **Step 1: Add an environment-aware base setting**
@@ -59,6 +60,7 @@ git commit -m "fix: configure Vite base path for Pages"
 ### Task 2: Add the tag-triggered GitHub Pages workflow
 
 **Files:**
+
 - Create: `.github/workflows/deploy-pages.yml`
 
 - [x] **Step 1: Add the workflow with tag filtering and least-required permissions**
@@ -71,7 +73,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 permissions:
   contents: read
@@ -148,6 +150,7 @@ git commit -m "ci: deploy tagged builds to GitHub Pages"
 ### Task 3: Final verification and handoff
 
 **Files:**
+
 - Verify: `vite.config.ts`
 - Verify: `.github/workflows/deploy-pages.yml`
 

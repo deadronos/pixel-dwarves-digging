@@ -13,6 +13,7 @@
 ### Task 1: Add the alternate-perimeter regression test
 
 **Files:**
+
 - Modify: `src/game/logistics.test.ts` near the existing `plans a reachable overflow depot` test
 - Test: `src/game/logistics.test.ts`
 
@@ -35,6 +36,7 @@ Expected: FAIL because the current planner checks only four positions anchored a
 ### Task 2: Implement full deterministic perimeter enumeration
 
 **Files:**
+
 - Modify: `src/game/logistics.ts` near `storageBuildings` and `planOverflowDepotOrder`
 - Test: `src/game/logistics.test.ts`
 
@@ -47,13 +49,21 @@ function storagePerimeterCandidates(
   building: Pick<BuildingState, 'position' | 'width' | 'height'>,
 ): Position[] {
   const candidates: Position[] = []
-  for (let x = building.position.x; x < building.position.x + building.width; x += 1) {
+  for (
+    let x = building.position.x;
+    x < building.position.x + building.width;
+    x += 1
+  ) {
     candidates.push(
       { x, y: building.position.y - 1 },
       { x, y: building.position.y + building.height },
     )
   }
-  for (let y = building.position.y; y < building.position.y + building.height; y += 1) {
+  for (
+    let y = building.position.y;
+    y < building.position.y + building.height;
+    y += 1
+  ) {
     candidates.push(
       { x: building.position.x - 1, y },
       { x: building.position.x + building.width, y },
@@ -100,6 +110,7 @@ git commit -m "fix: search the full storage perimeter for depots"
 ### Task 3: Add failing multi-depot policy tests
 
 **Files:**
+
 - Modify: `src/game/logistics.test.ts` after the existing overflow depot tests
 - Test: `src/game/logistics.test.ts`
 
@@ -128,6 +139,7 @@ Expected: FAIL because the current implementation rejects any colony that alread
 ### Task 4: Implement bounded depot scaling
 
 **Files:**
+
 - Modify: `src/game/logistics.ts`
 - Test: `src/game/logistics.test.ts`
 
@@ -183,6 +195,7 @@ git commit -m "feat: allow bounded overflow depot scaling"
 ### Task 5: Full verification and PR update
 
 **Files:**
+
 - Modify: `docs/archive/superpowers/plans/2026-08-24-depot-placement-and-scaling.md` only to mark completed steps
 
 - [ ] **Step 1: Run the full test suite**

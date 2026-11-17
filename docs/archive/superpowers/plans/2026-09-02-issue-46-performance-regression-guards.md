@@ -13,6 +13,7 @@
 ### Task 1: Guard the pathfinding benchmark
 
 **Files:**
+
 - Modify: `src/game/pathfinding.performance.test.ts`
 
 - [ ] **Step 1: Write the failing guard**
@@ -47,6 +48,7 @@ git commit -m "test: guard repeated pathfinding performance"
 ### Task 2: Guard the logistics benchmark
 
 **Files:**
+
 - Modify: `src/game/logistics.performance.test.ts`
 
 - [ ] **Step 1: Write the failing guard**
@@ -81,6 +83,7 @@ git commit -m "test: guard storage diagnostics performance"
 ### Task 3: Document and validate the guard policy
 
 **Files:**
+
 - Modify: `docs/archive/issues/2026-08-30-performance-regression-guards.md`
 
 - [ ] **Step 1: Document commands and threshold rationale**

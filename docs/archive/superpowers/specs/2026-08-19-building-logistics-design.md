@@ -207,4 +207,3 @@ Pure simulation tests must cover:
 - version 1 save migration and version 2 round-tripping.
 
 Browser smoke testing must verify that the stockpile is visible on a fresh run, dwarves remain grounded, stored inventory changes after hauling rather than mining, construction indicators appear, and a constructed route changes reachable movement.
-

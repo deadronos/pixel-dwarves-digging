@@ -13,6 +13,7 @@
 ### Task 1: Establish failing performance-regression tests
 
 **Files:**
+
 - Modify: `src/game/pathfinding.test.ts`
 - Create: `src/game/pathfinding.performance.test.ts`
 
@@ -37,6 +38,7 @@
 ### Task 2: Cache navigation state, BFS searches, and exact paths
 
 **Files:**
+
 - Modify: `src/game/pathfinding.ts`
 - Modify: `src/game/pathfinding.test.ts`
 
@@ -65,6 +67,7 @@
 ### Task 3: Verify simulation behavior and handoff
 
 **Files:**
+
 - Modify: `README.md` only if the benchmark/tick-budget target needs documentation.
 
 - [x] **Step 1: Run the complete verification suite**

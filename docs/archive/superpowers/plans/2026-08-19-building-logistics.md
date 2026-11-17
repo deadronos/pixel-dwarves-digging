@@ -32,6 +32,7 @@
 ## Task 1: Add the building and storage domain model
 
 **Files:**
+
 - Modify: `src/game/types.ts`
 - Modify: `src/game/content.ts`
 - Create: `src/game/buildings.ts`
@@ -50,16 +51,30 @@ it('finds the primary stockpile and reports finite capacity', () => {
 
 it('accepts a grounded outpost placement but rejects unsupported space', () => {
   const state = makeBuildingState()
-  expect(canPlaceBuilding(state.world, { type: 'outpost', position: { x: 5, y: 3 } })).toBe(true)
-  expect(canPlaceBuilding(state.world, { type: 'outpost', position: { x: 5, y: 1 } })).toBe(false)
+  expect(
+    canPlaceBuilding(state.world, {
+      type: 'outpost',
+      position: { x: 5, y: 3 },
+    }),
+  ).toBe(true)
+  expect(
+    canPlaceBuilding(state.world, {
+      type: 'outpost',
+      position: { x: 5, y: 1 },
+    }),
+  ).toBe(false)
 })
 
 it('reserves and consumes construction stone exactly once', () => {
   const state = makeBuildingState()
   const reserved = reserveConstructionMaterials(state, 'outpost-order')
   const completed = completeConstruction(reserved, 'outpost-order')
-  expect(completed.simulation.world.buildings).toContainEqual(expect.objectContaining({ type: 'outpost', construction: 'completed' }))
-  expect(completed.simulation.inventory.stone).toBe(reserved.simulation.inventory.stone)
+  expect(completed.simulation.world.buildings).toContainEqual(
+    expect.objectContaining({ type: 'outpost', construction: 'completed' }),
+  )
+  expect(completed.simulation.inventory.stone).toBe(
+    reserved.simulation.inventory.stone,
+  )
 })
 ```
 
@@ -77,7 +92,10 @@ Add these concepts to `src/game/types.ts`:
 
 ```ts
 export type BuildingType = 'stockpile' | 'outpost' | 'bridge' | 'ladder'
-export type BuildingConstruction = 'completed' | 'planned' | 'under-construction'
+export type BuildingConstruction =
+  | 'completed'
+  | 'planned'
+  | 'under-construction'
 export type ConstructionPolicy = 'conserve' | 'balanced' | 'expand'
 
 export type StorageState = {
@@ -140,6 +158,7 @@ Commit with `git add src/game/types.ts src/game/content.ts src/game/buildings.ts
 ## Task 2: Generate and render the main stockpile
 
 **Files:**
+
 - Modify: `src/game/generation.ts`
 - Create: `src/components/BuildingLayer.tsx`
 - Modify: `src/components/WorldCanvas.tsx`
@@ -179,6 +198,7 @@ Commit with `git add src/game/generation.ts src/game/generation.test.ts src/comp
 ## Task 3: Make navigation physically grounded
 
 **Files:**
+
 - Modify: `src/game/pathfinding.ts`
 - Modify: `src/game/engine.ts`
 - Test: `src/game/pathfinding.test.ts`
@@ -195,13 +215,22 @@ it('does not route through unsupported open air', () => {
 })
 
 it('uses a completed bridge across a gap', () => {
-  const world = makeWorldWithBridge(['......', '......', '..##..', '......'], 2, 2, 3)
-  expect(findPath(world, { x: 1, y: 1 }, { x: 4, y: 1 })).toEqual(expect.any(Array))
+  const world = makeWorldWithBridge(
+    ['......', '......', '..##..', '......'],
+    2,
+    2,
+    3,
+  )
+  expect(findPath(world, { x: 1, y: 1 }, { x: 4, y: 1 })).toEqual(
+    expect.any(Array),
+  )
 })
 
 it('uses a connected ladder for vertical travel', () => {
   const world = makeWorldWithLadder()
-  expect(findPath(world, { x: 2, y: 4 }, { x: 2, y: 1 })).toEqual(expect.any(Array))
+  expect(findPath(world, { x: 2, y: 4 }, { x: 2, y: 1 })).toEqual(
+    expect.any(Array),
+  )
 })
 ```
 
@@ -236,6 +265,7 @@ Commit with `git add src/game/pathfinding.ts src/game/engine.ts src/game/pathfin
 ## Task 4: Move hauling to physical per-building storage
 
 **Files:**
+
 - Create: `src/game/logistics.ts`
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/state.ts`
@@ -288,6 +318,7 @@ Commit with `git add src/game/logistics.ts src/game/engine.ts src/game/state.ts 
 ## Task 5: Add autonomous construction, bridges, ladders, and outposts
 
 **Files:**
+
 - Modify: `src/game/engine.ts`
 - Modify: `src/game/logistics.ts`
 - Modify: `src/game/buildings.ts`
@@ -330,6 +361,7 @@ Commit with `git add src/game/types.ts src/game/buildings.ts src/game/logistics.
 ## Task 6: Version saves and expose building/logistics UI
 
 **Files:**
+
 - Modify: `src/game/serialization.ts`
 - Modify: `src/game/serialization.test.ts`
 - Modify: `src/components/BuildingLayer.tsx`
@@ -370,6 +402,7 @@ Commit with `git add src/game/serialization.ts src/game/serialization.test.ts sr
 ## Task 7: Documentation and full verification
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `idea.md`
 - Modify: existing test files only if regression fixes are required.

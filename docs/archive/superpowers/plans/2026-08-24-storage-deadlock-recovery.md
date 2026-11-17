@@ -13,6 +13,7 @@
 ### Task 1: Add failing runtime regressions
 
 **Files:**
+
 - Modify: `src/game/engine.test.ts`
 - Modify: `src/game/logistics.test.ts`
 
@@ -39,6 +40,7 @@ Expected: the new starvation and recovery expectations fail against the current 
 ### Task 2: Implement runtime recovery and route-aware assignment
 
 **Files:**
+
 - Modify: `src/game/logistics.ts`
 - Modify: `src/game/engine.ts`
 
@@ -69,6 +71,7 @@ Expected: all runtime regressions and existing tests pass.
 ### Task 3: Add failing save-repair and import-status regressions
 
 **Files:**
+
 - Modify: `src/game/serialization.test.ts`
 - Modify: `src/game/state.test.ts`
 
@@ -95,6 +98,7 @@ Expected: the new repair and status expectations fail before implementation.
 ### Task 4: Implement safe import repair
 
 **Files:**
+
 - Modify: `src/game/serialization.ts`
 - Modify: `src/game/state.ts`
 
@@ -121,6 +125,7 @@ Expected: all save tests pass, including conservation rejection.
 ### Task 5: Full verification and branch handoff
 
 **Files:**
+
 - Modify: `docs/archive/superpowers/plans/2026-08-24-storage-deadlock-recovery.md` to mark completed steps
 
 - [x] **Step 1: Run the complete verification matrix**
