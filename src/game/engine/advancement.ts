@@ -1,4 +1,5 @@
 import type { DwarfState, SimulationState } from '../types'
+import { advanceAnchorBuild } from './anchorAdvancement'
 import { advanceBuild } from './buildAdvancement'
 import { advanceDig } from './digAdvancement'
 import { advanceHaul } from './haulAdvancement'
@@ -49,6 +50,7 @@ export function advanceDwarf(
   }
 
   const task = dwarf.task
+  if (task.kind === 'anchor') return advanceAnchorBuild(state, dwarf)
   if (
     task.kind === 'idle' &&
     task.purpose === 'recovery' &&

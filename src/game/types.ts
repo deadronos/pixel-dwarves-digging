@@ -138,7 +138,7 @@ export type AccessRequest = {
     | 'no-builder-route'
 }
 
-export type TaskKind = 'idle' | 'dig' | 'haul' | 'build'
+export type TaskKind = 'idle' | 'dig' | 'haul' | 'build' | 'anchor'
 
 export type TaskState = {
   kind: TaskKind

@@ -23,6 +23,8 @@ export type DigSafety = {
   landing?: Position
   recoveryWorld?: World
   recoveryMaterial?: CommonBuildingMaterial
+  /** Where the return ladder must be anchored, when one is required. */
+  ladderPosition?: Position
 }
 
 const digSafetyCache = new WeakMap<World, Map<string, DigSafety>>()
@@ -104,6 +106,7 @@ function assessSupportDropSafety(
           landing,
           recoveryWorld: ladderPlan.world,
           recoveryMaterial: ladderPlan.material,
+          ladderPosition: ladderPlan.position,
         }
       }
     }

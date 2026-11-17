@@ -263,12 +263,18 @@ export function dwarfFrameOffset(slot: number): number {
  * standing still at their target.
  */
 export function dwarfPoseFor(input: {
-  taskKind: 'idle' | 'dig' | 'haul' | 'build'
+  taskKind: 'idle' | 'dig' | 'haul' | 'build' | 'anchor'
   carrying: boolean
   moving: boolean
 }): DwarfPose {
   if (input.moving) return input.carrying ? 'carry' : 'walk'
-  if (input.taskKind === 'dig' || input.taskKind === 'build') return 'work'
+  if (
+    input.taskKind === 'dig' ||
+    input.taskKind === 'build' ||
+    input.taskKind === 'anchor'
+  ) {
+    return 'work'
+  }
   if (input.carrying) return 'carry'
   return 'idle'
 }
