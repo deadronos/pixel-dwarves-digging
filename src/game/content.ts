@@ -198,6 +198,13 @@ export const BUILDING_COLORS: Record<BuildingType, string> = {
   ladder: '#997fd3',
 }
 
+/**
+ * Ticks a builder spends on site per unit of material it delivers. Builds
+ * take visible time so a site reads as a scaffold being worked on rather than
+ * appearing the instant a dwarf arrives.
+ */
+export const BUILD_TICKS_PER_MATERIAL = 6
+
 export const DIG_DURATION: Record<BlockType, number> = {
   air: 0,
   bedrock: 0,
