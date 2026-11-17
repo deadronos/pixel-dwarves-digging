@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { blockAt, blockToId } from './blocks'
+import { BUILD_TICKS_PER_MATERIAL } from './content'
 import { stepSimulation } from './engine'
 import { planAccessRequests } from './engine/accessRequests'
 import { advanceDwarf } from './engine/advancement'
@@ -1484,11 +1485,15 @@ describe('stepSimulation', () => {
       },
     ]
 
-    const result = stepSimulation(state, 1)
+    const result = stepSimulation(state, BUILD_TICKS_PER_MATERIAL)
 
     expect(result.constructionOrders).toHaveLength(1)
+    expect(result.constructionOrders[0].delivered.stone).toBe(1)
     expect(result.world.buildings).toContainEqual(
-      expect.objectContaining({ id: 'multi-ladder', construction: 'planned' }),
+      expect.objectContaining({
+        id: 'multi-ladder',
+        construction: 'under-construction',
+      }),
     )
   })
 

@@ -21,7 +21,7 @@ connects the two.
 - `src/game/state.ts` — Zustand store, 100 ms tick timer, local persistence
 - `src/game/selectors.ts` — cached view models for the HUD and Inspector
 - `src/game/content.ts` — tunable data: blocks, colours (blocks and buildings),
-  dig times, building costs
+  dig times, build ticks per delivered material, building costs
 
 ## Rendering
 
@@ -57,7 +57,9 @@ connects the two.
   planned and under-construction sites draw a scaffold instead —
   `buildingScaffold.ts` holds the pure scaffold art and construction-progress
   maths, `buildingTexture.ts` caches the textures. Progress comes from the
-  read-only `constructionOrders` slice passed down from the store
+  read-only `constructionOrders` slice passed down from the store. The engine
+  flips a site to `under-construction` on the builder's first work tick
+  (`engine/buildAdvancement.ts`), so the two scaffold states are real
 - `src/components/MiningLayer.tsx` — cracks on the block each dwarf is digging;
   `miningFeedback.ts` holds the pure progress/stage maths and `blockArt.ts` +
   `blockTexture.ts` the crack and carried-block art. One cut-out quad per active

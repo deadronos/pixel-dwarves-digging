@@ -1,7 +1,31 @@
 import { canCompleteConstruction, completeConstruction } from '../buildings'
+import { BUILD_TICKS_PER_MATERIAL } from '../content'
 import type { DwarfState, Inventory, SimulationState } from '../types'
 import type { AdvanceResult } from './recovery'
 import { idleTask, invalidateTask, samePosition, unchanged } from './tasks'
+
+/**
+ * A site is planned until a builder starts work on it. Walking up to it is not
+ * enough: the first tick spent building flips it to under-construction so the
+ * renderer can tell "nobody has touched this" from "work in progress".
+ *
+ * Completed buildings are left alone, because storage upgrades deliver
+ * materials to a building that is already finished.
+ */
+function beginConstruction(state: SimulationState, buildingId: string) {
+  const building = state.world.buildings.find(
+    (candidate) => candidate.id === buildingId,
+  )
+  if (building?.construction !== 'planned') return state.world
+  return {
+    ...state.world,
+    buildings: state.world.buildings.map((candidate) =>
+      candidate.id === buildingId
+        ? { ...candidate, construction: 'under-construction' as const }
+        : candidate,
+    ),
+  }
+}
 
 export function assignBuildTask(
   state: SimulationState,
@@ -69,6 +93,18 @@ export function advanceBuild(
   }
 
   const delivered = (order.delivered[material] ?? 0) + 1
+  const nextProgress = task.progress + 1
+
+  // Work the site before delivering, so a build is visible for a moment.
+  if (nextProgress < BUILD_TICKS_PER_MATERIAL) {
+    return {
+      dwarf: { ...dwarf, task: { ...task, progress: nextProgress } },
+      world: beginConstruction(state, order.buildingId),
+      minedBlock: null,
+      progressed: true,
+    }
+  }
+
   const reserved = Math.max(0, (order.reserved[material] ?? 0) - 1)
   const constructionOrders = state.constructionOrders.map((candidate) =>
     candidate.id === order.id

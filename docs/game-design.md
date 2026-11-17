@@ -58,8 +58,11 @@ bootstrap phase that protects the ground under the stockpile and start pocket.
 
 **Buildings.** Storage is physical and finite. Any dwarf can become a
 builder: builders reserve stone, carry it to a planned site and build bridges,
-ladders, depots, outposts or storage upgrades over several trips. Outposts and
-depots add local storage and shorten haul routes.
+ladders, depots, outposts or storage upgrades over several trips. A builder
+spends a few ticks working on site per load, so a site reads as a dashed
+footprint until work starts, then as a braced scaffold that fills up as
+material arrives. Outposts and depots add local storage and shorten haul
+routes.
 
 ## Player directives
 
