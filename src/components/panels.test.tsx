@@ -1,6 +1,7 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { STARTER_DWARVES } from '../game/content'
 import { createInitialSimulation, useGameStore } from '../game/state'
 import ControlBar from './ControlBar'
 import Hud from './Hud'
@@ -185,7 +186,7 @@ describe('live UI panel components', () => {
 
     expect(container?.textContent).toContain('EXCAVATION')
     expect(container?.textContent).toContain('COLONY')
-    expect(container?.textContent).toContain('dwarves3')
+    expect(container?.textContent).toContain(`dwarves${STARTER_DWARVES}`)
     expect(container?.textContent).toContain('STORAGE LOGISTICS')
     expect(container?.textContent).toContain('DIRECTIVE')
     expect(container?.textContent).toContain('PRESTIGE')

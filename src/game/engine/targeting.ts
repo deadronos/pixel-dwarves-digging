@@ -13,6 +13,7 @@ import type {
   SimulationState,
   World,
 } from '../types'
+import { type BlockType, indexFor } from '../types'
 
 export type TargetCandidate = ReachableExposedSolid & {
   score: number
@@ -183,8 +184,18 @@ export function chooseTarget(
   state: SimulationState,
   dwarf: DwarfState,
   context?: TargetPlanningContext,
+  onlyBlock?: BlockType,
 ): ReachableExposedSolid | null {
   for (const candidate of rankedWorkCandidates(state, dwarf, context)) {
+    if (
+      onlyBlock !== undefined &&
+      blockAt(
+        state.world,
+        indexFor(candidate.target.x, candidate.target.y, state.world.width),
+      ) !== onlyBlock
+    ) {
+      continue
+    }
     if (assessDigSafety(state, candidate.stand, candidate.target).safe) {
       return { target: candidate.target, path: candidate.path }
     }

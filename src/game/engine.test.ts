@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 import { blockAt, blockToId } from './blocks'
-import { BUILD_TICKS_PER_MATERIAL } from './content'
+import {
+  BASE_CARRY_CAPACITY,
+  BUILD_TICKS_PER_MATERIAL,
+  DIG_DURATION,
+} from './content'
 import { stepSimulation } from './engine'
 import { planAccessRequests } from './engine/accessRequests'
 import { advanceDwarf } from './engine/advancement'
+import { advanceDig } from './engine/digAdvancement'
 import {
   createTargetPlanningContext,
   getTargetPlanningSnapshot,
@@ -370,17 +375,13 @@ describe('stepSimulation', () => {
 
     expect(result.totalCleared).toBe(1)
     expect(blockAt(result.world, 2 * result.world.width + 2)).toBe('air')
-    expect(result.dwarves[0].carrying).toBe('dirt')
-    expect(result.dwarves[0].task.kind).toBe('haul')
   })
 
   it('lands a dwarf after a one-cell emergency support drop', () => {
     const result = stepSimulation(makeEmergencyDropState(1), 6)
 
-    expect(result.dwarves[0].position).toEqual({ x: 2, y: 1 })
-    expect(result.dwarves[0].carrying).toBe('dirt')
-    expect(result.dwarves[0].task.kind).toBe('haul')
     expect(result.totalCleared).toBe(1)
+    expect(result.dwarves[0].movement).toBe('grounded')
   })
 
   it('recovers a compact blocked support-chain save without expanding', () => {
@@ -468,36 +469,60 @@ describe('stepSimulation', () => {
     expect(moved.dwarves[0].position.x).toBe(4)
   })
 
-  it('uses satchel upgrades to move hauling tasks farther per tick', () => {
-    const initial = makeState(['........', '........', '........'])
-    const haulingDwarf = {
+  it('deposits the whole load in one trip', () => {
+    const initial = makeState(['.....', '.....', '.....'])
+    const dwarf = {
       ...initial.dwarves[0],
+      position: { x: 1, y: 1 },
+      carrying: 'dirt' as const,
+      carryingCount: 3,
       task: {
         kind: 'haul' as const,
-        target: { x: 4, y: 1 },
-        path: [
-          { x: 2, y: 1 },
-          { x: 3, y: 1 },
-          { x: 4, y: 1 },
-        ],
+        target: { x: 1, y: 1 },
+        path: [],
         progress: 0,
         block: 'dirt' as const,
         buildingId: 'stockpile-1',
       },
-      carrying: 'dirt' as const,
     }
-    const normal = stepSimulation({ ...initial, dwarves: [haulingDwarf] }, 1)
-    const upgraded = stepSimulation(
-      {
-        ...initial,
-        dwarves: [haulingDwarf],
-        upgrades: { ...initial.upgrades, satchel: 1 },
-      },
-      1,
-    )
 
-    expect(normal.dwarves[0].position).toEqual({ x: 2, y: 1 })
-    expect(upgraded.dwarves[0].position).toEqual({ x: 3, y: 1 })
+    const result = stepSimulation({ ...initial, dwarves: [dwarf] }, 1)
+
+    expect(result.inventory.dirt).toBe(3)
+    expect(result.dwarves[0].carrying).toBeNull()
+  })
+
+  it('hauls as soon as the satchel is full', () => {
+    const initial = makeState(['#####', '.....', '..d..'])
+    const target = { x: 2, y: 2 }
+    const ready = (carryingCount: number) => ({
+      ...initial,
+      dwarves: [
+        {
+          ...initial.dwarves[0],
+          position: { x: 1, y: 2 },
+          carrying: 'dirt' as const,
+          carryingCount,
+          task: {
+            kind: 'dig' as const,
+            target,
+            path: [],
+            progress: DIG_DURATION.dirt - 1,
+          },
+        },
+      ],
+    })
+
+    const full = advanceDig(
+      ready(BASE_CARRY_CAPACITY - 1),
+      ready(BASE_CARRY_CAPACITY - 1).dwarves[0],
+    )
+    expect(full.dwarf.carryingCount).toBe(BASE_CARRY_CAPACITY)
+    expect(full.dwarf.task.kind).toBe('haul')
+
+    const partial = advanceDig(ready(1), ready(1).dwarves[0])
+    expect(partial.dwarf.carryingCount).toBe(2)
+    expect(partial.dwarf.task.kind).toBe('idle')
   })
 
   it('preserves the world reference during movement-only ticks', () => {

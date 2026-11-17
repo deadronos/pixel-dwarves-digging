@@ -61,12 +61,20 @@ export function advanceHaul(
     return invalidateTask(state, dwarf)
   }
   if (task.buildingId && task.block) {
-    const depositedWorld = depositCarriedMaterial(
-      state.world,
-      task.buildingId,
-      task.block,
-    )
-    if (!depositedWorld) {
+    const load = dwarf.carryingCount ?? 1
+    let depositedWorld = state.world
+    let deposited = 0
+    for (let index = 0; index < load; index += 1) {
+      const next = depositCarriedMaterial(
+        depositedWorld,
+        task.buildingId,
+        task.block,
+      )
+      if (!next) break
+      depositedWorld = next
+      deposited += 1
+    }
+    if (deposited === 0) {
       return (
         attemptEmergencyRecovery(state, dwarf) ??
         unchanged(
@@ -82,11 +90,21 @@ export function advanceHaul(
         )
       )
     }
+    const remaining = load - deposited
     return {
-      dwarf: { ...dwarf, carrying: null, task: idleTask() },
+      dwarf:
+        remaining > 0
+          ? {
+              ...dwarf,
+              carrying: task.block,
+              carryingCount: remaining,
+              task: idleTask(),
+            }
+          : { ...dwarf, carrying: null, task: idleTask() },
       world: depositedWorld,
       minedBlock: null,
       depositedBlock: task.block,
+      depositedCount: deposited,
       progressed: true,
     }
   }

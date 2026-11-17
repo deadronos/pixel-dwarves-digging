@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { blockToId } from './blocks'
+import { STARTER_DWARVES } from './content'
 import {
   formatDirectiveSummary,
   formatSafetySummary,
@@ -346,7 +347,7 @@ describe('view model selectors', () => {
     const inspectorVm = getInspectorViewModel(simulation)
     expect(inspectorVm.totalCleared).toBe(10)
     expect(inspectorVm.progress).toBe(0)
-    expect(inspectorVm.dwarfCounts.total).toBe(3)
+    expect(inspectorVm.dwarfCounts.total).toBe(STARTER_DWARVES)
     expect(inspectorVm.dwarfCounts.onTask).toBe(0)
     expect(inspectorVm.dwarfCounts.inRecovery).toBe(0)
     expect(inspectorVm.buildingCounts.outposts).toBe(0)
@@ -388,7 +389,9 @@ describe('view model selectors', () => {
     }
 
     expect(selectHudViewModel(mockStore).seed).toBe('state-vm-seed')
-    expect(selectInspectorViewModel(mockStore).dwarfCounts.total).toBe(3)
+    expect(selectInspectorViewModel(mockStore).dwarfCounts.total).toBe(
+      STARTER_DWARVES,
+    )
   })
 
   it('provides stable snapshot references when simulation identity does not change', () => {

@@ -4,6 +4,7 @@ import { DIG_DURATION } from '../content'
 import { clearCell } from '../generation'
 import { assessDigSafety } from '../logistics'
 import { findPath } from '../pathfinding'
+import { carryCapacity } from '../progression'
 import {
   type DwarfState,
   type Inventory,
@@ -45,6 +46,14 @@ export function advanceDig(
   const nextProgress = task.progress + 1
 
   if (duration > 0 && nextProgress >= duration) {
+    // A loaded dwarf only keeps mining what it already carries; the load is a
+    // single material, so anything else goes home first.
+    if (dwarf.carrying !== null && dwarf.carrying !== minedBlock) {
+      return invalidateTask(state, dwarf)
+    }
+    const loadCount =
+      (dwarf.carrying === minedBlock ? (dwarf.carryingCount ?? 1) : 0) + 1
+    const fullLoad = loadCount >= carryCapacity(state)
     const safety = assessDigSafety(state, dwarf.position, target)
     if (!safety.safe || !safety.storage) {
       return unchanged({ ...dwarf, task: idleTask() }, state.world)
@@ -60,6 +69,7 @@ export function advanceDig(
           ...dwarf,
           position: haulOrigin,
           carrying: minedBlock,
+          carryingCount: loadCount,
           task: {
             kind: 'anchor',
             target: safety.ladderPosition,
@@ -67,6 +77,23 @@ export function advanceDig(
             progress: 0,
             block: safety.recoveryMaterial,
           },
+        },
+        world: clearCell(state.world, target),
+        minedBlock,
+        progressed: true,
+      }
+    }
+
+    // Not full yet: drop into idle with the load so targeting can find another
+    // block of the same material.
+    if (!fullLoad) {
+      return {
+        dwarf: {
+          ...dwarf,
+          position: haulOrigin,
+          carrying: minedBlock,
+          carryingCount: loadCount,
+          task: idleTask(),
         },
         world: clearCell(state.world, target),
         minedBlock,
@@ -95,6 +122,7 @@ export function advanceDig(
         ...dwarf,
         position: haulOrigin,
         carrying: minedBlock,
+        carryingCount: loadCount,
         task: {
           kind: 'haul',
           target: haulTarget,

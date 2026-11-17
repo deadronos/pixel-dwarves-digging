@@ -10,7 +10,7 @@ const UPGRADE_LABELS: Record<
 > = {
   toolPower: { label: 'Stronger tools', detail: 'shorter dig cycles' },
   moveSpeed: { label: 'Lightweight gear', detail: 'faster travel' },
-  satchel: { label: 'Bigger satchels', detail: 'more efficient hauling' },
+  satchel: { label: 'Bigger satchels', detail: 'carry more per trip' },
   extraBunks: { label: 'Extra bunk', detail: 'one more starting dwarf' },
   prospecting: { label: 'Better prospecting', detail: 'sharper mineral odds' },
 }

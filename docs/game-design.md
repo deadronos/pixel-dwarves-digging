@@ -27,7 +27,7 @@ at the same odds. Relics only appear in the deeper part of the map, and
 prospecting upgrades raise the mineral odds.
 
 A permanent one-cell bedrock floor can't be mined and doesn't count toward a
-full clear. Every run starts with three dwarves, a surface start pocket, a
+full clear. Every run starts with six dwarves, a surface start pocket, a
 level-1 main stockpile, a three-block side stone vein and some starter stone,
 so there is always a reachable first task.
 
@@ -38,7 +38,8 @@ On each fixed simulation tick, a dwarf:
 1. finds reachable exposed solid blocks,
 2. scores them using the current directives,
 3. walks next to the target and digs it out,
-4. carries the block to a storage building with free capacity,
+4. carries its load (one block type, up to its satchel capacity) to a
+   storage building with free capacity,
 5. deposits it and returns to the planner.
 
 **Movement.** Dwarves only walk through supported air. Solid terrain,
@@ -83,7 +84,7 @@ inventory and run clock but keeps currency and permanent upgrades:
 
 - **Stronger tools:** shorter dig cycles.
 - **Lightweight gear:** faster travel.
-- **Bigger satchels:** faster travel while hauling.
+- **Bigger satchels:** carry more blocks per haul trip.
 - **Extra bunk:** one more starting dwarf.
 - **Better prospecting:** better mineral and relic odds.
 

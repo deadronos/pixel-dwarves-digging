@@ -1,6 +1,7 @@
 import { reserveConstructionMaterials } from '../buildings'
 import { selectStorageDestination } from '../logistics'
 import { findPath } from '../pathfinding'
+import { carryCapacity } from '../progression'
 import type {
   ConstructionOrder,
   DwarfState,
@@ -23,6 +24,26 @@ export function advanceIdle(
   context?: TargetPlanningContext,
 ): AdvanceResult {
   if (dwarf.carrying) {
+    const load = dwarf.carryingCount ?? 1
+    if (load < carryCapacity(state)) {
+      const sameMaterial = chooseTarget(state, dwarf, context, dwarf.carrying)
+      if (sameMaterial) {
+        return {
+          dwarf: {
+            ...dwarf,
+            task: {
+              kind: 'dig',
+              target: sameMaterial.target,
+              path: sameMaterial.path,
+              progress: 0,
+              purpose: 'ordinary',
+            },
+          },
+          world: state.world,
+          minedBlock: null,
+        }
+      }
+    }
     const destination = selectStorageDestination(
       state,
       dwarf.carrying,

@@ -1,4 +1,9 @@
-import { STARTER_EMERGENCY_STONE, STARTER_STONE_SUPPLY } from './content'
+import {
+  BASE_CARRY_CAPACITY,
+  STARTER_DWARVES,
+  STARTER_EMERGENCY_STONE,
+  STARTER_STONE_SUPPLY,
+} from './content'
 import { generateWorld } from './generation'
 import {
   cloneInventory,
@@ -25,11 +30,16 @@ export const UPGRADE_COSTS = {
   prospecting: 35,
 } as const
 
+/** Blocks a dwarf hauls per trip, base plus Bigger satchels. */
+export function carryCapacity(state: SimulationState): number {
+  return BASE_CARRY_CAPACITY + state.upgrades.satchel
+}
+
 function createDwarves(
   state: SimulationState,
   world: SimulationState['world'],
 ): DwarfState[] {
-  const count = 3 + state.upgrades.extraBunks
+  const count = STARTER_DWARVES + state.upgrades.extraBunks
   return Array.from({ length: count }, (_, index) => ({
     id: `dwarf-${index + 1}`,
     position: { ...world.start },

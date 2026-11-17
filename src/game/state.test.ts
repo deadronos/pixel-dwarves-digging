@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { STARTER_DWARVES } from './content'
 import { createGameStore, GAME_STORAGE_KEY } from './state'
 
 beforeEach(() => {
@@ -12,7 +13,7 @@ describe('createGameStore', () => {
 
     expect(state.simulation.world.seed).toBe('state-seed')
     expect(state.simulation.policy.workPreference).toBe('nearest')
-    expect(state.simulation.dwarves).toHaveLength(3)
+    expect(state.simulation.dwarves).toHaveLength(STARTER_DWARVES)
     expect(state.dynamicCameraEnabled).toBe(true)
   })
 

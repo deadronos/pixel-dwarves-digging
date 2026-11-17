@@ -159,6 +159,8 @@ export type DwarfState = {
   movement: 'grounded' | 'falling' | 'stranded'
   task: TaskState
   carrying: MineableBlockType | null
+  /** Blocks in the load when `carrying` is set. Absent means one. */
+  carryingCount?: number
   noProgressTicks?: number
 }
 

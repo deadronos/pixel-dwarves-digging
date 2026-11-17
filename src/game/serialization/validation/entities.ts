@@ -160,9 +160,13 @@ export function isDwarf(
     isTask(value.task, width, height) &&
     (value.noProgressTicks === undefined ||
       isNonNegativeInteger(value.noProgressTicks)) &&
-    (value.carrying === null ||
-      (typeof value.carrying === 'string' &&
-        MINEABLE_BLOCKS.includes(value.carrying as MineableBlockType)))
+    (value.carrying === null
+      ? value.carryingCount === undefined
+      : typeof value.carrying === 'string' &&
+        MINEABLE_BLOCKS.includes(value.carrying as MineableBlockType) &&
+        (value.carryingCount === undefined ||
+          (Number.isInteger(value.carryingCount) &&
+            (value.carryingCount as number) > 0)))
   )
 }
 

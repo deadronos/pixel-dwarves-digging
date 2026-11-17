@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { blockToId } from './blocks'
+import { STARTER_DWARVES } from './content'
 import { startPrestige } from './progression'
 import { EMPTY_INVENTORY, type SimulationState } from './types'
 
@@ -58,7 +59,7 @@ describe('startPrestige', () => {
     expect(result.world.runNumber).toBe(3)
     expect(result.completed).toBe(false)
     expect(result.totalCleared).toBe(0)
-    expect(result.dwarves.length).toBe(4)
+    expect(result.dwarves.length).toBe(STARTER_DWARVES + 1)
     expect(result.accessRequests).toEqual([])
     expect(result.worldRevision).toBe(0)
   })
