@@ -15,7 +15,7 @@ import {
   planStorageConstruction,
   planStorageUpgradeOrder,
   recoverStaleAccessOrders,
-  recoverStaleOutpostOrders,
+  recoverStaleStorageOrders,
   selectStorageDestination,
 } from './logistics'
 import { removeRecoveredConstructionOrder } from './logistics/constructionRecovery'
@@ -855,6 +855,59 @@ describe('logistics helpers', () => {
     )
   })
 
+  it('uses extra Expand depot slots only when mining is far from existing storage', () => {
+    const state = makeStorageState()
+    const width = 56
+    state.world.width = width
+    state.world.cells = Uint8Array.from({ length: width * 3 }, (_, index) =>
+      blockToId(index < width || index === width + 49 ? 'stone' : 'air'),
+    )
+    state.inventory.stone = 4
+    state.world.buildings[0].storage = {
+      capacity: 120,
+      inventory: { stone: 4, dirt: 116 },
+    }
+    for (let x = 1; x <= 8; x += 1) {
+      state.world.buildings.push({
+        id: `depot-${x}`,
+        type: 'depot',
+        position: { x, y: 1 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+        storage: { capacity: 24, inventory: { dirt: 24 } },
+      })
+    }
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      position: { x: 48, y: 1 },
+      task: { kind: 'dig', target: { x: 49, y: 1 }, path: [], progress: 0 },
+    }
+
+    expect(planOverflowDepotOrder(state)).toBe(state)
+    const expand = { ...state, constructionPolicy: 'expand' as const }
+    const planned = planOverflowDepotOrder(expand)
+    expect(planned.world.buildings.at(-1)).toMatchObject({
+      id: expect.stringMatching(/^depot-frontier-/),
+      position: { x: 48, y: 1 },
+    })
+    expect(getStorageDiagnostics(expand).depotLimit).toBe(10)
+
+    const nearby = {
+      ...expand,
+      world: {
+        ...expand.world,
+        buildings: expand.world.buildings.map((building) =>
+          building.id === 'depot-8'
+            ? { ...building, position: { x: 46, y: 1 } }
+            : building,
+        ),
+      },
+    }
+    expect(planOverflowDepotOrder(nearby)).toBe(nearby)
+  })
+
   it('plans a second overflow depot after the first depot fills', () => {
     const state = makeStorageState()
     state.inventory.stone = 4
@@ -1071,7 +1124,7 @@ describe('logistics helpers', () => {
       },
     ]
 
-    const recovered = recoverStaleOutpostOrders(state)
+    const recovered = recoverStaleStorageOrders(state)
 
     expect(recovered.world.buildings).not.toContainEqual(
       expect.objectContaining({ id: 'outpost-stale' }),

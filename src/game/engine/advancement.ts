@@ -1,4 +1,6 @@
 import { BASE_MOVEMENT_STEPS } from '../content'
+import { storageBuildings } from '../logistics/storage'
+import { findPath } from '../pathfinding'
 import type { DwarfState, SimulationState } from '../types'
 import { advanceAnchorBuild } from './anchorAdvancement'
 import { advanceBuild } from './buildAdvancement'
@@ -55,6 +57,14 @@ export function advanceDwarf(
     task.purpose === 'recovery' &&
     task.recoveryReason === 'stranded'
   ) {
+    if (
+      storageBuildings(state.world).some(
+        ({ position }) =>
+          findPath(state.world, dwarf.position, position) !== null,
+      )
+    ) {
+      return advanceIdle(state, { ...dwarf, task: idleTask() }, context)
+    }
     const recovery = attemptEmergencyRecovery(state, dwarf)
     if (recovery) return recovery
   }

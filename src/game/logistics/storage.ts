@@ -3,14 +3,17 @@ import { getCompletedStorageBuildings } from '../buildings/selectors'
 import { addMaterialToStorage, storedCount } from '../buildings/storage'
 import {
   COMMON_BUILDING_MATERIALS,
+  EXTRA_FRONTIER_DEPOTS_PER_STOCKPILE,
   FRONTIER_DEPOT_MIN_DISTANCE,
   getEmergencyReserveMaterial,
   MAX_DEPOTS_PER_STOCKPILE,
+  MINERAL_BLOCKS,
 } from '../content'
 import { findAdjacentConstructionPaths, findPath } from '../pathfinding'
 import {
   type BuildingState,
   type CommonBuildingMaterial,
+  type ConstructionPolicy,
   cloneInventory,
   type Inventory,
   type MineableBlockType,
@@ -30,6 +33,7 @@ export function storageBuildings(world: World): BuildingState[] {
 
 // Depot IDs carry placement provenance across saves and directive changes.
 export const FRONTIER_DEPOT_ID_PREFIX = 'depot-frontier-'
+const MIN_LOCAL_HAUL_SAVING = 8
 
 export function isFrontierDepot(building: BuildingState): boolean {
   return (
@@ -48,16 +52,23 @@ export function isFrontierDepotSite(
   )
 }
 
-export function getDepotLimit(world: World): number {
+export function getDepotLimit(
+  world: World,
+  policy?: ConstructionPolicy,
+): number {
   const stockpileCount = world.buildings.filter(
     (building) =>
       building.type === 'stockpile' && building.construction === 'completed',
   ).length
-  return stockpileCount * MAX_DEPOTS_PER_STOCKPILE
+  const extra = policy === 'expand' ? EXTRA_FRONTIER_DEPOTS_PER_STOCKPILE : 0
+  return stockpileCount * (MAX_DEPOTS_PER_STOCKPILE + extra)
 }
 
-export function canPlanAdditionalDepot(world: World): boolean {
-  const depotLimit = getDepotLimit(world)
+export function canPlanAdditionalDepot(
+  world: World,
+  policy?: ConstructionPolicy,
+): boolean {
+  const depotLimit = getDepotLimit(world, policy)
   if (depotLimit === 0) return false
 
   const depotCount = world.buildings.filter(
@@ -251,12 +262,12 @@ export function hasReachableStorage(state: SimulationState): boolean {
 
 export function selectStorageDestination(
   state: SimulationState,
-  _block: MineableBlockType,
+  block: MineableBlockType,
   from: Position,
   excludeDwarfId?: string,
   cleared?: Position,
 ): StorageDestination | null {
-  const primaryStockpileId = getPrimaryStockpile(state.world)?.id
+  const primaryStockpile = getPrimaryStockpile(state.world)
   const currentRouteBuildingId = excludeDwarfId
     ? (() => {
         const dwarf = state.dwarves.find(({ id }) => id === excludeDwarfId)
@@ -280,21 +291,61 @@ export function selectStorageDestination(
         path: Position[]
       } => candidate.path !== null,
     )
-    .sort((first, second) => {
-      if (state.policy.haulingPreference === 'finish-current-route') {
-        const firstCurrent = first.building.id === currentRouteBuildingId
-        const secondCurrent = second.building.id === currentRouteBuildingId
-        if (firstCurrent !== secondCurrent) return firstCurrent ? -1 : 1
+  let preferredId = primaryStockpile?.id
+  const hasFreight =
+    state.freight?.enabled && state.freight.depotId !== undefined
+  const workshopInput = state.workshop?.enabled && !MINERAL_BLOCKS.has(block)
+  if (
+    state.policy.haulingPreference === 'nearest-stockpile' &&
+    primaryStockpile &&
+    (hasFreight || workshopInput)
+  ) {
+    const primary = candidates.find(
+      ({ building }) => building.id === primaryStockpile.id,
+    )
+    if (primary) {
+      let shortest = Number.POSITIVE_INFINITY
+      for (const { building, path } of candidates) {
+        if (
+          path.length >= shortest ||
+          path.length > primary.path.length - MIN_LOCAL_HAUL_SAVING
+        )
+          continue
+        const freightDepot =
+          hasFreight &&
+          building.id === state.freight?.depotId &&
+          findPath(
+            state.world,
+            building.position,
+            primaryStockpile.position,
+            cleared,
+          ) !== null
+        if (
+          freightDepot ||
+          (workshopInput &&
+            (building.type === 'depot' || building.type === 'outpost'))
+        ) {
+          preferredId = building.id
+          shortest = path.length
+        }
       }
+    }
+  }
+  candidates.sort((first, second) => {
+    if (state.policy.haulingPreference === 'finish-current-route') {
+      const firstCurrent = first.building.id === currentRouteBuildingId
+      const secondCurrent = second.building.id === currentRouteBuildingId
+      if (firstCurrent !== secondCurrent) return firstCurrent ? -1 : 1
+    }
 
-      if (state.policy.haulingPreference === 'nearest-stockpile') {
-        const firstPrimary = first.building.id === primaryStockpileId
-        const secondPrimary = second.building.id === primaryStockpileId
-        if (firstPrimary !== secondPrimary) return firstPrimary ? -1 : 1
-      }
+    if (state.policy.haulingPreference === 'nearest-stockpile') {
+      const firstPrimary = first.building.id === preferredId
+      const secondPrimary = second.building.id === preferredId
+      if (firstPrimary !== secondPrimary) return firstPrimary ? -1 : 1
+    }
 
-      return first.path.length - second.path.length
-    })
+    return first.path.length - second.path.length
+  })
 
   const selected = candidates[0]
   return selected

@@ -1,4 +1,4 @@
-import type { SimulationState } from '../../types'
+import { SHIPMENT_MODES, type SimulationState } from '../../types'
 import {
   isAccessRequest,
   isConstructionOrder,
@@ -39,6 +39,9 @@ export function isSimulationState(
       : null
   const upgrades = value.upgrades
   const safety = value.safety
+  const shipments = value.shipments
+  const freight = value.freight
+  const workshop = value.workshop
   return (
     hasUniqueIds(world.buildings) &&
     Array.isArray(value.dwarves) &&
@@ -49,6 +52,22 @@ export function isSimulationState(
     ) &&
     value.dwarves.every((dwarf) => isDwarf(dwarf, world.width, world.height)) &&
     isInventoryRecord(value.inventory, false) &&
+    (shipments === undefined ||
+      (isRecord(shipments) &&
+        SHIPMENT_MODES.some((mode) => mode === shipments.mode) &&
+        isNonNegativeInteger(shipments.shipped))) &&
+    (freight === undefined ||
+      (isRecord(freight) &&
+        typeof freight.enabled === 'boolean' &&
+        isNonNegativeInteger(freight.moved) &&
+        (freight.depotId === undefined ||
+          (typeof freight.depotId === 'string' &&
+            freight.depotId.length > 0)))) &&
+    (workshop === undefined ||
+      (isRecord(workshop) &&
+        typeof workshop.enabled === 'boolean' &&
+        isNonNegativeInteger(workshop.produced))) &&
+    (value.secondCrew === undefined || typeof value.secondCrew === 'boolean') &&
     isRecord(policy) &&
     ['nearest', 'ore-first', 'deepest-first'].includes(
       policy.workPreference as string,

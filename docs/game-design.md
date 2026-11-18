@@ -48,6 +48,7 @@ support vertical movement. A dwarf that loses its support falls to the
 nearest supported cell or becomes stranded until access is restored. A
 dwarf that loses its route first secures the material it carries, and may
 place one anchored emergency ladder from carried or reserved stone.
+Grounded dwarves clear a stranded task when a walking route to storage exists.
 
 **Safety.** Before accepting a dig, a dwarf simulates the block becoming air
 and checks that it still has support and a route to storage. The colony also
@@ -62,12 +63,15 @@ descent is safe but not instant. Unfunded requests wait visibly for stone
 rather than deadlocking. New colonies start in a short bootstrap phase that
 protects the ground under the stockpile and start pocket.
 
-If an access scaffold loses its anchor, the colony cancels the order and
+If a scaffold loses its support, the colony cancels the order and
 returns its materials when storage has room. Refunding materials does not
 count as work. When all dwarves are idle and no safe work is available,
 the colony checks reachable sites in batches. It queues one affordable
 ladder or bridge if completing it would open a safe dig with a route to
 storage. Once built, the colony uses its regular work planner again.
+While other dwarves are still mining, two dwarves waiting without safe
+work can trigger the same search. Only one access project is queued at a
+time for these waiting dwarves.
 
 **Buildings.** Storage is physical and finite. Any dwarf can become a
 builder: builders reserve stone, carry it to a planned site and build bridges,
@@ -88,8 +92,48 @@ reachable from the main stockpile. It uses the storage perimeter if no such
 site is available. Dwarves preserve the routes linking frontier depots back
 to the stockpile from the time the depot is funded. Changing build
 directives keeps those routes open so work can resume at the same site.
+Once the regular depot slots are used, Expand logistics allows two extra
+frontier depots per stockpile for active digs at least 32 walking cells
+from existing storage. These slots require a site close to the dig with
+a route to the stockpile.
 The **Finish current route** haul directive lets dwarves choose nearby
 storage when starting a new haul.
+
+**Surface shipments.** The Inspector lets the player keep stock, ship
+common spoil, or ship spoil and ores from the main stockpile. At 1×,
+shipments can dispatch up to 24 blocks every 10 seconds. The colony keeps
+24 stone, 4 of each other common material, and 8 of each ore across its
+stores, in addition to materials promised to construction and emergency
+recovery. Relics are kept. The shipment count resets each run, and the
+selected mode carries through new runs and prestige.
+
+**Depot freight.** An optional freight route links one distant, connected
+depot to the main stockpile for 12 spare stone. The endpoints stay fixed
+for the run. Along the current walking route between them, freight can
+transfer up to 12 blocks every two seconds at 1×. The transfer respects
+space reserved by incoming haulers. The Inspector shows when the route
+is disconnected, the depot is empty, or the stockpile is full. Surface
+shipments can free room for freight before the next transfer. With Expand
+logistics, the colony can build the first frontier depot for these services
+while there is still surface capacity. When a linked depot saves at least
+eight walking cells, new hauls can drop there before the surface transfer.
+Eligible workshop inputs can take the same short route to a nearby store.
+
+**Spoil workshop.** At 1×, the workshop can process a batch every five
+seconds. It converts three spare blocks of one common material into one
+construction stone at a completed depot or outpost. It prefers other spoil
+and can compact loose stone when it has surplus.
+The workshop keeps the existing construction and emergency reserves.
+Sites with eligible spoil take turns supplying batches. Finished stone
+enters the same store and follows the usual construction and shipping rules.
+Freight can hold up to one workshop batch at its linked depot.
+
+**Second mining crew.** With this directive enabled, idle miners may favor
+a safe second face once two coworkers are already assigned to the main face.
+The alternative must have a comparable work score, walking route and haul.
+When it runs out of work, the usual planner sends the idle miners back to
+available faces. Existing access work retains priority. The colony can
+still plan new safe approaches for waiting miners while the main crew digs.
 
 ## Player directives
 
@@ -113,7 +157,7 @@ inventory and run clock but keeps currency and permanent upgrades:
 
 ## Saves
 
-Saves are versioned JSON (schema 5) with autosave to local storage, manual
+Saves are versioned JSON (schema 7) with autosave to local storage, manual
 save, and export/import of `pixel-dwarves-save.json`. Older schemas migrate
 forward, and an invalid file shows an error instead of replacing the run.
 Terrain is stored as one byte per cell, base64-encoded in the save, so

@@ -10,6 +10,7 @@ import {
   canPrestige,
   DEFAULT_UPGRADES,
   purchaseUpgrade,
+  resetRunLogistics,
   startPrestige,
 } from './progression'
 import { parseSave, serializeState } from './serialization'
@@ -19,6 +20,7 @@ import {
   EMPTY_INVENTORY,
   type PolicyState,
   type PrestigeMode,
+  type ShipmentMode,
   type SimulationState,
   type UpgradeLevels,
 } from './types'
@@ -63,6 +65,10 @@ export type GameStore = {
     enabled: boolean,
   ) => void
   setConstructionPolicy: (policy: ConstructionPolicy) => void
+  setShipmentMode: (mode: ShipmentMode) => void
+  setFreightEnabled: (enabled: boolean) => void
+  setWorkshopEnabled: (enabled: boolean) => void
+  setSecondCrew: (enabled: boolean) => void
   tickSimulation: () => void
   startSimulation: () => void
   stopSimulation: () => void
@@ -182,6 +188,37 @@ export function createGameStore(
         simulation: { ...current.simulation, constructionPolicy },
         saveStatus: 'DIRTY',
       })),
+    setShipmentMode: (mode) => {
+      const current = get().simulation
+      const simulation = {
+        ...current,
+        shipments: { mode, shipped: current.shipments?.shipped ?? 0 },
+      }
+      writeLocalSave(simulation)
+      set({ simulation, saveStatus: 'SAVED', saveError: null })
+    },
+    setFreightEnabled: (enabled) => {
+      set(({ simulation }) => ({
+        simulation: {
+          ...simulation,
+          freight: { moved: 0, ...simulation.freight, enabled },
+        },
+      }))
+      get().saveLocally()
+    },
+    setWorkshopEnabled: (enabled) => {
+      set(({ simulation }) => ({
+        simulation: {
+          ...simulation,
+          workshop: { produced: 0, ...simulation.workshop, enabled },
+        },
+      }))
+      get().saveLocally()
+    },
+    setSecondCrew: (secondCrew) => {
+      set(({ simulation }) => ({ simulation: { ...simulation, secondCrew } }))
+      get().saveLocally()
+    },
     tickSimulation: () => {
       const current = get()
       if (current.paused) return
@@ -244,14 +281,17 @@ export function createGameStore(
     },
     newRun: (nextSeed = randomStarterSeed()) => {
       const current = get().simulation
-      const simulation = createInitialSimulation(
-        nextSeed,
-        current.world.runNumber + 1,
-        current.upgrades,
-        current.prestigeCurrency,
-        current.policy,
-        current.constructionPolicy,
-      )
+      const simulation = {
+        ...createInitialSimulation(
+          nextSeed,
+          current.world.runNumber + 1,
+          current.upgrades,
+          current.prestigeCurrency,
+          current.policy,
+          current.constructionPolicy,
+        ),
+        ...resetRunLogistics(current),
+      }
       set({
         simulation,
         saveStatus: 'NEW RUN',

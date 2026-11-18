@@ -164,6 +164,9 @@ export type DwarfState = {
   noProgressTicks?: number
 }
 
+export const SHIPMENT_MODES = ['off', 'spoil', 'surplus'] as const
+export type ShipmentMode = (typeof SHIPMENT_MODES)[number]
+
 export type SimulationState = {
   world: World
   dwarves: DwarfState[]
@@ -171,6 +174,10 @@ export type SimulationState = {
   policy: PolicyState
   constructionOrders: ConstructionOrder[]
   constructionPolicy: ConstructionPolicy
+  shipments?: { mode: ShipmentMode; shipped: number }
+  freight?: { enabled: boolean; moved: number; depotId?: string }
+  workshop?: { enabled: boolean; produced: number }
+  secondCrew?: boolean
   accessRequests: AccessRequest[]
   worldRevision: number
   safety: SafetyState

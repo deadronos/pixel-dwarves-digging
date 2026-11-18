@@ -9,6 +9,7 @@ import { stepSimulation } from './engine'
 import { planAccessRequests } from './engine/accessRequests'
 import { advanceDwarf } from './engine/advancement'
 import { advanceDig } from './engine/digAdvancement'
+import { planFrontierRecovery } from './engine/frontierRecovery'
 import {
   createTargetPlanningContext,
   getTargetPlanningSnapshot,
@@ -746,9 +747,17 @@ describe('stepSimulation', () => {
 
   it('retries emergency recovery for a grounded stranded task', () => {
     const state = makeState(['#####', '.....', '.....'])
+    state.world.buildings = state.world.buildings.filter(
+      ({ id }) => id === 'stockpile-1' || id === 'bridge-2',
+    )
+    state.world.stockpile = { x: 0, y: 1 }
+    const stockpile = state.world.buildings.find(
+      ({ id }) => id === 'stockpile-1',
+    )
+    if (stockpile) stockpile.position = state.world.stockpile
     state.dwarves[0] = {
       ...state.dwarves[0],
-      position: { x: 2, y: 1 },
+      position: { x: 2, y: 2 },
       movement: 'grounded',
       task: {
         kind: 'idle',
@@ -1262,8 +1271,9 @@ describe('stepSimulation', () => {
   it('skips an unreachable access order when a reachable depot can be built', () => {
     const state = makeState(['.....', '.....', '.....'])
     state.world.buildings = state.world.buildings.filter(
-      (building) => building.id !== 'bridge-3',
+      (building) => building.id !== 'bridge-2' && building.id !== 'bridge-3',
     )
+    state.world.cells[2] = blockToId('bedrock')
     state.world.cells[1 * state.world.width + 3] = blockToId('bedrock')
     state.world.cells[0 * state.world.width + 4] = blockToId('bedrock')
     state.world.cells[2 * state.world.width + 4] = blockToId('bedrock')
@@ -1572,34 +1582,38 @@ describe('stepSimulation', () => {
   })
 
   it('assigns a capacity depot before an optional outpost', () => {
-    const state = makeState(['.....', '.....', '.....'])
+    const state = makeState(['.......', '.......', '.......'])
+    state.world.cells.fill(blockToId('bedrock'), 0, state.world.width)
+    state.world.buildings = state.world.buildings.filter(
+      ({ position }) => position.x < 3 || position.x > 5,
+    )
     state.world.buildings.push(
       {
         id: 'outpost-optional',
         type: 'outpost',
         position: { x: 3, y: 1 },
-        width: 1,
-        height: 1,
+        width: 2,
+        height: 2,
         level: 1,
         construction: 'planned',
       },
       {
         id: 'depot-capacity',
         type: 'depot',
-        position: { x: 4, y: 1 },
+        position: { x: 5, y: 1 },
         width: 1,
         height: 1,
         level: 1,
         construction: 'planned',
       },
     )
-    state.inventory.stone = 8
+    state.inventory.stone = 16
     state.constructionOrders = [
       {
         id: 'outpost-optional-order',
         buildingId: 'outpost-optional',
         type: 'outpost',
-        required: { stone: 4 },
+        required: { stone: 12 },
         reserved: {},
         delivered: {},
         progress: 0,
@@ -1874,4 +1888,155 @@ it('resolves the access request when one ladder opens a diagonal mining face', (
     expect.objectContaining({ target: { x: 4, y: 3 }, status: 'resolved' }),
   ])
   expect(next.completed).toBe(true)
+})
+
+it('opens another face for waiting dwarves before an active crew runs out of work', () => {
+  const state = makeMiningStall()
+  state.tick = 40
+  state.inventory.stone = 2
+  state.world.buildings[0].storage = { capacity: 120, inventory: { stone: 2 } }
+  state.world.cells[state.world.width + 6] = blockToId('iron')
+  const dwarf = state.dwarves[0]
+  state.dwarves = [
+    { ...dwarf, noProgressTicks: 20 },
+    { ...dwarf, id: 'waiting', noProgressTicks: 20 },
+    {
+      ...dwarf,
+      id: 'working',
+      position: { x: 5, y: 1 },
+      task: { kind: 'dig', target: { x: 6, y: 1 }, path: [], progress: 1 },
+    },
+  ]
+
+  const planned = planFrontierRecovery(state)
+  expect(planned.accessRequests).toContainEqual(
+    expect.objectContaining({ target: { x: 3, y: 3 }, status: 'open' }),
+  )
+  expect(planned.constructionOrders).toContainEqual(
+    expect.objectContaining({ type: 'ladder', reason: 'access' }),
+  )
+  expect(planFrontierRecovery(planned)).toBe(planned)
+})
+
+it('clears a stranded task when a grounded dwarf already has a route to storage', () => {
+  const state = makeState(['.....', '.....', '.....'])
+  state.dwarves[0] = {
+    ...state.dwarves[0],
+    noProgressTicks: 100,
+    task: {
+      kind: 'idle',
+      path: [],
+      progress: 0,
+      purpose: 'recovery',
+      recoveryReason: 'stranded',
+    },
+  }
+  state.safety = {
+    phase: 'blocked',
+    blockedReason: 'awaiting-recovery',
+    emergencyStone: 0,
+  }
+
+  const next = stepSimulation(state)
+  expect(next.dwarves[0].task).toEqual({ kind: 'idle', path: [], progress: 0 })
+  expect(next.safety.phase).toBe('operational')
+  expect(next.world.buildings).toEqual(state.world.buildings)
+})
+
+it('cancels an unsupported outpost and returns delivered and carried materials once', () => {
+  const state = makeState(['.......', '.......', '.......', '.......'])
+  state.world.buildings = state.world.buildings.filter(
+    ({ id }) => id !== 'bridge-5',
+  )
+  state.world.buildings.push({
+    id: 'unsupported-outpost',
+    type: 'outpost',
+    position: { x: 4, y: 2 },
+    width: 2,
+    height: 2,
+    level: 1,
+    construction: 'under-construction',
+  })
+  state.constructionOrders = [
+    {
+      id: 'unsupported-outpost-order',
+      buildingId: 'unsupported-outpost',
+      type: 'outpost',
+      required: { stone: 12 },
+      reserved: { stone: 1 },
+      delivered: { stone: 2 },
+      progress: 2,
+      reason: 'outpost',
+    },
+  ]
+  state.dwarves[0] = {
+    ...state.dwarves[0],
+    position: { x: 4, y: 1 },
+    carrying: 'stone',
+    task: {
+      kind: 'build',
+      target: { x: 4, y: 1 },
+      path: [],
+      progress: 0,
+      block: 'stone',
+      buildingId: 'unsupported-outpost',
+      constructionOrderId: 'unsupported-outpost-order',
+    },
+  }
+
+  const next = stepSimulation(state, 2)
+  expect(next.constructionOrders).toEqual([])
+  expect(
+    next.world.buildings.some(({ id }) => id === 'unsupported-outpost'),
+  ).toBe(false)
+  expect(next.dwarves[0].carrying).toBeNull()
+  expect(next.inventory.stone).toBe(3)
+})
+
+it('releases a falling builder reservation while retaining the carried stone', () => {
+  const state = makeState(['.....', '.....', '.....', '.....'])
+  state.world.buildings.push({
+    id: 'retained-ladder',
+    type: 'ladder',
+    position: { x: 1, y: 2 },
+    width: 1,
+    height: 1,
+    level: 1,
+    construction: 'planned',
+  })
+  state.constructionOrders = [
+    {
+      id: 'retained-ladder-order',
+      buildingId: 'retained-ladder',
+      type: 'ladder',
+      required: { stone: 1 },
+      reserved: { stone: 1 },
+      delivered: {},
+      progress: 0,
+      reason: 'policy',
+    },
+  ]
+  state.dwarves[0] = {
+    ...state.dwarves[0],
+    position: { x: 0, y: 3 },
+    carrying: 'stone',
+    task: {
+      kind: 'build',
+      target: { x: 0, y: 3 },
+      path: [],
+      progress: 0,
+      block: 'stone',
+      buildingId: 'retained-ladder',
+      constructionOrderId: 'retained-ladder-order',
+    },
+  }
+
+  const next = stepSimulation(state)
+  expect(next.dwarves[0]).toMatchObject({
+    movement: 'falling',
+    carrying: 'stone',
+    task: { kind: 'haul', purpose: 'recovery' },
+  })
+  expect(next.constructionOrders[0].reserved.stone).toBe(0)
+  expect(next.inventory.stone).toBe(0)
 })

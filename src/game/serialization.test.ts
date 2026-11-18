@@ -671,12 +671,12 @@ describe('serialization', () => {
     }
   })
 
-  it('writes schema five with compact base64 cells and no per-cell biome', () => {
+  it('writes schema seven with compact base64 cells and no per-cell biome', () => {
     const original = makeState()
     const parsed = JSON.parse(serializeState(original))
 
     expect(parsed.schemaVersion).toBe(SAVE_VERSION)
-    expect(SAVE_VERSION).toBe(5)
+    expect(SAVE_VERSION).toBe(7)
     expect(parsed.state.world.cells).toBe(encodeCells(original.world.cells))
     expect(typeof parsed.state.world.cells).toBe('string')
   })
@@ -702,7 +702,7 @@ describe('serialization', () => {
     expect(result).toEqual({ state: original })
     if ('state' in result) {
       expect(result.state.world.cells).toBeInstanceOf(Uint8Array)
-      expect(JSON.parse(serializeState(result.state)).schemaVersion).toBe(5)
+      expect(JSON.parse(serializeState(result.state)).schemaVersion).toBe(7)
     }
   })
 
@@ -738,4 +738,23 @@ describe('serialization', () => {
       error: 'Save terrain data has the wrong number of cells, expected 4.',
     })
   })
+})
+
+it('preserves opt-in logistics but keeps the new features off for a schema six save', () => {
+  const state = makeState()
+  state.shipments = { mode: 'surplus', shipped: 9 }
+  state.freight = { enabled: true, depotId: 'depot-1', moved: 12 }
+  state.workshop = { enabled: true, produced: 4 }
+  state.secondCrew = true
+
+  expect(parseSave(serializeState(state))).toEqual({ state })
+  const legacy = JSON.parse(serializeState(state))
+  legacy.schemaVersion = 6
+  const {
+    freight: _freight,
+    workshop: _workshop,
+    secondCrew: _secondCrew,
+    ...previous
+  } = state
+  expect(parseSave(JSON.stringify(legacy))).toEqual({ state: previous })
 })

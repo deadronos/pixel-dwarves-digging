@@ -1,5 +1,6 @@
-import { returnMaterialToStorage } from '../buildings'
+import { canCompleteConstruction, returnMaterialToStorage } from '../buildings'
 import type { ConstructionOrder, Inventory, SimulationState } from '../types'
+import { hasActiveBuilder, hasReachableConstructionSite } from './storage'
 
 export function returnOrderMaterials(
   state: SimulationState,
@@ -36,6 +37,17 @@ export function removeRecoveredConstructionOrder(
 
   return {
     ...returned,
+    // Carried construction material is already counted in the reservation.
+    dwarves: returned.dwarves.map((dwarf) =>
+      dwarf.task.kind === 'build' && dwarf.task.constructionOrderId === order.id
+        ? {
+            ...dwarf,
+            carrying: null,
+            carryingCount: undefined,
+            task: { kind: 'idle', path: [], progress: 0 },
+          }
+        : dwarf,
+    ),
     world: {
       ...returned.world,
       buildings: returned.world.buildings.filter(
@@ -46,4 +58,27 @@ export function removeRecoveredConstructionOrder(
       (candidate) => candidate.id !== order.id,
     ),
   }
+}
+
+export function recoverStaleStorageOrders(
+  state: SimulationState,
+): SimulationState {
+  let next = state
+  for (const order of state.constructionOrders) {
+    if (order.reason !== 'outpost' && order.reason !== 'capacity') continue
+    const building = next.world.buildings.find(
+      ({ id }) => id === order.buildingId,
+    )
+    if (building?.construction === 'completed') continue
+    const invalid = !canCompleteConstruction(next.world, order.buildingId)
+    const unreachableOutpost =
+      order.reason === 'outpost' &&
+      building?.construction === 'planned' &&
+      !hasActiveBuilder(next, building.id) &&
+      !hasReachableConstructionSite(next, building.position)
+    if (invalid || unreachableOutpost) {
+      next = removeRecoveredConstructionOrder(next, order) ?? next
+    }
+  }
+  return next
 }

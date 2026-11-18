@@ -4,10 +4,10 @@ import { isRecord } from './serialization/validation'
 import type { SerializedSave, SimulationState } from './types'
 
 /**
- * Schema history: 5 stores `world.cells` as base64 block ids (one byte per
- * cell) and drops per-cell biome; 4 and older store `{ block, biome }[]`.
+ * Schema 7 adds optional freight, workshop and crew directives. 6 adds surface
+ * shipments. 5 stores `world.cells` as base64 block IDs instead of cell objects.
  */
-export const SAVE_VERSION = 5
+export const SAVE_VERSION = 7
 
 export type SaveParseResult =
   | { state: SimulationState; recoveredAccessOrders?: number }
@@ -49,7 +49,7 @@ export function parseSave(payload: string): SaveParseResult {
 
   if (parsed.schemaVersion === 1) {
     const normalized = tryNormalize(() =>
-      normalizeV3State(migrateV1State(parsed.state), true),
+      normalizeV3State(migrateV1State(parsed.state), true, 1),
     )
     if (normalized && 'error' in normalized) return normalized
     return normalized
@@ -66,13 +66,16 @@ export function parseSave(payload: string): SaveParseResult {
     parsed.schemaVersion !== 2 &&
     parsed.schemaVersion !== 3 &&
     parsed.schemaVersion !== 4 &&
+    parsed.schemaVersion !== 5 &&
+    parsed.schemaVersion !== 6 &&
     parsed.schemaVersion !== SAVE_VERSION
   ) {
     return { error: 'Save version is not supported.' }
   }
 
+  const schemaVersion = parsed.schemaVersion
   const normalized = tryNormalize(() =>
-    normalizeV3State(parsed.state, parsed.schemaVersion === 2),
+    normalizeV3State(parsed.state, schemaVersion === 2, schemaVersion),
   )
   if (normalized && 'error' in normalized) return normalized
   if (!normalized) {

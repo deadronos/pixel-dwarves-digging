@@ -52,7 +52,10 @@ function digSafetyKey(
     })
     .sort()
     .join('|')
-  return `${stand.x}:${stand.y}|${target.x}:${target.y}|${state.policy.haulingPreference}|${reservations}`
+  const freightDepot = state.freight?.enabled
+    ? state.freight.depotId
+    : undefined
+  return `${stand.x}:${stand.y}|${target.x}:${target.y}|${state.policy.haulingPreference}|${freightDepot ?? ''}|${state.workshop?.enabled ?? false}|${reservations}`
 }
 
 function assessSupportDropSafety(

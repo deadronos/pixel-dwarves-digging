@@ -5,18 +5,23 @@ import { settleDwarf } from './engine/recovery'
 import { deriveSafetyObservation } from './engine/safetyObservation'
 import { transitionSafety } from './engine/safetyState'
 import { createTargetPlanningContext } from './engine/targeting'
+import { releaseBuildReservation } from './engine/tasks'
 import {
   planStorageConstruction,
   recoverStaleAccessOrders,
-  recoverStaleOutpostOrders,
+  recoverStaleStorageOrders,
 } from './logistics'
+import { advanceFreight } from './logistics/freight'
+import { dispatchSurplus } from './logistics/shipments'
+import { advanceWorkshop } from './logistics/workshop'
 import { cloneInventory, type SimulationState } from './types'
 
 function stepOnce(state: SimulationState): SimulationState {
   if (state.completed) return { ...state, tick: state.tick + 1 }
 
+  const suppliedState = advanceFreight(advanceWorkshop(dispatchSurplus(state)))
   const recoveredState = recoverStaleAccessOrders(
-    recoverStaleOutpostOrders(state),
+    recoverStaleStorageOrders(suppliedState),
   )
   const targetPlanningContext = createTargetPlanningContext(recoveredState)
   const requestedState = planAccessRequests(
@@ -36,6 +41,12 @@ function stepOnce(state: SimulationState): SimulationState {
   for (let index = 0; index < state.dwarves.length; index += 1) {
     const previousDwarf = nextState.dwarves[index]
     const settled = settleDwarf(nextState.world, nextState.dwarves[index])
+    if (previousDwarf.task.kind === 'build' && settled.task.kind !== 'build') {
+      nextState.constructionOrders = releaseBuildReservation(
+        nextState.constructionOrders,
+        previousDwarf,
+      )
+    }
     nextState.dwarves[index] = settled
     const worldBeforeAdvance = nextState.world
     const advanced = advanceDwarf(nextState, settled, targetPlanningContext)

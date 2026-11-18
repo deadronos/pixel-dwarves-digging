@@ -7,6 +7,7 @@ import {
 import {
   BUILDING_DEFINITIONS,
   FRONTIER_DEPOT_SEARCH_RADIUS,
+  LATE_FRONTIER_MIN_HAUL,
   MAX_STORAGE_LEVEL,
   OVERFLOW_DEPOT_TRIGGER_CAPACITY,
   STORAGE_UPGRADE_COST,
@@ -21,6 +22,7 @@ import {
   getAvailableCapacity,
   getAvailableConstructionMaterial,
   hasReachableConstructionSite,
+  isFrontierDepot,
   isFrontierDepotSite,
   storageBuildings,
   storagePerimeterCandidates,
@@ -59,16 +61,27 @@ export function outpostCandidatePositions(state: SimulationState): Position[] {
   )
 }
 
-function findFrontierDepotSite(state: SimulationState): Position | undefined {
+function findFrontierDepotSite(
+  state: SimulationState,
+  lateOnly: boolean,
+): Position | undefined {
   const { world } = state
   const stockpile = getPrimaryStockpile(world)
   if (!stockpile) return undefined
 
-  const digs = state.dwarves.flatMap(({ position, task }) =>
-    task.kind === 'dig' && task.target
-      ? [{ stand: task.path.at(-1) ?? position, target: task.target }]
-      : [],
-  )
+  const storage = lateOnly ? storageBuildings(world) : []
+  const digs = state.dwarves.flatMap(({ position, task }) => {
+    if (task.kind !== 'dig' || !task.target) return []
+    const stand = task.path.at(-1) ?? position
+    if (
+      storage.some((building) => {
+        const path = findPath(world, stand, building.position)
+        return path !== null && path.length < LATE_FRONTIER_MIN_HAUL
+      })
+    )
+      return []
+    return [{ stand, target: task.target }]
+  })
   const seen = new Set<string>()
   const sites: Array<{ position: Position; miners: number; travel: number }> =
     []
@@ -114,7 +127,8 @@ export function inspectOverflowDepotSites(
   state: SimulationState,
 ): ConstructionSiteInspection & { frontier?: true } {
   if (state.constructionPolicy === 'expand') {
-    const site = findFrontierDepotSite(state)
+    const lateOnly = !canPlanAdditionalDepot(state.world)
+    const site = findFrontierDepotSite(state, lateOnly)
     if (site) {
       return {
         reachableCandidate: site,
@@ -122,6 +136,7 @@ export function inspectOverflowDepotSites(
         frontier: true,
       }
     }
+    if (lateOnly) return {}
   }
   return inspectConstructionSites(
     state,
@@ -208,18 +223,36 @@ export function planOverflowDepotOrder(
 ): SimulationState {
   if (state.constructionPolicy === 'conserve') return state
   const eligibility = getExpansionEligibility(state)
-  if (eligibility.availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
-    return state
-  }
-  if (!canPlanAdditionalDepot(state.world) || eligibility.hasPendingDepot) {
+  const lateOnly =
+    state.constructionPolicy === 'expand' &&
+    !canPlanAdditionalDepot(state.world)
+  if (
+    !canPlanAdditionalDepot(state.world, state.constructionPolicy) ||
+    eligibility.hasPendingDepot
+  ) {
     return state
   }
 
   const definition = BUILDING_DEFINITIONS.depot
   if (eligibility.availableStone < definition.stone) return state
 
-  const { reachableCandidate: site, frontier } =
-    inspectOverflowDepotSites(state)
+  const needsServiceDepot =
+    state.constructionPolicy === 'expand' &&
+    state.tick % 20 === 0 &&
+    ((state.freight?.enabled && !state.freight.depotId) ||
+      state.workshop?.enabled) &&
+    !state.world.buildings.some(isFrontierDepot)
+  const serviceSite = needsServiceDepot
+    ? findFrontierDepotSite(state, true)
+    : undefined
+  const canPlanOverflow = lateOnly
+    ? state.tick % 20 === 0
+    : eligibility.availableCapacity <= OVERFLOW_DEPOT_TRIGGER_CAPACITY
+  const { reachableCandidate: site, frontier } = serviceSite
+    ? { reachableCandidate: serviceSite, frontier: true }
+    : canPlanOverflow
+      ? inspectOverflowDepotSites(state)
+      : {}
   if (!site) return state
   const planned = appendPlannedConstruction(state, 'depot', site, frontier)
   const order =
