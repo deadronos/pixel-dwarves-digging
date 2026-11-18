@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { blockToId, cellsFromBlocks, encodeCells, idToBlock } from './blocks'
+import { stepSimulation } from './engine'
 import { parseSave, SAVE_VERSION, serializeState } from './serialization'
 import { createInitialSimulation } from './state'
 import { EMPTY_INVENTORY, type SimulationState } from './types'
@@ -69,6 +70,104 @@ describe('serialization', () => {
     const original = makeState()
 
     expect(parseSave(serializeState(original))).toEqual({ state: original })
+  })
+
+  it('opens a fixed schema-five terrain payload with every historical block ID', () => {
+    const original = makeState()
+    const parsed = parseSave(
+      JSON.stringify({
+        schemaVersion: 5,
+        state: {
+          ...original,
+          world: {
+            ...original.world,
+            width: 6,
+            height: 3,
+            biomes: Array(6).fill('meadow'),
+            surfaceHeights: Array(6).fill(1),
+            cells: 'AAECAwQFBgcICQoLDA0ODxAR',
+          },
+        },
+      }),
+    )
+
+    expect(
+      'state' in parsed && Array.from(parsed.state.world.cells, idToBlock),
+    ).toEqual([
+      'air',
+      'bedrock',
+      'grass',
+      'dirt',
+      'sand',
+      'sandstone',
+      'red-stone',
+      'snow',
+      'packed-soil',
+      'ice',
+      'mushroom',
+      'loam',
+      'clay',
+      'stone',
+      'coal',
+      'iron',
+      'crystal',
+      'relic',
+    ])
+  })
+
+  it('round-trips the state immediately after depositing a full satchel', () => {
+    const original = createInitialSimulation('serialized-delivery')
+    const stockpile = original.world.stockpile
+    original.dwarves[0] = {
+      ...original.dwarves[0],
+      position: stockpile,
+      carrying: 'stone',
+      carryingCount: 3,
+      task: {
+        kind: 'haul',
+        target: stockpile,
+        path: [],
+        progress: 0,
+        block: 'stone',
+        buildingId: 'stockpile-1',
+      },
+    }
+    const delivered = stepSimulation(original)
+    expect(delivered.inventory.stone).toBe(5)
+    expect(delivered.dwarves[0].carrying).toBeNull()
+    expect(delivered.dwarves[0].carryingCount).toBeUndefined()
+    expect(parseSave(serializeState(delivered))).toMatchObject({
+      state: { tick: 1, inventory: { stone: 5 } },
+    })
+  })
+
+  it('loads older saves left with an empty dwarf and a stale satchel count', () => {
+    const original = createInitialSimulation('stale-satchel-count')
+    original.dwarves[0] = { ...original.dwarves[0], carryingCount: 3 }
+
+    const parsed = parseSave(serializeState(original))
+
+    expect('state' in parsed).toBe(true)
+    if ('state' in parsed) {
+      expect(parsed.state.dwarves[0].carrying).toBeNull()
+      expect(parsed.state.dwarves[0].carryingCount).toBeUndefined()
+    }
+  })
+
+  it('loads an empty dwarf returning to the stockpile after rescue', () => {
+    const original = createInitialSimulation('empty-recovery-haul')
+    original.dwarves[0].task = {
+      kind: 'haul',
+      path: [],
+      progress: 0,
+      target: original.world.stockpile,
+      buildingId: 'stockpile-1',
+      purpose: 'recovery',
+      recoveryReason: 'stranded',
+    }
+    const parsed = parseSave(serializeState(original))
+
+    expect(parsed).toMatchObject({ state: { dwarves: original.dwarves } })
   })
 
   it('migrates a schema-two world to schema three with a bedrock floor', () => {
@@ -270,17 +369,30 @@ describe('serialization', () => {
     expect(parseSave(JSON.stringify(invalidCell))).toEqual({
       error: 'Save terrain data has an invalid cell at 0.',
     })
+  })
 
-    const invalidTask = makeState()
-    invalidTask.dwarves = [
-      {
-        ...invalidTask.dwarves[0],
-        task: { kind: 'haul', path: [], progress: 0 },
-      },
-    ]
-    expect(
-      parseSave(legacyJson({ schemaVersion: 4, state: invalidTask })),
-    ).toEqual({ error: 'Save file is missing required simulation data.' })
+  it('rejects a targeted haul that has lost its destination building', () => {
+    const original = createInitialSimulation('missing-haul-destination')
+    const task = {
+      kind: 'haul' as const,
+      target: original.world.stockpile,
+      path: [],
+      progress: 0,
+      block: 'stone' as const,
+    }
+    original.dwarves[0] = {
+      ...original.dwarves[0],
+      carrying: 'stone',
+      task: { ...task, buildingId: 'stockpile-1' },
+    }
+    expect(parseSave(serializeState(original))).toMatchObject({
+      state: { dwarves: original.dwarves },
+    })
+
+    original.dwarves[0].task = task
+    expect(parseSave(serializeState(original))).toEqual({
+      error: 'Save file is missing required simulation data.',
+    })
   })
 
   it('rejects construction orders that reference missing buildings', () => {

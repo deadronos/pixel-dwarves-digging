@@ -70,9 +70,9 @@ export function tileDistance(from: TilePoint, to: TilePoint): number {
 }
 
 /**
- * Progress through a segment, clamped to [0, 1]. A segment with no duration
- * (or one that started in the future, as happens with a clock change) counts
- * as finished so nothing is ever left mid-stride.
+ * Progress through a segment, clamped to [0, 1]. A zero-duration segment
+ * is finished immediately. A timed segment stays at its starting position
+ * until its start time.
  */
 export function interpolationProgress(
   now: number,

@@ -90,7 +90,12 @@ export function advanceHaul(
               carryingCount: remaining,
               task: idleTask(),
             }
-          : { ...dwarf, carrying: null, task: idleTask() },
+          : {
+              ...dwarf,
+              carrying: null,
+              carryingCount: undefined,
+              task: idleTask(),
+            },
       world: depositedWorld,
       minedBlock: null,
       depositedBlock: task.block,

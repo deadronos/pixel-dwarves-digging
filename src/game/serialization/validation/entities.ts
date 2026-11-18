@@ -127,13 +127,11 @@ export function isTask(value: unknown, width: number, height: number): boolean {
 
   if (value.kind === 'haul') {
     const hasCargo = typeof value.block === 'string'
-    return (
-      hasCargo &&
-      (value.target !== undefined
-        ? typeof value.buildingId === 'string'
-        : value.purpose === 'recovery' &&
-          value.recoveryReason === 'storage-route')
-    )
+    const recovering =
+      value.purpose === 'recovery' && value.recoveryReason !== undefined
+    return value.target !== undefined
+      ? typeof value.buildingId === 'string' && (hasCargo || recovering)
+      : hasCargo && recovering && value.recoveryReason === 'storage-route'
   }
 
   return (

@@ -180,9 +180,16 @@ export function getAggregateInventory(
 ): Inventory {
   const aggregate = cloneInventory(state.inventory)
   for (const dwarf of state.dwarves) {
-    if (dwarf.carrying) aggregate[dwarf.carrying] += 1
+    if (dwarf.carrying) aggregate[dwarf.carrying] += dwarf.carryingCount ?? 1
   }
   return aggregate
+}
+
+function freeStorageSlots(building: BuildingState): number {
+  return (
+    (building.storage?.capacity ?? 0) -
+    storedCount(building.storage?.inventory ?? {})
+  )
 }
 
 export function getAvailableCapacity(
@@ -191,13 +198,7 @@ export function getAvailableCapacity(
 ): number {
   return storageBuildings(world)
     .filter((building) => !buildingId || building.id === buildingId)
-    .reduce(
-      (total, building) =>
-        total +
-        (building.storage?.capacity ?? 0) -
-        storedCount(building.storage?.inventory ?? {}),
-      0,
-    )
+    .reduce((total, building) => total + freeStorageSlots(building), 0)
 }
 
 export function getReservedStorageCapacity(
@@ -205,14 +206,19 @@ export function getReservedStorageCapacity(
   buildingId?: string,
   excludeDwarfId?: string,
 ): number {
-  return state.dwarves.filter(
-    (dwarf) =>
+  let reserved = 0
+  for (const dwarf of state.dwarves) {
+    if (
       dwarf.id !== excludeDwarfId &&
       dwarf.carrying !== null &&
       dwarf.task.kind === 'haul' &&
       dwarf.task.target !== undefined &&
-      (!buildingId || dwarf.task.buildingId === buildingId),
-  ).length
+      (!buildingId || dwarf.task.buildingId === buildingId)
+    ) {
+      reserved += dwarf.carryingCount ?? 1
+    }
+  }
+  return reserved
 }
 
 export function getAvailableStateCapacity(
@@ -220,11 +226,19 @@ export function getAvailableStateCapacity(
   buildingId?: string,
   excludeDwarfId?: string,
 ): number {
-  return Math.max(
-    0,
-    getAvailableCapacity(state.world, buildingId) -
-      getReservedStorageCapacity(state, buildingId, excludeDwarfId),
-  )
+  // Overflow at one destination cannot consume free slots in another store.
+  return storageBuildings(state.world)
+    .filter((building) => !buildingId || building.id === buildingId)
+    .reduce(
+      (total, building) =>
+        total +
+        Math.max(
+          0,
+          freeStorageSlots(building) -
+            getReservedStorageCapacity(state, building.id, excludeDwarfId),
+        ),
+      0,
+    )
 }
 
 export function hasReachableStorage(state: SimulationState): boolean {

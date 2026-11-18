@@ -72,6 +72,7 @@ routes. When expansion is enabled, the colony plans an overflow depot with
 36 free storage slots remaining and reserves its stone when the order is
 created. A loaded dwarf that reaches a full destination looks for another
 reachable store before attempting emergency recovery.
+Each loaded haul reserves space for the blocks it carries at its destination.
 
 **Expand logistics** looks for depot sites near active digs that are already
 reachable from the main stockpile. It uses the storage perimeter if no such

@@ -44,6 +44,7 @@ export function assignBuildTask(
     dwarf: {
       ...dwarf,
       carrying: buildOrder.material,
+      carryingCount: undefined,
       task: {
         kind: 'build',
         target: buildOrder.stand,

@@ -123,9 +123,7 @@ export function attemptEmergencyRecovery(
       ...dwarf,
       movement: 'grounded',
       carrying: retainedCarriedMaterial,
-      ...(retainedCarriedCount !== undefined
-        ? { carryingCount: retainedCarriedCount }
-        : {}),
+      carryingCount: retainedCarriedCount,
       task,
     },
     world: recoveryWorld,

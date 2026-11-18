@@ -219,7 +219,7 @@ export function formatDirectiveSummary(
   policy: Pick<PolicyState, 'workPreference' | 'haulingPreference'>,
   constructionPolicy: ConstructionPolicy,
 ): string {
-  return `${policy.workPreference.replace('-', ' ')} · ${policy.haulingPreference.replace('-', ' ')} · ${constructionPolicy} construction`
+  return `${policy.workPreference.replaceAll('-', ' ')} · ${policy.haulingPreference.replaceAll('-', ' ')} · ${constructionPolicy} construction`
 }
 
 export function getCenterBiomeDefinition(
