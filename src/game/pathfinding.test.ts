@@ -135,6 +135,33 @@ describe('findPath', () => {
     ])
   })
 
+  it('requires a ladder between vertically adjacent walkable cells', () => {
+    const world = makeWorld(['##', '..', '.#'])
+    const from = { x: 0, y: 1 }
+    const to = { x: 0, y: 2 }
+    const upperFloor = {
+      id: 'upper-floor',
+      type: 'bridge' as const,
+      position: to,
+      width: 1,
+      height: 1,
+      level: 1,
+      construction: 'completed' as const,
+    }
+    world.buildings = [upperFloor]
+    expect(findPath(world, from, to)).toBeNull()
+
+    const withLadder: World = {
+      ...world,
+      buildings: [
+        upperFloor,
+        { ...upperFloor, id: 'ladder', type: 'ladder', position: from },
+      ],
+      topologyKey: createTopologyKey(),
+    }
+    expect(findPath(withLadder, from, to)).toEqual([to])
+  })
+
   it('finds a supported diagonal path', () => {
     const world = makeWorld(['#####', '.....', '.....', '#####'])
     world.buildings = [

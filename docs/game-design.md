@@ -73,6 +73,8 @@ routes. When expansion is enabled, the colony plans an overflow depot with
 created. A loaded dwarf that reaches a full destination looks for another
 reachable store before attempting emergency recovery.
 Each loaded haul reserves space for the blocks it carries at its destination.
+When a builder returns to a partially supplied site, the order reserves
+only the material still owed.
 
 **Expand logistics** looks for depot sites near active digs that are already
 reachable from the main stockpile. It uses the storage perimeter if no such

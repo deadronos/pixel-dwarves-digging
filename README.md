@@ -35,7 +35,12 @@ early reset. See [docs/game-design.md](docs/game-design.md) for the full rules.
     npm test -- --run
     npm run build
 
-CI runs all four on every pull request and every push to `main`. Pushing a
-`v*` tag deploys to GitHub Pages after the same checks pass.
+CI also runs the Chromium recovery smoke test on each pull request and push
+to `main`. To run it locally:
+
+    npx playwright install --only-shell chromium
+    npm run test:browser
+
+Pushing a `v*` tag deploys to GitHub Pages after the same checks pass.
 
 Contributor and coding-agent guidance starts at [AGENTS.md](AGENTS.md).

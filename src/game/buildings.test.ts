@@ -181,6 +181,12 @@ describe('building helpers', () => {
 
   it('allows a ladder directly below a completed ladder anchor', () => {
     const state = makeBuildingState()
+    const position = { x: 4, y: 3 }
+    const request = { type: 'ladder' as const, position }
+    state.world.cells[2 * state.world.width + position.x] = blockToId('air')
+    state.world.cells[5 * state.world.width + position.x] = blockToId('stone')
+    expect(canPlaceBuilding(state.world, request)).toBe(false)
+
     const ladderWorld = {
       ...state.world,
       buildings: [
@@ -188,7 +194,7 @@ describe('building helpers', () => {
         {
           id: 'ladder-anchor',
           type: 'ladder' as const,
-          position: { x: 3, y: 4 },
+          position: { x: position.x, y: position.y + 1 },
           width: 1,
           height: 1,
           level: 1,
@@ -197,24 +203,24 @@ describe('building helpers', () => {
       ],
     }
 
-    ladderWorld.cells[3 * state.world.width + 2] = blockToId('stone')
-    expect(
-      canPlaceBuilding(ladderWorld, {
-        type: 'ladder',
-        position: { x: 3, y: 3 },
-      }),
-    ).toBe(true)
+    expect(canPlaceBuilding(ladderWorld, request)).toBe(true)
   })
 
   it('rejects planned footprints that overlap another planned building', () => {
     const state = makeBuildingState()
-
+    const request = { type: 'outpost' as const, position: { x: 5, y: 3 } }
     expect(
-      canPlaceBuilding(state.world, {
-        type: 'outpost',
-        position: { x: 5, y: 2 },
-      }),
-    ).toBe(false)
+      canPlaceBuilding(
+        {
+          ...state.world,
+          buildings: state.world.buildings.filter(
+            ({ id }) => id !== 'outpost-1',
+          ),
+        },
+        request,
+      ),
+    ).toBe(true)
+    expect(canPlaceBuilding(state.world, request)).toBe(false)
   })
 
   it('does not complete a planned building after a reservation conflict appears', () => {
@@ -244,8 +250,30 @@ describe('building helpers', () => {
 
   it('reserves and consumes construction stone exactly once', () => {
     const state = makeBuildingState()
+    const stockpile = getPrimaryStockpile(state.world)
+    if (!stockpile?.storage) throw new Error('fixture stockpile missing')
+    stockpile.storage.inventory = { stone: 20 }
+    state.inventory.stone = 20
+    state.constructionOrders[0].delivered.stone = 4
+    state.constructionOrders[0].reserved.stone = 2
+
     const reserved = reserveConstructionMaterials(state, 'outpost-order')
-    const completed = completeConstruction(reserved, 'outpost-order')
+    const retried = reserveConstructionMaterials(reserved, 'outpost-order')
+    expect(retried.constructionOrders[0].reserved.stone).toBe(8)
+    expect(retried.inventory.stone).toBe(14)
+    expect(getPrimaryStockpile(retried.world)?.storage?.inventory.stone).toBe(
+      14,
+    )
+    const delivered = {
+      ...retried,
+      constructionOrders: retried.constructionOrders.map((order) => ({
+        ...order,
+        reserved: {},
+        delivered: { stone: 12 },
+        progress: 12,
+      })),
+    }
+    const completed = completeConstruction(delivered, 'outpost-order')
 
     expect(completed.world.buildings).toContainEqual(
       expect.objectContaining({
@@ -253,7 +281,11 @@ describe('building helpers', () => {
         construction: 'completed',
       }),
     )
-    expect(completed.inventory.stone).toBe(0)
+    expect(completed.inventory.stone).toBe(14)
+    expect(getPrimaryStockpile(completed.world)?.storage?.inventory.stone).toBe(
+      14,
+    )
+    expect(completed.constructionOrders).toEqual([])
   })
 
   it('completes a storage upgrade without resetting stored inventory', () => {

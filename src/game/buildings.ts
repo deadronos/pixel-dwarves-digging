@@ -95,7 +95,10 @@ export function reserveConstructionMaterials(
     const reserveMaterial = getEmergencyReserveMaterial(state.inventory)
     const reserve = key === reserveMaterial ? state.safety.emergencyStone : 0
     const available = Math.max(0, inventory[key] - reserve)
-    const needed = Math.max(0, (amount ?? 0) - (reserved[key] ?? 0))
+    const needed = Math.max(
+      0,
+      (amount ?? 0) - (order.delivered[key] ?? 0) - (reserved[key] ?? 0),
+    )
     const taken = Math.min(available, needed)
     inventory[key] -= taken
     world = removeFromStorage(world, key, taken)

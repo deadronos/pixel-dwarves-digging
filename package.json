@@ -9,6 +9,7 @@
     "typecheck": "tsc -b",
     "lint": "biome check .",
     "test": "vitest",
+    "test:browser": "playwright test",
     "test:watch": "vitest --watch",
     "preview": "vite preview"
   },
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.6.8",
+    "@playwright/test": "1.65.1",
     "@types/node": "^26.6.6",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.3.0",

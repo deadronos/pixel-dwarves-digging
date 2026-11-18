@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { blockToId, cellsFromBlocks, encodeCells, idToBlock } from './blocks'
+import { getPrimaryStockpile } from './buildings'
 import { stepSimulation } from './engine'
 import { parseSave, SAVE_VERSION, serializeState } from './serialization'
 import { createInitialSimulation } from './state'
@@ -151,6 +152,33 @@ describe('serialization', () => {
     if ('state' in parsed) {
       expect(parsed.state.dwarves[0].carrying).toBeNull()
       expect(parsed.state.dwarves[0].carryingCount).toBeUndefined()
+    }
+  })
+
+  it('repairs an older builder save that retained its previous satchel count', () => {
+    const initial = createInitialSimulation('stale-builder-count')
+    const stockpile = getPrimaryStockpile(initial.world)
+    if (!stockpile?.storage) throw new Error('fixture stockpile missing')
+    stockpile.storage.inventory.stone = 100
+    initial.inventory.stone = 100
+
+    // Placing, funding, and assigning the depot use the same path as a run.
+    const original = stepSimulation(initial)
+    const builderIndex = original.dwarves.findIndex(
+      ({ task }) => task.kind === 'build',
+    )
+    expect(builderIndex).toBeGreaterThanOrEqual(0)
+    original.dwarves[builderIndex].carryingCount = 3
+
+    const parsed = parseSave(serializeState(original))
+
+    expect('state' in parsed).toBe(true)
+    if ('state' in parsed) {
+      expect(parsed.state.dwarves[builderIndex]).toMatchObject({
+        carrying: 'stone',
+        task: { kind: 'build' },
+      })
+      expect(parsed.state.dwarves[builderIndex].carryingCount).toBeUndefined()
     }
   })
 
