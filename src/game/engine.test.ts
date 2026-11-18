@@ -1785,3 +1785,93 @@ describe('stepSimulation', () => {
     expect(result.dwarves[0].carrying).toBeNull()
   })
 })
+
+function makeMiningStall(oreRow = '...I...'): SimulationState {
+  const state = makeState(['.......', '.......', '.......', oreRow, '.......'])
+  for (let x = 0; x < state.world.width; x += 1) {
+    state.world.cells[x] = blockToId('bedrock')
+  }
+  state.world.cells[2 * state.world.width + 2] = blockToId('bedrock')
+  state.world.buildings = state.world.buildings.filter(
+    (building) => building.type === 'stockpile',
+  )
+  return state
+}
+
+it('cancels an unsupported access scaffold and refunds its assigned stone once', () => {
+  const state = makeMiningStall()
+  state.world.buildings.push({
+    id: 'lost-anchor',
+    type: 'ladder',
+    position: { x: 5, y: 2 },
+    width: 1,
+    height: 1,
+    level: 1,
+    construction: 'under-construction',
+  })
+  state.constructionOrders.push({
+    id: 'lost-anchor-order',
+    buildingId: 'lost-anchor',
+    type: 'ladder',
+    reason: 'access',
+    required: { stone: 1 },
+    reserved: { stone: 1 },
+    delivered: {},
+    progress: 0,
+  })
+  state.dwarves[0] = {
+    ...state.dwarves[0],
+    carrying: 'stone',
+    task: {
+      kind: 'build',
+      target: { x: 1, y: 1 },
+      path: [],
+      progress: 0,
+      block: 'stone',
+      buildingId: 'lost-anchor',
+      constructionOrderId: 'lost-anchor-order',
+    },
+  }
+
+  const next = stepSimulation(state)
+  expect(next.constructionOrders).toEqual([])
+  expect(next.world.buildings.map(({ id }) => id)).toEqual(['stockpile-1'])
+  expect(next.dwarves[0]).toMatchObject({
+    carrying: null,
+    task: { kind: 'idle' },
+  })
+  expect(next.inventory.stone).toBe(1)
+  expect(next.world.buildings[0].storage?.inventory.stone).toBe(1)
+  expect(next.safety.noProgressTicks).toBe(1)
+})
+
+it('builds an access ladder and mines a previously unreachable face when idle', () => {
+  const state = makeMiningStall()
+  state.inventory.stone = 2
+  state.world.buildings[0].storage = { capacity: 120, inventory: { stone: 2 } }
+  state.safety.noProgressTicks = 100
+
+  const next = stepSimulation(state, 300)
+  expect(next.world.buildings).toContainEqual(
+    expect.objectContaining({ type: 'ladder', construction: 'completed' }),
+  )
+  expect(next.totalCleared).toBe(1)
+  expect(next.inventory.iron).toBe(1)
+})
+
+it('resolves the access request when one ladder opens a diagonal mining face', () => {
+  const state = makeMiningStall('....I..')
+  state.inventory.stone = 1
+  state.world.buildings[0].storage = { capacity: 120, inventory: { stone: 1 } }
+  state.safety.noProgressTicks = 100
+
+  const next = stepSimulation(state, 300)
+  expect(
+    next.world.buildings.filter(({ type }) => type === 'ladder'),
+  ).toHaveLength(1)
+  expect(next.totalCleared).toBe(1)
+  expect(next.accessRequests).toEqual([
+    expect.objectContaining({ target: { x: 4, y: 3 }, status: 'resolved' }),
+  ])
+  expect(next.completed).toBe(true)
+})

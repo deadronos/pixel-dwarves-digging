@@ -1,5 +1,6 @@
 import { planAccessRequests } from './engine/accessRequests'
 import { advanceDwarf } from './engine/advancement'
+import { planFrontierRecovery } from './engine/frontierRecovery'
 import { settleDwarf } from './engine/recovery'
 import { deriveSafetyObservation } from './engine/safetyObservation'
 import { transitionSafety } from './engine/safetyState'
@@ -43,15 +44,13 @@ function stepOnce(state: SimulationState): SimulationState {
       advanced.world.buildings !== worldBeforeAdvance.buildings
     nextState.dwarves[index] = {
       ...advanced.dwarf,
-      noProgressTicks:
-        advanced.progressed || worldChanged
-          ? 0
-          : (previousDwarf.noProgressTicks ?? 0) + 1,
+      noProgressTicks: advanced.progressed
+        ? 0
+        : (previousDwarf.noProgressTicks ?? 0) + 1,
     }
     nextState.world = advanced.world
     if (worldChanged) {
       nextState.worldRevision += 1
-      progressedThisTick = true
     }
     if (advanced.progressed) progressedThisTick = true
     if (advanced.inventory) nextState.inventory = advanced.inventory
@@ -80,7 +79,7 @@ function stepOnce(state: SimulationState): SimulationState {
   const noProgressTicks = progressedThisTick
     ? 0
     : (state.safety.noProgressTicks ?? 0) + 1
-  return {
+  return planFrontierRecovery({
     ...nextState,
     safety: transitionSafety(
       { ...nextState.safety, noProgressTicks },
@@ -89,7 +88,7 @@ function stepOnce(state: SimulationState): SimulationState {
     ),
     completed:
       !observation.hasMineableSolids && allDwarvesSettled && !hasPendingPlans,
-  }
+  })
 }
 
 export function stepSimulation(
