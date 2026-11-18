@@ -73,6 +73,14 @@ routes. When expansion is enabled, the colony plans an overflow depot with
 created. A loaded dwarf that reaches a full destination looks for another
 reachable store before attempting emergency recovery.
 
+**Expand logistics** looks for depot sites near active digs that are already
+reachable from the main stockpile. It uses the storage perimeter if no such
+site is available. Dwarves preserve the routes linking frontier depots back
+to the stockpile from the time the depot is funded. Changing build
+directives keeps those routes open so work can resume at the same site.
+The **Finish current route** haul directive lets dwarves choose nearby
+storage when starting a new haul.
+
 ## Player directives
 
 - **Work:** nearest exposed, ore first, or deepest first.

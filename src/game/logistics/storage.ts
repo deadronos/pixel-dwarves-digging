@@ -3,6 +3,7 @@ import { getCompletedStorageBuildings } from '../buildings/selectors'
 import { addMaterialToStorage, storedCount } from '../buildings/storage'
 import {
   COMMON_BUILDING_MATERIALS,
+  FRONTIER_DEPOT_MIN_DISTANCE,
   getEmergencyReserveMaterial,
   MAX_DEPOTS_PER_STOCKPILE,
 } from '../content'
@@ -25,6 +26,26 @@ export type StorageDestination = {
 
 export function storageBuildings(world: World): BuildingState[] {
   return getCompletedStorageBuildings(world)
+}
+
+// Depot IDs carry placement provenance across saves and directive changes.
+export const FRONTIER_DEPOT_ID_PREFIX = 'depot-frontier-'
+
+export function isFrontierDepot(building: BuildingState): boolean {
+  return (
+    building.type === 'depot' &&
+    building.id.startsWith(FRONTIER_DEPOT_ID_PREFIX)
+  )
+}
+
+export function isFrontierDepotSite(
+  position: Position,
+  stockpile: Position,
+): boolean {
+  return (
+    Math.abs(position.x - stockpile.x) + Math.abs(position.y - stockpile.y) >=
+    FRONTIER_DEPOT_MIN_DISTANCE
+  )
 }
 
 export function getDepotLimit(world: World): number {

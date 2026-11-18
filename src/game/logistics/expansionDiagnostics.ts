@@ -8,7 +8,9 @@ import {
 import type { BuildingType, Position, SimulationState, World } from '../types'
 import { getExpansionEligibility } from './expansionEligibility'
 import {
+  type ConstructionSiteInspection,
   inspectConstructionSites,
+  inspectOverflowDepotSites,
   outpostCandidatePositions,
 } from './expansionPlanning'
 import {
@@ -19,7 +21,6 @@ import {
   getDepotLimit,
   getReservedStorageCapacity,
   storageBuildings,
-  storagePerimeterCandidates,
   storedCount,
 } from './storage'
 
@@ -76,19 +77,20 @@ function storageExpansionKey(state: SimulationState): string {
     .sort()
     .join('|')
   const dwarfSignature = state.dwarves
-    .map((dwarf) => `${dwarf.position.x},${dwarf.position.y}`)
-    .sort()
+    .map(({ position, task }) => {
+      const dig = task.kind === 'dig' && task.target
+      const stand = task.path.at(-1) ?? position
+      return `${position.x},${position.y}${dig ? `:${dig.x},${dig.y}:${stand.x},${stand.y}` : ''}`
+    })
     .join('|')
 
   return `${state.constructionPolicy}|${state.safety.phase}|${state.safety.blockedReason ?? ''}|${availableCapacity}|${availableStone}|${ordersSignature}|${dwarfSignature}`
 }
 
 function explainConstructionSites(
-  state: SimulationState,
   type: 'depot' | 'outpost',
-  candidates: Position[],
+  inspection: ConstructionSiteInspection,
 ): StorageExpansionDiagnostic {
-  const inspection = inspectConstructionSites(state, type, candidates)
   return inspection.reachableCandidate
     ? {
         kind: type,
@@ -133,11 +135,7 @@ export function getStorageExpansionDiagnostics(
     expansion.push({ kind: 'depot', reason: 'insufficient-stone' })
   } else {
     expansion.push(
-      explainConstructionSites(
-        state,
-        'depot',
-        storageBuildings(state.world).flatMap(storagePerimeterCandidates),
-      ),
+      explainConstructionSites('depot', inspectOverflowDepotSites(state)),
     )
   }
 
@@ -182,7 +180,10 @@ export function getStorageExpansionDiagnostics(
     expansion.push({ kind: 'outpost', reason: 'insufficient-stone' })
   } else {
     expansion.push(
-      explainConstructionSites(state, 'outpost', outpostCandidates),
+      explainConstructionSites(
+        'outpost',
+        inspectConstructionSites(state, 'outpost', outpostCandidates),
+      ),
     )
   }
 
