@@ -37,7 +37,10 @@ export const STARTER_STONE_VEIN_LENGTH = 3
 export const STARTER_STONE_SUPPLY = 2
 export const STARTER_EMERGENCY_STONE = 1
 export const MAX_OPEN_ACCESS_REQUESTS = 3
-export const OVERFLOW_DEPOT_TRIGGER_CAPACITY = 12
+export const STORAGE_UPGRADE_TRIGGER_CAPACITY = 12
+// Give builders one depot's worth of extra headroom for incoming hauls.
+export const OVERFLOW_DEPOT_TRIGGER_CAPACITY =
+  STORAGE_UPGRADE_TRIGGER_CAPACITY + BUILDING_DEFINITIONS.depot.capacity
 export const MAX_DEPOTS_PER_STOCKPILE = 8
 export const STORAGE_UPGRADE_COST = 8
 export const STORAGE_UPGRADE_CAPACITY_BONUS = 24

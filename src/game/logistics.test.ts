@@ -651,6 +651,36 @@ describe('logistics helpers', () => {
     )
   })
 
+  it('funds the overflow depot while the colony still has room for incoming loads', () => {
+    const state = makeStorageState()
+    state.inventory.stone = 5
+    state.safety.emergencyStone = 1
+    state.world.buildings[0].storage = {
+      capacity: 120,
+      inventory: { stone: 5, dirt: 85 },
+    }
+
+    const planned = planOverflowDepotOrder(state)
+
+    expect(planned.constructionOrders[0]).toMatchObject({
+      type: 'depot',
+      required: { stone: 4 },
+      reserved: { stone: 4 },
+    })
+    expect(planned.inventory.stone).toBe(1)
+    expect(planned.world.buildings[0].storage?.inventory.stone).toBe(1)
+    expect(planOverflowDepotOrder(planned)).toBe(planned)
+    expect(getStorageExpansionDiagnostics(state)).toContainEqual(
+      expect.objectContaining({ kind: 'depot', reason: 'available' }),
+    )
+
+    const conserve = { ...state, constructionPolicy: 'conserve' as const }
+    expect(planOverflowDepotOrder(conserve)).toBe(conserve)
+    expect(getStorageExpansionDiagnostics(conserve)).toContainEqual(
+      expect.objectContaining({ kind: 'depot', reason: 'policy-disabled' }),
+    )
+  })
+
   it('plans an overflow depot on an alternate perimeter cell', () => {
     const state = makeStorageState()
     state.world.height = 5

@@ -492,6 +492,41 @@ describe('stepSimulation', () => {
     expect(result.dwarves[0].carrying).toBeNull()
   })
 
+  it('redirects an in-flight load if its destination fills before arrival', () => {
+    const state = makeState(['######', '......', '......'])
+    const full = state.world.buildings[state.world.buildings.length - 1]
+    full.storage = { capacity: 1, inventory: { stone: 1 } }
+    const depot = {
+      ...full,
+      id: 'depot-overflow',
+      type: 'depot' as const,
+      position: { x: 3, y: 1 },
+      storage: { capacity: 24, inventory: {} },
+    }
+    state.world.buildings.push(depot)
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      carrying: 'dirt',
+      carryingCount: 3,
+      task: {
+        kind: 'haul',
+        target: full.position,
+        path: [],
+        progress: 0,
+        block: 'dirt',
+        buildingId: full.id,
+      },
+    }
+
+    const result = stepSimulation(state, 4)
+
+    expect(result.inventory.dirt).toBe(3)
+    expect(result.dwarves[0].carrying).toBeNull()
+    expect(
+      result.world.buildings.find(({ id }) => id === depot.id)?.storage,
+    ).toMatchObject({ inventory: { dirt: 3 } })
+  })
+
   it('hauls as soon as the satchel is full', () => {
     const initial = makeState(['#####', '.....', '..d..'])
     const target = { x: 2, y: 2 }

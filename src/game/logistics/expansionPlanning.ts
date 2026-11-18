@@ -1,9 +1,10 @@
-import { canPlaceBuilding } from '../buildings'
+import { canPlaceBuilding, reserveConstructionMaterials } from '../buildings'
 import {
   BUILDING_DEFINITIONS,
   MAX_STORAGE_LEVEL,
   OVERFLOW_DEPOT_TRIGGER_CAPACITY,
   STORAGE_UPGRADE_COST,
+  STORAGE_UPGRADE_TRIGGER_CAPACITY,
 } from '../content'
 import type { BuildingType, Position, SimulationState } from '../types'
 import { getExpansionEligibility } from './expansionEligibility'
@@ -123,6 +124,7 @@ export function planExpansionOrder(state: SimulationState): SimulationState {
 export function planOverflowDepotOrder(
   state: SimulationState,
 ): SimulationState {
+  if (state.constructionPolicy === 'conserve') return state
   const eligibility = getExpansionEligibility(state)
   if (eligibility.availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
     return state
@@ -139,7 +141,11 @@ export function planOverflowDepotOrder(
     'depot',
     storageBuildings(state.world).flatMap(storagePerimeterCandidates),
   ).reachableCandidate
-  return site ? appendPlannedConstruction(state, 'depot', site) : state
+  if (!site) return state
+  const planned = appendPlannedConstruction(state, 'depot', site)
+  const order =
+    planned.constructionOrders[planned.constructionOrders.length - 1]
+  return reserveConstructionMaterials(planned, order.id)
 }
 
 export function planStorageUpgradeOrder(
@@ -153,7 +159,7 @@ export function planStorageUpgradeOrder(
   ) {
     return state
   }
-  if (eligibility.availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
+  if (eligibility.availableCapacity > STORAGE_UPGRADE_TRIGGER_CAPACITY) {
     return state
   }
   if (

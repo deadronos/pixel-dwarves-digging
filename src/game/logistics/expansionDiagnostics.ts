@@ -3,6 +3,7 @@ import {
   MAX_STORAGE_LEVEL,
   OVERFLOW_DEPOT_TRIGGER_CAPACITY,
   STORAGE_UPGRADE_COST,
+  STORAGE_UPGRADE_TRIGGER_CAPACITY,
 } from '../content'
 import type { BuildingType, Position, SimulationState, World } from '../types'
 import { getExpansionEligibility } from './expansionEligibility'
@@ -120,7 +121,9 @@ export function getStorageExpansionDiagnostics(
   const availableCapacity = eligibility.availableCapacity
   const expansion: StorageExpansionDiagnostic[] = []
 
-  if (availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
+  if (state.constructionPolicy === 'conserve') {
+    expansion.push({ kind: 'depot', reason: 'policy-disabled' })
+  } else if (availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
     expansion.push({ kind: 'depot', reason: 'capacity-not-low' })
   } else if (!canPlanAdditionalDepot(state.world)) {
     expansion.push({ kind: 'depot', reason: 'depot-limit' })
@@ -138,7 +141,7 @@ export function getStorageExpansionDiagnostics(
     )
   }
 
-  if (availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
+  if (availableCapacity > STORAGE_UPGRADE_TRIGGER_CAPACITY) {
     expansion.push({ kind: 'storage-upgrade', reason: 'capacity-not-low' })
   } else if (
     state.constructionOrders.some((order) => order.reason === 'storage-upgrade')
