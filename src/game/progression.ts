@@ -78,6 +78,9 @@ export function startPrestige(
     world,
     dwarves: createDwarves(state, world),
     inventory: { ...EMPTY_INVENTORY, stone: STARTER_STONE_SUPPLY },
+    ...(state.shipments && {
+      shipments: { mode: state.shipments.mode, shipped: 0 },
+    }),
     constructionOrders: [],
     accessRequests: [],
     worldRevision: 0,

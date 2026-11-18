@@ -19,6 +19,7 @@ import {
   EMPTY_INVENTORY,
   type PolicyState,
   type PrestigeMode,
+  type ShipmentMode,
   type SimulationState,
   type UpgradeLevels,
 } from './types'
@@ -63,6 +64,7 @@ export type GameStore = {
     enabled: boolean,
   ) => void
   setConstructionPolicy: (policy: ConstructionPolicy) => void
+  setShipmentMode: (mode: ShipmentMode) => void
   tickSimulation: () => void
   startSimulation: () => void
   stopSimulation: () => void
@@ -182,6 +184,15 @@ export function createGameStore(
         simulation: { ...current.simulation, constructionPolicy },
         saveStatus: 'DIRTY',
       })),
+    setShipmentMode: (mode) => {
+      const current = get().simulation
+      const simulation = {
+        ...current,
+        shipments: { mode, shipped: current.shipments?.shipped ?? 0 },
+      }
+      writeLocalSave(simulation)
+      set({ simulation, saveStatus: 'SAVED', saveError: null })
+    },
     tickSimulation: () => {
       const current = get()
       if (current.paused) return
@@ -252,6 +263,9 @@ export function createGameStore(
         current.policy,
         current.constructionPolicy,
       )
+      if (current.shipments) {
+        simulation.shipments = { mode: current.shipments.mode, shipped: 0 }
+      }
       set({
         simulation,
         saveStatus: 'NEW RUN',

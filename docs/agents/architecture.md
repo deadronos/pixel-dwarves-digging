@@ -17,7 +17,7 @@ connects the two.
 - `src/game/generation.ts` — deterministic world generation and cell helpers
 - `src/game/pathfinding.ts` — grounded paths, ladders, bridges, reachable work
 - `src/game/logistics.ts` — public logistics API; `logistics/` has storage,
-  access, safety and expansion
+  access, safety, expansion and surplus shipments
 - `src/game/buildings.ts` — building footprints, support and construction
 - `src/game/progression.ts` — prestige and permanent upgrades
 - `src/game/serialization.ts` — versioned save envelope; `serialization/` has

@@ -99,6 +99,14 @@ a route to the stockpile.
 The **Finish current route** haul directive lets dwarves choose nearby
 storage when starting a new haul.
 
+**Surface shipments.** The Inspector lets the player keep stock, ship
+common spoil, or ship spoil and ores from the main stockpile. At 1×,
+shipments can dispatch up to 24 blocks every 10 seconds. The colony keeps
+24 stone, 4 of each other common material, and 8 of each ore across its
+stores, in addition to materials promised to construction and emergency
+recovery. Relics are kept. The shipment count resets each run, and the
+selected mode carries through new runs and prestige.
+
 ## Player directives
 
 - **Work:** nearest exposed, ore first, or deepest first.
@@ -121,7 +129,7 @@ inventory and run clock but keeps currency and permanent upgrades:
 
 ## Saves
 
-Saves are versioned JSON (schema 5) with autosave to local storage, manual
+Saves are versioned JSON (schema 6) with autosave to local storage, manual
 save, and export/import of `pixel-dwarves-save.json`. Older schemas migrate
 forward, and an invalid file shows an error instead of replacing the run.
 Terrain is stored as one byte per cell, base64-encoded in the save, so

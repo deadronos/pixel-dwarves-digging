@@ -160,6 +160,7 @@ export function migrateV1State(value: unknown): SimulationState | null {
 export function normalizeV3State(
   value: unknown,
   addBedrockFloor: boolean,
+  legacyShipments = false,
 ): { state: SimulationState; recoveredAccessOrders: number } | null {
   if (!isRecord(value)) return null
   const world = value.world
@@ -179,6 +180,8 @@ export function normalizeV3State(
   const { saveStatus: _straySaveStatus, ...cleanValue } = value
   const normalized = {
     ...cleanValue,
+    // Before schema 6, an absent shipment ledger means shipping is off.
+    ...(legacyShipments ? { shipments: undefined } : {}),
     world: { ...world, cells },
     dwarves: Array.isArray(value.dwarves)
       ? value.dwarves.map((dwarf: unknown) => {

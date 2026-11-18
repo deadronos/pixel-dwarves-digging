@@ -384,6 +384,7 @@ describe('view model selectors', () => {
       setPolicy: () => {},
       setMaterialPriority: () => {},
       setConstructionPolicy: () => {},
+      setShipmentMode: () => {},
       tickSimulation: () => {},
       startSimulation: () => {},
       stopSimulation: () => {},

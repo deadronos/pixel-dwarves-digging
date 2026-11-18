@@ -671,12 +671,12 @@ describe('serialization', () => {
     }
   })
 
-  it('writes schema five with compact base64 cells and no per-cell biome', () => {
+  it('writes schema six with compact base64 cells and no per-cell biome', () => {
     const original = makeState()
     const parsed = JSON.parse(serializeState(original))
 
     expect(parsed.schemaVersion).toBe(SAVE_VERSION)
-    expect(SAVE_VERSION).toBe(5)
+    expect(SAVE_VERSION).toBe(6)
     expect(parsed.state.world.cells).toBe(encodeCells(original.world.cells))
     expect(typeof parsed.state.world.cells).toBe('string')
   })
@@ -702,7 +702,7 @@ describe('serialization', () => {
     expect(result).toEqual({ state: original })
     if ('state' in result) {
       expect(result.state.world.cells).toBeInstanceOf(Uint8Array)
-      expect(JSON.parse(serializeState(result.state)).schemaVersion).toBe(5)
+      expect(JSON.parse(serializeState(result.state)).schemaVersion).toBe(6)
     }
   })
 

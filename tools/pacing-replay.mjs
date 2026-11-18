@@ -4,12 +4,15 @@ import { registerHooks } from 'node:module'
 const [policy, tickLimit, ...seeds] = process.argv.slice(2)
 const ticks = Number(tickLimit)
 const hauling = process.env.PACING_HAULING
+const shipments = process.env.PACING_SHIPMENTS
 const resumePath = process.env.PACING_RESUME
 const capturePath = process.env.PACING_CAPTURE
 if (
   !['balanced', 'expand', 'conserve'].includes(policy) ||
   (hauling !== undefined &&
     !['nearest-stockpile', 'finish-current-route'].includes(hauling)) ||
+  (shipments !== undefined &&
+    !['off', 'spoil', 'surplus'].includes(shipments)) ||
   !Number.isSafeInteger(ticks) ||
   ticks < 1 ||
   seeds.length === 0 ||
@@ -120,6 +123,11 @@ for (const seed of seeds) {
       haulingPreference: hauling ?? state.policy.haulingPreference,
     },
   }
+  if (shipments)
+    state.shipments = {
+      mode: shipments,
+      shipped: state.shipments?.shipped ?? 0,
+    }
   const startTick = state.tick
   const mineable = countSolids(state.world) + state.totalCleared
   const taskTicks = {}
@@ -192,6 +200,7 @@ for (const seed of seeds) {
           seed,
           policy,
           hauling: state.policy.haulingPreference,
+          shipments: state.shipments ?? { mode: 'off', shipped: 0 },
           startTick,
           tick,
           mineable,

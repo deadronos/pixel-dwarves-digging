@@ -339,3 +339,25 @@ describe('createGameStore', () => {
     )
   })
 })
+
+it('persists the shipment mode while paused and resets the count with a new run', () => {
+  const store = createGameStore('shipping-settings')
+  store.getState().setPaused(true)
+  store.getState().setShipmentMode('spoil')
+  const loaded = createGameStore('unused').getState().simulation
+  expect(loaded.shipments).toEqual({ mode: 'spoil', shipped: 0 })
+
+  store.setState({
+    simulation: { ...loaded, shipments: { mode: 'spoil', shipped: 24 } },
+  })
+  store.getState().setShipmentMode('off')
+  expect(store.getState().simulation.shipments).toEqual({
+    mode: 'off',
+    shipped: 24,
+  })
+  store.getState().newRun('another-mine')
+  expect(store.getState().simulation.shipments).toEqual({
+    mode: 'off',
+    shipped: 0,
+  })
+})

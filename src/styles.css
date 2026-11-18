@@ -360,6 +360,12 @@ h1 {
   border-bottom: 1px solid #384136;
 }
 
+.shipment-mode {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+}
+
 .section-heading {
   display: flex;
   align-items: baseline;

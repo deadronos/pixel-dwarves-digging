@@ -10,6 +10,7 @@ import {
   getStorageDiagnostics,
   type StorageDiagnostics,
 } from './logistics'
+import { getShipmentStatus } from './logistics/shipments'
 import { canPrestige } from './progression'
 import type { GameStore } from './state'
 import type {
@@ -100,6 +101,7 @@ export type InspectorViewModel = {
   discoveredRelics: number
   mainStockpile: StockpileSummary
   storageDiagnostics: StorageDiagnostics
+  shipments: ReturnType<typeof getShipmentStatus>
   buildingCounts: BuildingCounts
   constructionCount: number
   openAccessRequests: number
@@ -317,6 +319,7 @@ export function getInspectorViewModel(
     discoveredRelics: simulation.discoveredRelics,
     mainStockpile,
     storageDiagnostics,
+    shipments: getShipmentStatus(simulation),
     buildingCounts,
     constructionCount: simulation.constructionOrders.length,
     openAccessRequests,

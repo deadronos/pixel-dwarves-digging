@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { SHIPMENT_RESERVES } from '../game/logistics/shipments'
 import { UPGRADE_COSTS } from '../game/progression'
 import { selectInspectorViewModel } from '../game/selectors'
-import { useGameStore } from '../game/state'
-import type { UpgradeLevels } from '../game/types'
+import { SIMULATION_TICK_MS, useGameStore } from '../game/state'
+import type { ShipmentMode, UpgradeLevels } from '../game/types'
 
 const UPGRADE_LABELS: Record<
   keyof UpgradeLevels,
@@ -19,7 +20,13 @@ export default function Inspector() {
   const [activeTab, setActiveTab] = useState<'colony' | 'upgrades'>('colony')
   const prestige = useGameStore((state) => state.prestige)
   const buyUpgrade = useGameStore((state) => state.buyUpgrade)
+  const setShipmentMode = useGameStore((state) => state.setShipmentMode)
   const inspector = useGameStore(selectInspectorViewModel)
+  const { mode, shipped, ready, hasStockpile, ticksUntilDispatch, completed } =
+    inspector.shipments
+  const nextShipmentSeconds = Math.ceil(
+    (ticksUntilDispatch * SIMULATION_TICK_MS) / 1_000,
+  )
 
   const canAffordAnyUpgrade = (
     Object.keys(UPGRADE_LABELS) as Array<keyof UpgradeLevels>
@@ -36,7 +43,7 @@ export default function Inspector() {
           <span style={{ width: `${inspector.progress}%` }} />
         </div>
         <p>
-          {inspector.totalCleared.toLocaleString()} stored /{' '}
+          {inspector.totalCleared.toLocaleString()} cleared /{' '}
           {inspector.remainingSolids.toLocaleString()} blocks remain
         </p>
       </div>
@@ -165,6 +172,48 @@ export default function Inspector() {
               </li>
             ))}
           </ul>
+        </div>
+
+        <div className="inspector-section">
+          <label className="section-kicker" htmlFor="shipment-mode">
+            SURFACE SHIPMENTS
+          </label>
+          <select
+            id="shipment-mode"
+            className="shipment-mode"
+            value={mode}
+            onChange={(event) =>
+              setShipmentMode(event.target.value as ShipmentMode)
+            }
+          >
+            <option value="off">Keep stock</option>
+            <option value="spoil">Ship common spoil</option>
+            <option value="surplus">Ship spoil and ores</option>
+          </select>
+          {(mode !== 'off' || shipped > 0) && (
+            <p className="directive">
+              {shipped.toLocaleString()} shipped this run
+            </p>
+          )}
+          {mode !== 'off' && (
+            <>
+              <p className="muted-copy">
+                {completed
+                  ? 'Run complete.'
+                  : !hasStockpile
+                    ? 'Waiting for the main stockpile.'
+                    : ready === 0
+                      ? 'Waiting for eligible surplus at the main stockpile.'
+                      : `${ready} ready · dispatch in ${nextShipmentSeconds}s at 1×`}
+              </p>
+              <p className="muted-copy">
+                Keeps {SHIPMENT_RESERVES.stone} stone,{' '}
+                {SHIPMENT_RESERVES.common} of each other common material,{' '}
+                {SHIPMENT_RESERVES.ore} of each ore, and all relics.
+                Construction and emergency supplies are also protected.
+              </p>
+            </>
+          )}
         </div>
 
         <div className="inspector-section">
