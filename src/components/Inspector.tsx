@@ -1,9 +1,23 @@
 import { useState } from 'react'
+import { BLOCK_LABELS } from '../game/content'
+import { FREIGHT_SETUP_STONE } from '../game/logistics/freight'
 import { SHIPMENT_RESERVES } from '../game/logistics/shipments'
 import { UPGRADE_COSTS } from '../game/progression'
 import { selectInspectorViewModel } from '../game/selectors'
 import { SIMULATION_TICK_MS, useGameStore } from '../game/state'
 import type { ShipmentMode, UpgradeLevels } from '../game/types'
+
+const FREIGHT_STATUS = {
+  off: '',
+  'waiting-for-depot': 'Waiting for a distant, connected depot.',
+  'waiting-for-stone': `Waiting for ${FREIGHT_SETUP_STONE} spare stone to set up.`,
+  setup: 'Setting up the freight route.',
+  disconnected: 'Waiting for a walking route to the main stockpile.',
+  backpressure: 'Waiting for room in the main stockpile.',
+  starved: 'Waiting for cargo at the depot.',
+  'workshop-supply': 'Holding the depot cargo for a workshop batch.',
+  ready: 'Cargo ready for the main stockpile.',
+}
 
 const UPGRADE_LABELS: Record<
   keyof UpgradeLevels,
@@ -21,7 +35,11 @@ export default function Inspector() {
   const prestige = useGameStore((state) => state.prestige)
   const buyUpgrade = useGameStore((state) => state.buyUpgrade)
   const setShipmentMode = useGameStore((state) => state.setShipmentMode)
+  const setFreightEnabled = useGameStore((state) => state.setFreightEnabled)
+  const setWorkshopEnabled = useGameStore((state) => state.setWorkshopEnabled)
+  const setSecondCrew = useGameStore((state) => state.setSecondCrew)
   const inspector = useGameStore(selectInspectorViewModel)
+  const { freight, workshop, secondCrew } = inspector
   const { mode, shipped, ready, hasStockpile, ticksUntilDispatch, completed } =
     inspector.shipments
   const nextShipmentSeconds = Math.ceil(
@@ -213,6 +231,73 @@ export default function Inspector() {
                 Construction and emergency supplies are also protected.
               </p>
             </>
+          )}
+        </div>
+
+        <div className="inspector-section">
+          <label className="dynamic-camera-toggle">
+            <input
+              type="checkbox"
+              checked={freight.status !== 'off'}
+              onChange={(event) => setFreightEnabled(event.target.checked)}
+            />
+            Depot freight
+          </label>
+          {(freight.status !== 'off' || freight.moved > 0) && (
+            <p className="directive">
+              {freight.moved.toLocaleString()} moved this run
+              {freight.depotPosition &&
+                ` · depot (${freight.depotPosition.x}, ${freight.depotPosition.y})`}
+            </p>
+          )}
+          {freight.status !== 'off' && (
+            <p className="muted-copy">
+              {completed ? 'Run complete.' : FREIGHT_STATUS[freight.status]}
+            </p>
+          )}
+        </div>
+
+        <div className="inspector-section">
+          <label className="dynamic-camera-toggle">
+            <input
+              type="checkbox"
+              checked={workshop.enabled}
+              onChange={(event) => setWorkshopEnabled(event.target.checked)}
+            />
+            Spoil workshop
+          </label>
+          {(workshop.enabled || workshop.produced > 0) && (
+            <p className="directive">
+              {workshop.produced.toLocaleString()} workshop{' '}
+              {workshop.produced === 1 ? 'batch' : 'batches'} this run
+            </p>
+          )}
+          {workshop.enabled && (
+            <p className="muted-copy">
+              {workshop.reason === 'completed'
+                ? 'Run complete.'
+                : !workshop.site
+                  ? 'Waiting for a completed depot or outpost.'
+                  : workshop.input
+                    ? `3 ${BLOCK_LABELS[workshop.input]} → 1 Stone at ${workshop.site.type} (${workshop.site.position.x}, ${workshop.site.position.y}).`
+                    : 'Waiting for spare common spoil at a depot or outpost.'}
+            </p>
+          )}
+        </div>
+
+        <div className="inspector-section">
+          <label className="dynamic-camera-toggle">
+            <input
+              type="checkbox"
+              checked={secondCrew}
+              onChange={(event) => setSecondCrew(event.target.checked)}
+            />
+            Second mining crew
+          </label>
+          {secondCrew && (
+            <p className="muted-copy">
+              Idle miners prefer a second safe face with a comparable haul.
+            </p>
           )}
         </div>
 

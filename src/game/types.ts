@@ -175,6 +175,9 @@ export type SimulationState = {
   constructionOrders: ConstructionOrder[]
   constructionPolicy: ConstructionPolicy
   shipments?: { mode: ShipmentMode; shipped: number }
+  freight?: { enabled: boolean; moved: number; depotId?: string }
+  workshop?: { enabled: boolean; produced: number }
+  secondCrew?: boolean
   accessRequests: AccessRequest[]
   worldRevision: number
   safety: SafetyState

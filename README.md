@@ -21,7 +21,8 @@ to the colony's activity immediately, even when follow mode is off.
   hauling and material priority.
 - **Inspector:** colony and storage status (Colony tab), plus prestige and
   permanent upgrades (Upgrades tab). Choose **Surface shipments** in the
-  Colony tab to dispatch surplus from the main stockpile.
+  Colony tab to dispatch surplus from the main stockpile. The same tab has
+  switches for depot freight, spoil workshops, and a second mining crew.
 - **Recovery alerts:** the HUD shows what each waiting dwarf needs. Select
   an alert to center the map on the dwarf's gold ring.
 - **Settings (⚙):** save, export/import a JSON save, new run (keeps upgrades),

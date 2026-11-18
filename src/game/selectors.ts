@@ -10,7 +10,9 @@ import {
   getStorageDiagnostics,
   type StorageDiagnostics,
 } from './logistics'
+import { getFreightStatus } from './logistics/freight'
 import { getShipmentStatus } from './logistics/shipments'
+import { getWorkshopStatus } from './logistics/workshop'
 import { canPrestige } from './progression'
 import type { GameStore } from './state'
 import type {
@@ -102,6 +104,9 @@ export type InspectorViewModel = {
   mainStockpile: StockpileSummary
   storageDiagnostics: StorageDiagnostics
   shipments: ReturnType<typeof getShipmentStatus>
+  freight: ReturnType<typeof getFreightStatus>
+  workshop: ReturnType<typeof getWorkshopStatus>
+  secondCrew: boolean
   buildingCounts: BuildingCounts
   constructionCount: number
   openAccessRequests: number
@@ -320,6 +325,9 @@ export function getInspectorViewModel(
     mainStockpile,
     storageDiagnostics,
     shipments: getShipmentStatus(simulation),
+    freight: getFreightStatus(simulation),
+    workshop: getWorkshopStatus(simulation),
+    secondCrew: simulation.secondCrew ?? false,
     buildingCounts,
     constructionCount: simulation.constructionOrders.length,
     openAccessRequests,

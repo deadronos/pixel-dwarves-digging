@@ -14,6 +14,7 @@ import type {
   World,
 } from '../types'
 import { type BlockType, indexFor } from '../types'
+import { chooseSecondCrewTarget } from './secondCrew'
 
 export type TargetCandidate = ReachableExposedSolid & {
   score: number
@@ -186,7 +187,9 @@ export function chooseTarget(
   context?: TargetPlanningContext,
   onlyBlock?: BlockType,
 ): ReachableExposedSolid | null {
-  for (const candidate of rankedWorkCandidates(state, dwarf, context)) {
+  const ranked = rankedWorkCandidates(state, dwarf, context)
+  for (let index = 0; index < ranked.length; index += 1) {
+    const candidate = ranked[index]
     if (
       onlyBlock !== undefined &&
       blockAt(
@@ -196,11 +199,27 @@ export function chooseTarget(
     ) {
       continue
     }
-    if (
-      assessDigSafety(state, candidate.stand, candidate.target, dwarf.id).safe
-    ) {
-      return { target: candidate.target, path: candidate.path }
-    }
+    const safety = assessDigSafety(
+      state,
+      candidate.stand,
+      candidate.target,
+      dwarf.id,
+    )
+    if (!safety.safe) continue
+
+    const assignment =
+      (state.secondCrew &&
+        onlyBlock === undefined &&
+        chooseSecondCrewTarget(
+          state,
+          dwarf,
+          candidate,
+          safety,
+          ranked,
+          index + 1,
+        )) ||
+      candidate
+    return { target: assignment.target, path: assignment.path }
   }
   return null
 }

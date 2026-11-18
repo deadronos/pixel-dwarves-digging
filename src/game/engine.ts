@@ -11,14 +11,17 @@ import {
   recoverStaleAccessOrders,
   recoverStaleStorageOrders,
 } from './logistics'
+import { advanceFreight } from './logistics/freight'
 import { dispatchSurplus } from './logistics/shipments'
+import { advanceWorkshop } from './logistics/workshop'
 import { cloneInventory, type SimulationState } from './types'
 
 function stepOnce(state: SimulationState): SimulationState {
   if (state.completed) return { ...state, tick: state.tick + 1 }
 
+  const suppliedState = advanceFreight(advanceWorkshop(dispatchSurplus(state)))
   const recoveredState = recoverStaleAccessOrders(
-    recoverStaleStorageOrders(dispatchSurplus(state)),
+    recoverStaleStorageOrders(suppliedState),
   )
   const targetPlanningContext = createTargetPlanningContext(recoveredState)
   const requestedState = planAccessRequests(

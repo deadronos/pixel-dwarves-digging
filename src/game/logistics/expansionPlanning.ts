@@ -22,6 +22,7 @@ import {
   getAvailableCapacity,
   getAvailableConstructionMaterial,
   hasReachableConstructionSite,
+  isFrontierDepot,
   isFrontierDepotSite,
   storageBuildings,
   storagePerimeterCandidates,
@@ -226,13 +227,6 @@ export function planOverflowDepotOrder(
     state.constructionPolicy === 'expand' &&
     !canPlanAdditionalDepot(state.world)
   if (
-    lateOnly
-      ? state.tick % 20 !== 0
-      : eligibility.availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY
-  ) {
-    return state
-  }
-  if (
     !canPlanAdditionalDepot(state.world, state.constructionPolicy) ||
     eligibility.hasPendingDepot
   ) {
@@ -242,8 +236,23 @@ export function planOverflowDepotOrder(
   const definition = BUILDING_DEFINITIONS.depot
   if (eligibility.availableStone < definition.stone) return state
 
-  const { reachableCandidate: site, frontier } =
-    inspectOverflowDepotSites(state)
+  const needsServiceDepot =
+    state.constructionPolicy === 'expand' &&
+    state.tick % 20 === 0 &&
+    ((state.freight?.enabled && !state.freight.depotId) ||
+      state.workshop?.enabled) &&
+    !state.world.buildings.some(isFrontierDepot)
+  const serviceSite = needsServiceDepot
+    ? findFrontierDepotSite(state, true)
+    : undefined
+  const canPlanOverflow = lateOnly
+    ? state.tick % 20 === 0
+    : eligibility.availableCapacity <= OVERFLOW_DEPOT_TRIGGER_CAPACITY
+  const { reachableCandidate: site, frontier } = serviceSite
+    ? { reachableCandidate: serviceSite, frontier: true }
+    : canPlanOverflow
+      ? inspectOverflowDepotSites(state)
+      : {}
   if (!site) return state
   const planned = appendPlannedConstruction(state, 'depot', site, frontier)
   const order =

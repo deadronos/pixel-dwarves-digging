@@ -64,6 +64,23 @@ export function prestigeReward(
   return 10 + state.discoveredRelics * 5
 }
 
+export function resetRunLogistics(
+  state: SimulationState,
+): Pick<SimulationState, 'shipments' | 'freight' | 'workshop' | 'secondCrew'> {
+  return {
+    ...(state.shipments && {
+      shipments: { mode: state.shipments.mode, shipped: 0 },
+    }),
+    ...(state.freight && {
+      freight: { enabled: state.freight.enabled, moved: 0 },
+    }),
+    ...(state.workshop && {
+      workshop: { enabled: state.workshop.enabled, produced: 0 },
+    }),
+    ...(state.secondCrew !== undefined && { secondCrew: state.secondCrew }),
+  }
+}
+
 export function startPrestige(
   state: SimulationState,
   mode: PrestigeMode,
@@ -78,9 +95,7 @@ export function startPrestige(
     world,
     dwarves: createDwarves(state, world),
     inventory: { ...EMPTY_INVENTORY, stone: STARTER_STONE_SUPPLY },
-    ...(state.shipments && {
-      shipments: { mode: state.shipments.mode, shipped: 0 },
-    }),
+    ...resetRunLogistics(state),
     constructionOrders: [],
     accessRequests: [],
     worldRevision: 0,

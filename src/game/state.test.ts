@@ -361,3 +361,31 @@ it('persists the shipment mode while paused and resets the count with a new run'
     shipped: 0,
   })
 })
+
+it('keeps logistics directives and clears their ledgers when starting another mine', () => {
+  const store = createGameStore('new-logistics-controls')
+  store.getState().setFreightEnabled(true)
+  store.getState().setWorkshopEnabled(true)
+  store.getState().setSecondCrew(true)
+
+  const loaded = createGameStore('unused').getState().simulation
+  expect(loaded).toMatchObject({
+    freight: { enabled: true, moved: 0 },
+    workshop: { enabled: true, produced: 0 },
+    secondCrew: true,
+  })
+
+  store.setState({
+    simulation: {
+      ...loaded,
+      freight: { enabled: true, moved: 20, depotId: 'old-depot' },
+      workshop: { enabled: true, produced: 5 },
+      discoveredRelics: 1,
+    },
+  })
+  expect(store.getState().prestige('relic')).toBe(true)
+  const next = store.getState().simulation
+  expect(next.freight).toEqual({ enabled: true, moved: 0 })
+  expect(next.workshop).toEqual({ enabled: true, produced: 0 })
+  expect(next.secondCrew).toBe(true)
+})

@@ -10,6 +10,7 @@ import {
   canPrestige,
   DEFAULT_UPGRADES,
   purchaseUpgrade,
+  resetRunLogistics,
   startPrestige,
 } from './progression'
 import { parseSave, serializeState } from './serialization'
@@ -65,6 +66,9 @@ export type GameStore = {
   ) => void
   setConstructionPolicy: (policy: ConstructionPolicy) => void
   setShipmentMode: (mode: ShipmentMode) => void
+  setFreightEnabled: (enabled: boolean) => void
+  setWorkshopEnabled: (enabled: boolean) => void
+  setSecondCrew: (enabled: boolean) => void
   tickSimulation: () => void
   startSimulation: () => void
   stopSimulation: () => void
@@ -193,6 +197,28 @@ export function createGameStore(
       writeLocalSave(simulation)
       set({ simulation, saveStatus: 'SAVED', saveError: null })
     },
+    setFreightEnabled: (enabled) => {
+      set(({ simulation }) => ({
+        simulation: {
+          ...simulation,
+          freight: { moved: 0, ...simulation.freight, enabled },
+        },
+      }))
+      get().saveLocally()
+    },
+    setWorkshopEnabled: (enabled) => {
+      set(({ simulation }) => ({
+        simulation: {
+          ...simulation,
+          workshop: { produced: 0, ...simulation.workshop, enabled },
+        },
+      }))
+      get().saveLocally()
+    },
+    setSecondCrew: (secondCrew) => {
+      set(({ simulation }) => ({ simulation: { ...simulation, secondCrew } }))
+      get().saveLocally()
+    },
     tickSimulation: () => {
       const current = get()
       if (current.paused) return
@@ -255,16 +281,16 @@ export function createGameStore(
     },
     newRun: (nextSeed = randomStarterSeed()) => {
       const current = get().simulation
-      const simulation = createInitialSimulation(
-        nextSeed,
-        current.world.runNumber + 1,
-        current.upgrades,
-        current.prestigeCurrency,
-        current.policy,
-        current.constructionPolicy,
-      )
-      if (current.shipments) {
-        simulation.shipments = { mode: current.shipments.mode, shipped: 0 }
+      const simulation = {
+        ...createInitialSimulation(
+          nextSeed,
+          current.world.runNumber + 1,
+          current.upgrades,
+          current.prestigeCurrency,
+          current.policy,
+          current.constructionPolicy,
+        ),
+        ...resetRunLogistics(current),
       }
       set({
         simulation,

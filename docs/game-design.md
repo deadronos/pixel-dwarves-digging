@@ -107,6 +107,34 @@ stores, in addition to materials promised to construction and emergency
 recovery. Relics are kept. The shipment count resets each run, and the
 selected mode carries through new runs and prestige.
 
+**Depot freight.** An optional freight route links one distant, connected
+depot to the main stockpile for 12 spare stone. The endpoints stay fixed
+for the run. Along the current walking route between them, freight can
+transfer up to 12 blocks every two seconds at 1×. The transfer respects
+space reserved by incoming haulers. The Inspector shows when the route
+is disconnected, the depot is empty, or the stockpile is full. Surface
+shipments can free room for freight before the next transfer. With Expand
+logistics, the colony can build the first frontier depot for these services
+while there is still surface capacity. When a linked depot saves at least
+eight walking cells, new hauls can drop there before the surface transfer.
+Eligible workshop inputs can take the same short route to a nearby store.
+
+**Spoil workshop.** At 1×, the workshop can process a batch every five
+seconds. It converts three spare blocks of one common material into one
+construction stone at a completed depot or outpost. It prefers other spoil
+and can compact loose stone when it has surplus.
+The workshop keeps the existing construction and emergency reserves.
+Sites with eligible spoil take turns supplying batches. Finished stone
+enters the same store and follows the usual construction and shipping rules.
+Freight can hold up to one workshop batch at its linked depot.
+
+**Second mining crew.** With this directive enabled, idle miners may favor
+a safe second face once two coworkers are already assigned to the main face.
+The alternative must have a comparable work score, walking route and haul.
+When it runs out of work, the usual planner sends the idle miners back to
+available faces. Existing access work retains priority. The colony can
+still plan new safe approaches for waiting miners while the main crew digs.
+
 ## Player directives
 
 - **Work:** nearest exposed, ore first, or deepest first.
@@ -129,7 +157,7 @@ inventory and run clock but keeps currency and permanent upgrades:
 
 ## Saves
 
-Saves are versioned JSON (schema 6) with autosave to local storage, manual
+Saves are versioned JSON (schema 7) with autosave to local storage, manual
 save, and export/import of `pixel-dwarves-save.json`. Older schemas migrate
 forward, and an invalid file shows an error instead of replacing the run.
 Terrain is stored as one byte per cell, base64-encoded in the save, so

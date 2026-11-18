@@ -5,6 +5,9 @@ const [policy, tickLimit, ...seeds] = process.argv.slice(2)
 const ticks = Number(tickLimit)
 const hauling = process.env.PACING_HAULING
 const shipments = process.env.PACING_SHIPMENTS
+const freight = process.env.PACING_FREIGHT
+const workshop = process.env.PACING_WORKSHOP
+const secondCrew = process.env.PACING_SECOND_CREW
 const resumePath = process.env.PACING_RESUME
 const capturePath = process.env.PACING_CAPTURE
 if (
@@ -13,6 +16,9 @@ if (
     !['nearest-stockpile', 'finish-current-route'].includes(hauling)) ||
   (shipments !== undefined &&
     !['off', 'spoil', 'surplus'].includes(shipments)) ||
+  [freight, workshop, secondCrew].some(
+    (flag) => flag !== undefined && flag !== '0' && flag !== '1',
+  ) ||
   !Number.isSafeInteger(ticks) ||
   ticks < 1 ||
   seeds.length === 0 ||
@@ -128,6 +134,15 @@ for (const seed of seeds) {
       mode: shipments,
       shipped: state.shipments?.shipped ?? 0,
     }
+  if (freight !== undefined)
+    state.freight = { moved: 0, ...state.freight, enabled: freight === '1' }
+  if (workshop !== undefined)
+    state.workshop = {
+      produced: 0,
+      ...state.workshop,
+      enabled: workshop === '1',
+    }
+  if (secondCrew !== undefined) state.secondCrew = secondCrew === '1'
   const startTick = state.tick
   const mineable = countSolids(state.world) + state.totalCleared
   const taskTicks = {}
@@ -137,6 +152,7 @@ for (const seed of seeds) {
   let longestNoDig = 0
   let longestBlocked = 0
   let blocked = 0
+  let multiFaceTicks = 0
   let firstMiningTick = null
   let lastMiningTick = startTick
   let firstRelicTick = null
@@ -158,8 +174,19 @@ for (const seed of seeds) {
       blocked = 0
     }
 
+    const faces = []
     for (const [index, dwarf] of next.dwarves.entries()) {
       const { task } = dwarf
+      if (task.kind === 'dig' && task.target && task.path.length === 0) {
+        const { x, y } = task.target
+        if (
+          faces.every(
+            (front) => Math.abs(front.x - x) + Math.abs(front.y - y) > 4,
+          )
+        ) {
+          faces.push(task.target)
+        }
+      }
       increment(taskTicks, task.path.length ? `${task.kind}-travel` : task.kind)
       const previous = state.dwarves[index].task
       if (
@@ -183,6 +210,7 @@ for (const seed of seeds) {
       }
     }
 
+    if (faces.length > 1) multiFaceTicks += 1
     state = next
     if (tick % 50 === 0) sampleIdle(state, idleSamples)
     if (
@@ -201,6 +229,10 @@ for (const seed of seeds) {
           policy,
           hauling: state.policy.haulingPreference,
           shipments: state.shipments ?? { mode: 'off', shipped: 0 },
+          freight: state.freight,
+          workshop: state.workshop,
+          secondCrew: state.secondCrew ?? false,
+          multiFaceTicks,
           startTick,
           tick,
           mineable,
