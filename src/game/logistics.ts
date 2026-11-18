@@ -17,9 +17,9 @@ export type {
 export {
   getStorageDiagnostics,
   getStorageExpansionDiagnostics,
-  planEmergencyCapacityOrder,
   planExpansionOrder,
   planOverflowDepotOrder,
+  planStorageConstruction,
   planStorageUpgradeOrder,
 } from './logistics/expansion'
 export type { DigSafety } from './logistics/safety'

@@ -8,7 +8,9 @@ connects the two.
 
 - `src/game/engine.ts` — tick orchestrator; `engine/` has targeting, access
   requests, recovery and per-task advancement (dig, haul, build, and the
-  anchor task that rebuilds a return ladder after a straight-down dig)
+  anchor task that rebuilds a return ladder after a straight-down dig).
+  `engine/safetyObservation.ts` derives the colony's work and recovery facts,
+  and `engine/safetyState.ts` applies the phase transitions
 - `src/game/blocks.ts` — stable block ids, `getBlock`/`blockAt` accessors, cell
   encode/decode for saves
 - `src/game/generation.ts` — deterministic world generation and cell helpers

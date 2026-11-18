@@ -1,4 +1,4 @@
-import { NO_PROGRESS_TICK_LIMIT } from '../content'
+import { COMMON_BUILDING_MATERIALS, NO_PROGRESS_TICK_LIMIT } from '../content'
 import { hasMineableSolids } from '../generation'
 import {
   getAvailableConstructionMaterial,
@@ -10,17 +10,10 @@ import { chooseTarget, findUnsafeTarget } from './targeting'
 import { chooseBuildOrder } from './tasks'
 
 export type SafetyObservation = {
-  hasSafeWork: boolean
-  hasBuildWork: boolean
-  hasWaitingAccess: boolean
-  hasRecovery: boolean
-  hasRecoveryProgress: boolean
-  hasStalledRecovery: boolean
-  hasActiveWork: boolean
-  hasUnroutableAccess: boolean
-  storageCapacityExhausted: boolean
-  storageRouteUnavailable: boolean
-  hasStorageBlockedWork: boolean
+  work: 'assignable' | 'active' | 'idle'
+  recovery: 'none' | 'moving' | 'waiting' | 'stalled'
+  access: 'none' | 'waiting-for-stone' | 'unroutable'
+  storageBlock: 'storage-full' | 'no-safe-work' | null
   hasMineableSolids: boolean
   hasWaitingConstructionMaterial: boolean
 }
@@ -89,18 +82,39 @@ export function deriveSafetyObservation(
     },
   )
 
+  const work =
+    hasSafeWork || hasBuildWork
+      ? 'assignable'
+      : hasActiveWork
+        ? 'active'
+        : 'idle'
+  const recovery = hasRecoveryProgress
+    ? 'moving'
+    : hasStalledRecovery
+      ? 'stalled'
+      : hasRecovery
+        ? 'waiting'
+        : 'none'
+  const awaitingStone =
+    work === 'idle' &&
+    hasWaitingAccess &&
+    COMMON_BUILDING_MATERIALS.every(
+      (material) => getAvailableConstructionMaterial(state, material) === 0,
+    )
+
   return {
-    hasSafeWork,
-    hasBuildWork,
-    hasWaitingAccess,
-    hasRecovery,
-    hasRecoveryProgress,
-    hasStalledRecovery,
-    hasActiveWork,
-    hasUnroutableAccess,
-    storageCapacityExhausted,
-    storageRouteUnavailable,
-    hasStorageBlockedWork,
+    work,
+    recovery,
+    access: awaitingStone
+      ? 'waiting-for-stone'
+      : hasUnroutableAccess
+        ? 'unroutable'
+        : 'none',
+    storageBlock: hasStorageBlockedWork
+      ? storageCapacityExhausted
+        ? 'storage-full'
+        : 'no-safe-work'
+      : null,
     hasMineableSolids: hasMineableSolidsInWorld,
     hasWaitingConstructionMaterial,
   }

@@ -11,6 +11,7 @@ import {
   findUnsafeTarget,
   getTargetPlanningSnapshot,
   scoreTarget,
+  type TargetPlanningContext,
   taskKey,
 } from './targeting'
 
@@ -57,9 +58,9 @@ function reopenAccessRequest(
   }
 }
 
-export function reopenResolvedAccessRequests(
+function reopenResolvedAccessRequests(
   state: SimulationState,
-  context = createTargetPlanningContext(state),
+  context: TargetPlanningContext,
 ): SimulationState {
   let next = state
   for (const request of state.accessRequests) {

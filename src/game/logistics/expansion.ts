@@ -7,8 +7,8 @@ export {
   getStorageExpansionDiagnostics,
 } from './expansionDiagnostics'
 export {
-  planEmergencyCapacityOrder,
   planExpansionOrder,
   planOverflowDepotOrder,
+  planStorageConstruction,
   planStorageUpgradeOrder,
 } from './expansionPlanning'

@@ -1,132 +1,15 @@
-import {
-  BOOTSTRAP_NO_PROGRESS_TICK_LIMIT,
-  COMMON_BUILDING_MATERIALS,
-  NO_PROGRESS_TICK_LIMIT,
-  STARTER_BOOTSTRAP_CLEAR_COUNT,
-} from './content'
-import {
-  planAccessRequests,
-  reopenResolvedAccessRequests,
-} from './engine/accessRequests'
+import { planAccessRequests } from './engine/accessRequests'
 import { advanceDwarf } from './engine/advancement'
 import { settleDwarf } from './engine/recovery'
 import { deriveSafetyObservation } from './engine/safetyObservation'
+import { transitionSafety } from './engine/safetyState'
 import { createTargetPlanningContext } from './engine/targeting'
-import { hasMineableSolids } from './generation'
 import {
-  getAvailableConstructionMaterial,
-  planEmergencyCapacityOrder,
-  planExpansionOrder,
-  planOverflowDepotOrder,
-  planStorageUpgradeOrder,
+  planStorageConstruction,
   recoverStaleAccessOrders,
   recoverStaleOutpostOrders,
 } from './logistics'
 import { cloneInventory, type SimulationState } from './types'
-
-function updateSafetyState(state: SimulationState): SimulationState['safety'] {
-  const {
-    hasSafeWork,
-    hasBuildWork,
-    hasWaitingAccess,
-    hasRecovery,
-    hasRecoveryProgress,
-    hasStalledRecovery,
-    hasActiveWork,
-    hasUnroutableAccess,
-    storageCapacityExhausted,
-    hasStorageBlockedWork,
-    hasMineableSolids,
-    hasWaitingConstructionMaterial,
-  } = deriveSafetyObservation(state)
-  const noProgressTicks = state.safety.noProgressTicks ?? 0
-  const bootstrapActive =
-    state.safety.phase === 'bootstrap' &&
-    state.totalCleared < STARTER_BOOTSTRAP_CLEAR_COUNT
-  const stalled =
-    noProgressTicks >=
-    (bootstrapActive
-      ? BOOTSTRAP_NO_PROGRESS_TICK_LIMIT
-      : NO_PROGRESS_TICK_LIMIT)
-  const blocked = (
-    blockedReason: NonNullable<SimulationState['safety']['blockedReason']>,
-  ): SimulationState['safety'] => ({
-    phase: 'blocked',
-    emergencyStone: state.safety.emergencyStone,
-    blockedReason,
-    noProgressTicks,
-  })
-
-  if (hasStalledRecovery && !hasRecoveryProgress) {
-    return blocked('awaiting-recovery')
-  }
-
-  if (
-    !hasSafeWork &&
-    !hasBuildWork &&
-    !hasActiveWork &&
-    hasWaitingAccess &&
-    COMMON_BUILDING_MATERIALS.every(
-      (material) => getAvailableConstructionMaterial(state, material) === 0,
-    )
-  ) {
-    return blocked('waiting-for-stone')
-  }
-
-  if (
-    !hasSafeWork &&
-    !hasBuildWork &&
-    !hasActiveWork &&
-    hasWaitingConstructionMaterial
-  ) {
-    return blocked('waiting-for-material')
-  }
-
-  if (
-    hasRecovery &&
-    !hasSafeWork &&
-    !hasBuildWork &&
-    !hasRecoveryProgress &&
-    (!hasActiveWork || stalled)
-  ) {
-    return blocked('awaiting-recovery')
-  }
-
-  if (
-    hasStorageBlockedWork &&
-    !hasBuildWork &&
-    !hasRecovery &&
-    !hasActiveWork
-  ) {
-    return blocked(storageCapacityExhausted ? 'storage-full' : 'no-safe-work')
-  }
-
-  if (hasUnroutableAccess && !hasSafeWork && !hasBuildWork && !hasActiveWork) {
-    return blocked('no-safe-work')
-  }
-
-  if (hasMineableSolids && !hasSafeWork && !hasBuildWork && stalled) {
-    return blocked(
-      hasStorageBlockedWork && storageCapacityExhausted
-        ? 'storage-full'
-        : 'no-safe-work',
-    )
-  }
-
-  if (bootstrapActive) {
-    return {
-      phase: 'bootstrap',
-      emergencyStone: state.safety.emergencyStone,
-      noProgressTicks,
-    }
-  }
-
-  return {
-    phase: 'operational',
-    emergencyStone: state.safety.emergencyStone,
-    noProgressTicks,
-  }
-}
 
 function stepOnce(state: SimulationState): SimulationState {
   if (state.completed) return { ...state, tick: state.tick + 1 }
@@ -135,19 +18,11 @@ function stepOnce(state: SimulationState): SimulationState {
     recoverStaleOutpostOrders(state),
   )
   const targetPlanningContext = createTargetPlanningContext(recoveredState)
-  const requestedState =
-    state.safety.phase === 'blocked'
-      ? planAccessRequests(
-          reopenResolvedAccessRequests(recoveredState, targetPlanningContext),
-          targetPlanningContext,
-        )
-      : planAccessRequests(recoveredState, targetPlanningContext)
-  const capacityState = planOverflowDepotOrder(requestedState)
-  const upgradedState = planStorageUpgradeOrder(capacityState)
-  const plannedState =
-    state.safety.phase === 'blocked'
-      ? planEmergencyCapacityOrder(upgradedState)
-      : planExpansionOrder(upgradedState)
+  const requestedState = planAccessRequests(
+    recoveredState,
+    targetPlanningContext,
+  )
+  const plannedState = planStorageConstruction(requestedState)
 
   const nextState: SimulationState = {
     ...plannedState,
@@ -195,26 +70,25 @@ function stepOnce(state: SimulationState): SimulationState {
     }
   }
 
-  const hasSolids = hasMineableSolids(nextState.world)
+  const observation = deriveSafetyObservation(nextState)
   const allDwarvesSettled = nextState.dwarves.every(
     (dwarf) => dwarf.task.kind === 'idle' && dwarf.carrying === null,
   )
   const hasPendingPlans =
     nextState.constructionOrders.length > 0 ||
     nextState.accessRequests.some((request) => request.status === 'open')
-  const safetyState: SimulationState = {
-    ...nextState,
-    safety: {
-      ...nextState.safety,
-      noProgressTicks: progressedThisTick
-        ? 0
-        : (state.safety.noProgressTicks ?? 0) + 1,
-    },
-  }
+  const noProgressTicks = progressedThisTick
+    ? 0
+    : (state.safety.noProgressTicks ?? 0) + 1
   return {
-    ...safetyState,
-    safety: updateSafetyState(safetyState),
-    completed: !hasSolids && allDwarvesSettled && !hasPendingPlans,
+    ...nextState,
+    safety: transitionSafety(
+      { ...nextState.safety, noProgressTicks },
+      nextState.totalCleared,
+      observation,
+    ),
+    completed:
+      !observation.hasMineableSolids && allDwarvesSettled && !hasPendingPlans,
   }
 }
 
