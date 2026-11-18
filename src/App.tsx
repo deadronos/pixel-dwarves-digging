@@ -3,6 +3,7 @@ import ControlBar from './components/ControlBar'
 import Hud from './components/Hud'
 import Inspector from './components/Inspector'
 import { useGameStore } from './game/state'
+import type { Position } from './game/types'
 
 const WorldCanvas = lazy(() => import('./components/WorldCanvas'))
 
@@ -12,8 +13,10 @@ const WorldCanvas = lazy(() => import('./components/WorldCanvas'))
  */
 function WorldStage({
   onTemporaryPauseChange,
+  recoveryFocus,
 }: {
   onTemporaryPauseChange: (paused: boolean) => void
+  recoveryFocus: Position | null
 }) {
   const world = useGameStore((state) => state.simulation.world)
   const dwarves = useGameStore((state) => state.simulation.dwarves)
@@ -36,6 +39,7 @@ function WorldStage({
       paused={paused}
       dynamicCameraEnabled={dynamicCameraEnabled}
       onTemporaryPauseChange={onTemporaryPauseChange}
+      recoveryFocus={recoveryFocus}
     />
   )
 }
@@ -44,6 +48,7 @@ export default function App() {
   const startSimulation = useGameStore((state) => state.startSimulation)
   const stopSimulation = useGameStore((state) => state.stopSimulation)
   const [dynamicCameraPaused, setDynamicCameraPaused] = useState(false)
+  const [recoveryFocus, setRecoveryFocus] = useState<Position | null>(null)
 
   useEffect(() => {
     startSimulation()
@@ -52,7 +57,10 @@ export default function App() {
 
   return (
     <main className="app-shell">
-      <Hud dynamicCameraPaused={dynamicCameraPaused} />
+      <Hud
+        dynamicCameraPaused={dynamicCameraPaused}
+        onLocateRecovery={(position) => setRecoveryFocus({ ...position })}
+      />
       <div className="main-layout">
         <section className="world-stage" aria-label="Terrain workspace">
           <Suspense
@@ -66,7 +74,10 @@ export default function App() {
               </div>
             }
           >
-            <WorldStage onTemporaryPauseChange={setDynamicCameraPaused} />
+            <WorldStage
+              onTemporaryPauseChange={setDynamicCameraPaused}
+              recoveryFocus={recoveryFocus}
+            />
           </Suspense>
         </section>
         <Inspector />

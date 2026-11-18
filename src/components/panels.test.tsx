@@ -1,7 +1,7 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { STARTER_DWARVES } from '../game/content'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { NO_PROGRESS_TICK_LIMIT, STARTER_DWARVES } from '../game/content'
 import { createInitialSimulation, useGameStore } from '../game/state'
 import ControlBar from './ControlBar'
 import Hud from './Hud'
@@ -82,6 +82,71 @@ describe('live UI panel components', () => {
     expect(labels(materials)).toHaveLength(12)
     expect(labels(materials)).toContain('Mushroom cap')
     expect(labels(materials)).not.toContain('Coal')
+  })
+
+  it('shows what each waiting dwarf needs and can locate it on the map', () => {
+    const { simulation } = useGameStore.getState()
+    const [stranded, waiting, moving] = simulation.dwarves
+    const position = { x: 15, y: 28 }
+    const locate = vi.fn()
+    const haul = {
+      kind: 'haul' as const,
+      purpose: 'recovery' as const,
+      recoveryReason: 'storage-route' as const,
+      block: 'stone' as const,
+      path: [],
+      progress: 0,
+    }
+    const dwarves: typeof simulation.dwarves = [
+      { ...stranded, movement: 'stranded' },
+      {
+        ...waiting,
+        position,
+        carrying: 'stone',
+        task: haul,
+        noProgressTicks: NO_PROGRESS_TICK_LIMIT,
+      },
+      {
+        ...moving,
+        carrying: 'stone',
+        task: { ...haul, target: position, path: [position] },
+        noProgressTicks: NO_PROGRESS_TICK_LIMIT,
+      },
+      {
+        ...simulation.dwarves[3],
+        carrying: 'stone',
+        task: haul,
+        noProgressTicks: 1,
+      },
+    ]
+
+    act(() => {
+      useGameStore.setState({ simulation: { ...simulation, dwarves } })
+      root?.render(<Hud onLocateRecovery={locate} />)
+    })
+    const recovery = container?.querySelector(
+      '[aria-label="Dwarves awaiting recovery"]',
+    )
+    expect(recovery?.textContent).toContain(
+      'Dwarf 1 · Waiting for a safe way out',
+    )
+    expect(recovery?.textContent).toContain(
+      'Dwarf 2 · Waiting for reachable storage',
+    )
+    expect(recovery?.textContent).not.toContain('Dwarf 3')
+    expect(recovery?.textContent).not.toContain('Dwarf 4')
+
+    act(() => {
+      recovery?.querySelectorAll('button')[1]?.click()
+    })
+    expect(locate).toHaveBeenCalledWith(position)
+
+    act(() => {
+      useGameStore.setState({ simulation })
+    })
+    expect(
+      container?.querySelector('[aria-label="Dwarves awaiting recovery"]'),
+    ).toBeNull()
   })
 
   it('dims empty inventory entries but keeps stocked ones bright (#74)', () => {

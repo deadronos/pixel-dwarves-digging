@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { DoubleSide, type Group, type Texture } from 'three'
 import { BLOCK_COLORS } from '../game/content'
+import { getDwarfRecoveryWait } from '../game/selectors'
 import { SIMULATION_TICK_MS } from '../game/state'
 import type {
   DwarfState,
@@ -79,6 +80,7 @@ type DwarfActorProps = {
   color: string
   /** Block being hauled, or null. Drives the carried chip above the head. */
   carrying: MineableBlockType | null
+  awaitingRecovery: boolean
   register: (
     id: string,
     visual: { group: Group; texture: Texture } | null,
@@ -95,6 +97,7 @@ const DwarfActor = memo(function DwarfActor({
   id,
   color,
   carrying,
+  awaitingRecovery,
   register,
 }: DwarfActorProps) {
   const texture = useMemo(() => createDwarfSpriteTexture(color), [color])
@@ -129,6 +132,16 @@ const DwarfActor = memo(function DwarfActor({
           toneMapped={false}
         />
       </mesh>
+      {awaitingRecovery && (
+        <mesh position={[0, DWARF_SPRITE_CENTER_Y, 0.02]}>
+          <ringGeometry args={[0.68, 0.83, 24]} />
+          <meshBasicMaterial
+            color="#ffd178"
+            side={DoubleSide}
+            toneMapped={false}
+          />
+        </mesh>
+      )}
       {chipTexture ? (
         // Above the raised hands of the carry pose, in the hauled block's own
         // terrain colour so the load is identifiable at a glance.
@@ -291,6 +304,7 @@ export default function DwarfLayer({
           id={dwarf.id}
           color={DWARF_COLORS[index % DWARF_COLORS.length]}
           carrying={dwarf.carrying}
+          awaitingRecovery={getDwarfRecoveryWait(dwarf) !== null}
           register={register}
         />
       ))}

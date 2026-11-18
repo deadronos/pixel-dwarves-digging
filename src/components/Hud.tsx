@@ -5,13 +5,18 @@ import {
   MINEABLE_BLOCKS,
   MINERAL_BLOCKS,
 } from '../game/content'
-import { selectHudViewModel } from '../game/selectors'
+import { type RecoveryWait, selectHudViewModel } from '../game/selectors'
 import { useGameStore } from '../game/state'
-import type { Inventory, MineableBlockType } from '../game/types'
+import type { Inventory, MineableBlockType, Position } from '../game/types'
 import SettingsModal from './SettingsModal'
 
 const MATERIALS = MINEABLE_BLOCKS.filter((block) => !MINERAL_BLOCKS.has(block))
 const MINERALS = MINEABLE_BLOCKS.filter((block) => MINERAL_BLOCKS.has(block))
+const RECOVERY_WAIT_LABEL: Record<RecoveryWait, string> = {
+  stranded: 'Waiting for a safe way out',
+  'storage-route': 'Waiting for reachable storage',
+  recovery: 'Waiting for recovery',
+}
 
 function InventoryGroup({
   label,
@@ -50,9 +55,13 @@ function InventoryGroup({
 
 type HudProps = {
   dynamicCameraPaused?: boolean
+  onLocateRecovery?: (position: Position) => void
 }
 
-export default function Hud({ dynamicCameraPaused = false }: HudProps) {
+export default function Hud({
+  dynamicCameraPaused = false,
+  onLocateRecovery,
+}: HudProps) {
   const paused = useGameStore((state) => state.paused)
   const speed = useGameStore((state) => state.speed)
   const saveStatus = useGameStore((state) => state.saveStatus)
@@ -88,6 +97,23 @@ export default function Hud({ dynamicCameraPaused = false }: HudProps) {
           </button>
         </div>
       </div>
+
+      {hud.recoveryWaits.length > 0 && (
+        <ul className="recovery-list" aria-label="Dwarves awaiting recovery">
+          {hud.recoveryWaits.map(({ id, ordinal, position, reason }) => (
+            <li key={id}>
+              <button
+                type="button"
+                className="recovery-location"
+                onClick={() => onLocateRecovery?.(position)}
+                title="Center on this dwarf"
+              >
+                <strong>Dwarf {ordinal}</strong> · {RECOVERY_WAIT_LABEL[reason]}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <SettingsModal
         isOpen={isSettingsOpen}
