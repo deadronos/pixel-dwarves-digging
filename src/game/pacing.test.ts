@@ -22,4 +22,21 @@ describe('early-run pacing', () => {
       expect(state.totalCleared).toBeGreaterThanOrEqual(floor)
     })
   }
+
+  it('keeps the b2 frontier productive after the opening 1,000 ticks', () => {
+    const opening = stepSimulation(createInitialSimulation('b2'), 1000)
+    let state = opening
+    let blockedStreak = 0
+    let longestBlockedStreak = 0
+    for (let tick = 1000; tick < 3000; tick += 1) {
+      state = stepSimulation(state)
+      blockedStreak = state.safety.phase === 'blocked' ? blockedStreak + 1 : 0
+      longestBlockedStreak = Math.max(longestBlockedStreak, blockedStreak)
+    }
+
+    expect(state.totalCleared - opening.totalCleared).toBeGreaterThanOrEqual(
+      120,
+    )
+    expect(longestBlockedStreak).toBeLessThan(200)
+  })
 })

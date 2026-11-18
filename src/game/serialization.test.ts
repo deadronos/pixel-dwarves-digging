@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { blockToId, cellsFromBlocks, encodeCells, idToBlock } from './blocks'
 import { stepSimulation } from './engine'
+import { appendPlannedConstruction } from './logistics/expansionPlanning'
 import { parseSave, SAVE_VERSION, serializeState } from './serialization'
 import { createInitialSimulation } from './state'
 import { EMPTY_INVENTORY, type SimulationState } from './types'
@@ -152,6 +153,44 @@ describe('serialization', () => {
       expect(parsed.state.dwarves[0].carrying).toBeNull()
       expect(parsed.state.dwarves[0].carryingCount).toBeUndefined()
     }
+  })
+
+  it('repairs an older builder save that retained its previous satchel count', () => {
+    const initial = createInitialSimulation('stale-builder-count')
+    const original = appendPlannedConstruction(initial, 'depot', {
+      x: initial.world.start.x + 4,
+      y: initial.world.start.y,
+    })
+    const order = original.constructionOrders[0]
+    order.reserved.stone = 1
+    original.dwarves[0] = {
+      ...original.dwarves[0],
+      carrying: 'stone',
+      carryingCount: 3,
+      task: {
+        kind: 'build',
+        target: original.dwarves[0].position,
+        path: [],
+        progress: 0,
+        block: 'stone',
+        buildingId: order.buildingId,
+        constructionOrderId: order.id,
+      },
+    }
+
+    const parsed = parseSave(serializeState(original))
+
+    expect(parsed).toMatchObject({
+      state: {
+        dwarves: [
+          expect.objectContaining({ carrying: 'stone' }),
+          ...original.dwarves.slice(1),
+        ],
+      },
+    })
+    expect(
+      'state' in parsed && parsed.state.dwarves[0].carryingCount,
+    ).toBeUndefined()
   })
 
   it('loads an empty dwarf returning to the stockpile after rescue', () => {
