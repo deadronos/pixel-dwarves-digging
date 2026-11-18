@@ -54,7 +54,7 @@ export function advanceDig(
     const loadCount =
       (dwarf.carrying === minedBlock ? (dwarf.carryingCount ?? 1) : 0) + 1
     const fullLoad = loadCount >= carryCapacity(state)
-    const safety = assessDigSafety(state, dwarf.position, target)
+    const safety = assessDigSafety(state, dwarf.position, target, dwarf.id)
     if (!safety.safe || !safety.storage) {
       return unchanged({ ...dwarf, task: idleTask() }, state.world)
     }

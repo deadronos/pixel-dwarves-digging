@@ -525,6 +525,77 @@ describe('stepSimulation', () => {
     expect(partial.dwarf.task.kind).toBe('idle')
   })
 
+  it('keeps a support block when another dwarf would lose its storage route', () => {
+    const state = makeState(['######', '...##.', '......'])
+    state.world.buildings = [
+      ...state.world.buildings.filter(({ type }) => type === 'stockpile'),
+      {
+        id: 'route-ladder',
+        type: 'ladder',
+        position: { x: 2, y: 2 },
+        width: 1,
+        height: 1,
+        level: 1,
+        construction: 'completed',
+      },
+    ]
+    const target = { x: 3, y: 1 }
+    const miner = {
+      ...state.dwarves[0],
+      position: { x: 2, y: 1 },
+      task: {
+        kind: 'dig' as const,
+        target,
+        path: [],
+        progress: DIG_DURATION.dirt - 1,
+      },
+    }
+    const coworker = {
+      ...state.dwarves[0],
+      id: 'dwarf-2',
+      position: { x: 4, y: 2 },
+    }
+
+    const alone = advanceDig({ ...state, dwarves: [miner] }, miner)
+    expect(alone.minedBlock).toBe('dirt')
+
+    const together = advanceDig({ ...state, dwarves: [miner, coworker] }, miner)
+    expect(together.minedBlock).toBeNull()
+    expect(together.world).toBe(state.world)
+  })
+
+  it('protects a coworker during the ticks before a return ladder is anchored', () => {
+    const state = makeState(['#####', '#####', '###..', '.....'])
+    state.world.buildings = state.world.buildings
+      .filter(({ type }) => type === 'stockpile')
+      .map((building) => ({ ...building, position: { x: 0, y: 3 } }))
+    state.inventory.dirt = 1
+    const miner = {
+      ...state.dwarves[0],
+      position: { x: 1, y: 3 },
+      task: {
+        kind: 'dig' as const,
+        target: { x: 1, y: 2 },
+        path: [],
+        progress: DIG_DURATION.dirt - 1,
+      },
+    }
+    const coworker = {
+      ...state.dwarves[0],
+      id: 'dwarf-2',
+      position: { x: 2, y: 3 },
+    }
+
+    const alone = advanceDig({ ...state, dwarves: [miner] }, miner)
+    expect(alone.dwarf.task).toMatchObject({
+      kind: 'anchor',
+      target: miner.position,
+    })
+
+    const together = advanceDig({ ...state, dwarves: [miner, coworker] }, miner)
+    expect(together.minedBlock).toBeNull()
+  })
+
   it('preserves the world reference during movement-only ticks', () => {
     const initial = makeState(['........', '.....d..', '........'])
     const assigned = stepSimulation(initial, 1)

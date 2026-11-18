@@ -196,7 +196,9 @@ export function chooseTarget(
     ) {
       continue
     }
-    if (assessDigSafety(state, candidate.stand, candidate.target).safe) {
+    if (
+      assessDigSafety(state, candidate.stand, candidate.target, dwarf.id).safe
+    ) {
       return { target: candidate.target, path: candidate.path }
     }
   }
@@ -219,6 +221,7 @@ export function findUnsafeTarget(
       state,
       candidate.stand,
       candidate.target,
+      dwarf.id,
     ).failure
     if (failure) return { ...candidate, failure }
   }
@@ -254,7 +257,9 @@ export function chooseAccessTarget(
       )
 
     for (const candidate of candidates) {
-      if (assessDigSafety(state, candidate.stand, candidate.target).safe) {
+      if (
+        assessDigSafety(state, candidate.stand, candidate.target, dwarf.id).safe
+      ) {
         return {
           target: candidate.target,
           path: candidate.path,

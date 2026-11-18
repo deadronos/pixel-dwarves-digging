@@ -21,7 +21,8 @@ export function resolveAccessRequests(state: SimulationState): SimulationState {
       if (request.status !== 'open') return request
       const safe = state.dwarves.some((dwarf) =>
         findAdjacentPaths(state.world, dwarf.position, request.target).some(
-          ({ stand }) => assessDigSafety(state, stand, request.target).safe,
+          ({ stand }) =>
+            assessDigSafety(state, stand, request.target, dwarf.id).safe,
         ),
       )
       return safe ? { ...request, status: 'resolved' as const } : request
@@ -74,7 +75,7 @@ export function reopenResolvedAccessRequests(
       )
       if (!candidate) continue
       const stand = candidate.path.at(-1) ?? dwarf.position
-      const safety = assessDigSafety(state, stand, candidate.target)
+      const safety = assessDigSafety(state, stand, candidate.target, dwarf.id)
       if (!safety.safe && safety.failure !== 'storage-route') {
         next = reopenAccessRequest(next, {
           ...candidate,

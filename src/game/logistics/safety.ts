@@ -1,5 +1,5 @@
 import { getBlock } from '../blocks'
-import { isSupported, simulateDigWorld } from '../pathfinding'
+import { findPath, isSupported, simulateDigWorld } from '../pathfinding'
 import type {
   AccessFailure,
   CommonBuildingMaterial,
@@ -13,6 +13,7 @@ import {
   chooseCommonConstructionMaterial,
   type StorageDestination,
   selectStorageDestination,
+  storageBuildings,
 } from './storage'
 
 export type DigSafety = {
@@ -141,10 +142,41 @@ function assessDigSafetyUncached(
     : { safe: false, failure: 'storage-route' }
 }
 
+function preservesCoworkerStorageRoutes(
+  state: SimulationState,
+  target: Position,
+  minerId?: string,
+): boolean {
+  const above = { x: target.x, y: target.y + 1 }
+  // The only existing walkable cell a dig can remove is the one above it.
+  if (
+    getBlock(state.world, above.x, above.y) !== 'air' ||
+    isSupported(state.world, above, target)
+  ) {
+    return true
+  }
+
+  // Movement is symmetric, so each storage-origin search can serve every dwarf.
+  const storage = storageBuildings(state.world)
+  const hasStorageRoute = (to: Position, cleared?: Position) =>
+    storage.some(
+      ({ position }) => findPath(state.world, position, to, cleared) !== null,
+    )
+
+  // A planned return ladder takes time to anchor and can be interrupted.
+  return state.dwarves.every(
+    ({ id, position }) =>
+      id === minerId ||
+      hasStorageRoute(position, target) ||
+      !hasStorageRoute(position),
+  )
+}
+
 export function assessDigSafety(
   state: SimulationState,
   stand: Position,
   target: Position,
+  minerId?: string,
 ): DigSafety {
   let worldCache = digSafetyCache.get(state.world)
   if (!worldCache) {
@@ -153,10 +185,14 @@ export function assessDigSafety(
   }
 
   const key = digSafetyKey(state, stand, target)
-  const cached = worldCache.get(key)
-  if (cached) return cached
-
-  const result = assessDigSafetyUncached(state, stand, target)
-  worldCache.set(key, result)
+  let result = worldCache.get(key)
+  if (!result) {
+    result = assessDigSafetyUncached(state, stand, target)
+    worldCache.set(key, result)
+  }
+  // Dwarves can move while the world and the miner's route stay the same.
+  if (result.safe && !preservesCoworkerStorageRoutes(state, target, minerId)) {
+    return { safe: false, failure: 'support' }
+  }
   return result
 }
