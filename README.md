@@ -12,9 +12,10 @@ React 19, TypeScript 7, Vite and React Three Fiber.
 ## Play
 
 The colony runs itself at 10 ticks per second. Drag to pan and scroll to
-zoom; on touch, drag with one finger and pinch to zoom. The view stays inside
-the map. The camera follows active dwarves. After you pan or zoom, following
-pauses for about 2.5 s, then resumes.
+zoom. On touch, drag with one finger and pinch to zoom. Zoom out all the way
+to fit the map. The camera follows the busiest work area by default and
+resumes after 6 seconds without camera input. Select **Recenter** to return
+to the colony's activity immediately, even when follow mode is off.
 
 - **Bottom bar:** pause, speed (1×/2×/4×), and directives for work, building,
   hauling and material priority.
