@@ -62,6 +62,13 @@ descent is safe but not instant. Unfunded requests wait visibly for stone
 rather than deadlocking. New colonies start in a short bootstrap phase that
 protects the ground under the stockpile and start pocket.
 
+If an access scaffold loses its anchor, the colony cancels the order and
+returns its materials when storage has room. Refunding materials does not
+count as work. When all dwarves are idle and no safe work is available,
+the colony checks reachable sites in batches. It queues one affordable
+ladder or bridge if completing it would open a safe dig with a route to
+storage. Once built, the colony uses its regular work planner again.
+
 **Buildings.** Storage is physical and finite. Any dwarf can become a
 builder: builders reserve stone, carry it to a planned site and build bridges,
 ladders, depots, outposts or storage upgrades over several trips. A builder

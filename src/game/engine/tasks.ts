@@ -1,4 +1,4 @@
-import { returnMaterialToStorage } from '../buildings'
+import { canCompleteConstruction, returnMaterialToStorage } from '../buildings'
 import { clearCell } from '../generation'
 import { canMoveBetween, findAdjacentConstructionPaths } from '../pathfinding'
 import type {
@@ -53,6 +53,12 @@ export function chooseBuildOrder(
       if (
         state.constructionPolicy === 'conserve' &&
         order.reason !== 'access'
+      ) {
+        return false
+      }
+      if (
+        order.reason === 'access' &&
+        !canCompleteConstruction(state.world, building.id)
       ) {
         return false
       }

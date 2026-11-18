@@ -4,7 +4,11 @@ import {
   planAccessConstructionOrder,
   recoverOrphanedAccessOrders,
 } from '../logistics'
-import { findAdjacentPaths, type ReachableExposedSolid } from '../pathfinding'
+import {
+  findAdjacentPaths,
+  findPath,
+  type ReachableExposedSolid,
+} from '../pathfinding'
 import type { AccessRequest, Position, SimulationState } from '../types'
 import {
   createTargetPlanningContext,
@@ -20,13 +24,23 @@ export function resolveAccessRequests(state: SimulationState): SimulationState {
     ...state,
     accessRequests: state.accessRequests.map((request) => {
       if (request.status !== 'open') return request
-      const safe = state.dwarves.some((dwarf) =>
-        findAdjacentPaths(state.world, dwarf.position, request.target).some(
-          ({ stand }) =>
-            assessDigSafety(state, stand, request.target, dwarf.id).safe,
-        ),
+      const { approach, target } = request
+      const diagonalApproach =
+        approach &&
+        Math.abs(approach.x - target.x) === 1 &&
+        Math.abs(approach.y - target.y) === 1
+      const safe = state.dwarves.some(
+        (dwarf) =>
+          (diagonalApproach &&
+            findPath(state.world, dwarf.position, approach) !== null &&
+            assessDigSafety(state, approach, target, dwarf.id).safe) ||
+          findAdjacentPaths(state.world, dwarf.position, target).some(
+            ({ stand }) => assessDigSafety(state, stand, target, dwarf.id).safe,
+          ),
       )
-      return safe ? { ...request, status: 'resolved' as const } : request
+      return safe
+        ? { ...request, status: 'resolved' as const, blockedReason: undefined }
+        : request
     }),
   }
 }

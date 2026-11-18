@@ -276,6 +276,33 @@ export type ReachableExposedSolid = {
   path: Position[]
 }
 
+export function findReachableConstructionSites(
+  world: World,
+  origins: Position[],
+): Position[] {
+  const visited = new Set<number>()
+  const sites = new Map<number, Position>()
+  for (const origin of origins) {
+    if (visited.has(indexFor(origin.x, origin.y, world.width))) continue
+    const search = getSearch(world, origin)
+    if (!search) continue
+    for (let index = 0; index < search.count; index += 1) {
+      const standIndex = search.queue[index]
+      visited.add(standIndex)
+      const stand = positionFor(standIndex, world.width)
+      for (const direction of MOVEMENT_DIRECTIONS) {
+        const x = stand.x + direction.x
+        const y = stand.y + direction.y
+        const position = { x, y }
+        if (isInBounds(world, position) && getBlock(world, x, y) === 'air') {
+          sites.set(indexFor(x, y, world.width), position)
+        }
+      }
+    }
+  }
+  return [...sites.values()]
+}
+
 export function findReachableExposedSolids(
   world: World,
   from: Position,

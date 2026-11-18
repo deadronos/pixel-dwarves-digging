@@ -1,5 +1,10 @@
-import { canPlaceBuilding, getPrimaryStockpile } from '../buildings'
-import { BUILDING_DEFINITIONS } from '../content'
+import { getBlock } from '../blocks'
+import {
+  canCompleteConstruction,
+  canPlaceBuilding,
+  getPrimaryStockpile,
+} from '../buildings'
+import { BUILDING_DEFINITIONS, MINEABLE_BLOCK_SET } from '../content'
 import {
   createTopologyKey,
   findAdjacentConstructionPaths,
@@ -84,10 +89,12 @@ export function findEmergencyLadderPlan(
   return null
 }
 
-function accessSiteCandidates(request: AccessRequest): Array<{
-  type: Exclude<BuildingType, 'stockpile' | 'outpost'>
+type AccessSite = {
+  type: Extract<BuildingType, 'ladder' | 'bridge'>
   position: Position
-}> {
+}
+
+function accessSiteCandidates(request: AccessRequest): AccessSite[] {
   const { x, y } = request.target
   return [
     { type: 'ladder', position: { x, y: y - 1 } },
@@ -97,6 +104,51 @@ function accessSiteCandidates(request: AccessRequest): Array<{
     { type: 'bridge', position: { x: x - 1, y } },
     { type: 'bridge', position: { x: x + 1, y } },
   ]
+}
+
+export function queueAccessConstruction(
+  state: SimulationState,
+  request: AccessRequest,
+  { type, position }: AccessSite,
+  material: CommonBuildingMaterial,
+): SimulationState {
+  const definition = BUILDING_DEFINITIONS[type]
+  const buildingId = `${request.id}-${type}-${position.x}-${position.y}`
+  const order: ConstructionOrder = {
+    id: `${buildingId}-order`,
+    buildingId,
+    type,
+    required: { [material]: definition.stone },
+    reserved: {},
+    delivered: {},
+    progress: 0,
+    reason: 'access',
+    accessRequestId: request.id,
+  }
+  return {
+    ...state,
+    world: {
+      ...state.world,
+      buildings: [
+        ...state.world.buildings,
+        {
+          id: buildingId,
+          type,
+          position,
+          width: definition.width,
+          height: definition.height,
+          level: 1,
+          construction: 'planned',
+        },
+      ],
+    },
+    accessRequests: state.accessRequests.some(({ id }) => id === request.id)
+      ? state.accessRequests.map((current) =>
+          current.id === request.id ? request : current,
+        )
+      : [...state.accessRequests, request],
+    constructionOrders: [...state.constructionOrders, order],
+  }
 }
 
 export function planAccessConstructionOrder(
@@ -147,42 +199,12 @@ export function planAccessConstructionOrder(
       }
     }
 
-    const buildingId = `${request.id}-${candidate.type}-${candidate.position.x}-${candidate.position.y}`
-    const order: ConstructionOrder = {
-      id: `${buildingId}-order`,
-      buildingId,
-      type: candidate.type,
-      required: { [material]: requiredAmount },
-      reserved: {},
-      delivered: {},
-      progress: 0,
-      reason: 'access',
-      accessRequestId: request.id,
-    }
-    return {
-      ...state,
-      world: {
-        ...state.world,
-        buildings: [
-          ...state.world.buildings,
-          {
-            id: buildingId,
-            type: candidate.type,
-            position: candidate.position,
-            width: definition.width,
-            height: definition.height,
-            level: 1,
-            construction: 'planned',
-          },
-        ],
-      },
-      accessRequests: state.accessRequests.map((current) =>
-        current.id === request.id
-          ? { ...current, blockedReason: undefined }
-          : current,
-      ),
-      constructionOrders: [...state.constructionOrders, order],
-    }
+    return queueAccessConstruction(
+      state,
+      { ...request, blockedReason: undefined },
+      candidate,
+      material,
+    )
   }
 
   return {
@@ -209,6 +231,39 @@ function recoverAccessOrders(
     const building = next.world.buildings.find(
       (candidate) => candidate.id === order.buildingId,
     )
+    if (
+      recoverUnreachable &&
+      building?.construction !== 'completed' &&
+      !canCompleteConstruction(next.world, order.buildingId)
+    ) {
+      const cancelled = removeRecoveredConstructionOrder(next, order)
+      if (cancelled) {
+        // A builder's load is already included in the order's reservation.
+        next = {
+          ...cancelled,
+          accessRequests: cancelled.accessRequests.map((candidate) =>
+            candidate.id === order.accessRequestId &&
+            !MINEABLE_BLOCK_SET.has(
+              getBlock(cancelled.world, candidate.target.x, candidate.target.y),
+            )
+              ? { ...candidate, status: 'resolved', blockedReason: undefined }
+              : candidate,
+          ),
+          dwarves: cancelled.dwarves.map((dwarf) =>
+            dwarf.task.kind === 'build' &&
+            dwarf.task.constructionOrderId === order.id
+              ? {
+                  ...dwarf,
+                  carrying: null,
+                  carryingCount: undefined,
+                  task: { kind: 'idle', path: [], progress: 0 },
+                }
+              : dwarf,
+          ),
+        }
+      }
+      continue
+    }
     const orphaned =
       order.accessRequestId === undefined || request === undefined
     const unreachable =
