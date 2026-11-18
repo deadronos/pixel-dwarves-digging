@@ -20,6 +20,8 @@ pauses for about 2.5 s, then resumes.
   hauling and material priority.
 - **Inspector:** colony and storage status (Colony tab), plus prestige and
   permanent upgrades (Upgrades tab).
+- **Recovery alerts:** the HUD shows what each waiting dwarf needs. Select
+  an alert to center the map on the dwarf's gold ring.
 - **Settings (⚙):** save, export/import a JSON save, new run (keeps upgrades),
   reset everything, and toggle the dynamic camera.
 

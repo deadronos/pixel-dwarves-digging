@@ -131,6 +131,34 @@ h1 {
   gap: 6px;
 }
 
+.recovery-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 7rem;
+  margin: 0 0 10px;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.recovery-location {
+  display: block;
+  padding: 6px 10px;
+  border: 1px solid #8b683f;
+  background: #2a231a;
+  color: #ffd178;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recovery-location:hover,
+.recovery-location:focus-visible {
+  border-color: #ffd178;
+  background: #3b2d1d;
+}
+
 .gear-btn {
   display: flex;
   align-items: center;

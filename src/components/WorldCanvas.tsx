@@ -1,11 +1,12 @@
 import { OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef } from 'react'
 import { MOUSE, TOUCH } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type {
   ConstructionOrder,
   DwarfState,
+  Position,
   UpgradeLevels,
   World,
 } from '../game/types'
@@ -26,6 +27,8 @@ import DwarfLayer from './DwarfLayer'
 import MiningLayer from './MiningLayer'
 import TerrainLayer from './TerrainLayer'
 
+const RECOVERY_FOCUS_ZOOM = 12
+
 type WorldCanvasProps = {
   world: World
   dwarves: DwarfState[]
@@ -35,6 +38,7 @@ type WorldCanvasProps = {
   paused: boolean
   dynamicCameraEnabled: boolean
   onTemporaryPauseChange: (paused: boolean) => void
+  recoveryFocus: Position | null
 }
 
 function WorldScene({
@@ -46,6 +50,7 @@ function WorldScene({
   paused,
   dynamicCameraEnabled,
   onTemporaryPauseChange,
+  recoveryFocus,
 }: WorldCanvasProps) {
   const { camera, size, invalidate } = useThree()
   const controlsRef = useRef<OrbitControlsImpl>(null)
@@ -143,6 +148,20 @@ function WorldScene({
     if (resumeTimer.current) clearTimeout(resumeTimer.current)
     resumeTimer.current = setTimeout(() => invalidate(), CAMERA_PAUSE_MS + 32)
   }
+
+  const focusRecovery = useEffectEvent((position: Position) => {
+    camera.position.x = position.x + 0.5 - world.width / 2
+    camera.position.y = position.y + 0.5 - world.height / 2
+    camera.zoom = Math.max(camera.zoom, RECOVERY_FOCUS_ZOOM)
+    camera.updateProjectionMatrix()
+    clampManualView()
+    registerManualEnd()
+    invalidate()
+  })
+
+  useEffect(() => {
+    if (recoveryFocus) focusRecovery(recoveryFocus)
+  }, [recoveryFocus])
 
   return (
     <>

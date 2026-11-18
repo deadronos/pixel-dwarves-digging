@@ -42,8 +42,9 @@ connects the two.
   and the animation maths
 - `src/components/dwarfTexture.ts` — turns a generated dwarf sheet into a
   nearest-filtered `DataTexture` whose window slides along the sheet to show one
-  frame. `DwarfLayer` swaps frames through `texture.offset`, so a dwarf is one
-  mesh and one draw call
+  frame. `DwarfLayer` swaps frames through `texture.offset`, so the sprite is
+  one mesh. The hauled block and recovery ring draw as separate overlays.
+  The HUD and ring use the same recovery selector
 - `src/components/colorMath.ts` — shared sRGB colour helpers (hex parsing,
   darken, mix) used by the sprite and terrain textures
 - `src/components/terrainTexture.ts` — fills the single terrain `DataTexture`:

@@ -1,5 +1,9 @@
 import { getPrimaryStockpile } from './buildings'
-import { BIOME_DEFINITIONS, type BiomeDefinition } from './content'
+import {
+  BIOME_DEFINITIONS,
+  type BiomeDefinition,
+  NO_PROGRESS_TICK_LIMIT,
+} from './content'
 import { countSolids } from './generation'
 import {
   getAggregateInventory,
@@ -15,6 +19,7 @@ import type {
   DwarfState,
   Inventory,
   PolicyState,
+  Position,
   SafetyPhase,
   SafetyState,
   SimulationState,
@@ -33,6 +38,23 @@ export type DwarfCounts = {
   total: number
   onTask: number
   inRecovery: number
+}
+
+export type RecoveryWait = 'stranded' | 'storage-route' | 'recovery'
+
+export function getDwarfRecoveryWait(dwarf: DwarfState): RecoveryWait | null {
+  const { task } = dwarf
+  if (dwarf.movement === 'stranded') return 'stranded'
+
+  // Brief reroutes are part of normal hauling.
+  if (
+    task.purpose !== 'recovery' ||
+    task.path.length > 0 ||
+    (dwarf.noProgressTicks ?? 0) < NO_PROGRESS_TICK_LIMIT
+  ) {
+    return null
+  }
+  return task.recoveryReason ?? 'recovery'
 }
 
 export type BuildingCounts = {
@@ -61,6 +83,12 @@ export type HudViewModel = {
   remainingSolids: number
   openAccessRequests: number
   safetySummary: string
+  recoveryWaits: Array<{
+    id: string
+    ordinal: number
+    position: Position
+    reason: RecoveryWait
+  }>
 }
 
 export type InspectorViewModel = {
@@ -236,6 +264,19 @@ export function getHudViewModel(simulation: SimulationState): HudViewModel {
     remainingSolids: getRemainingSolids(simulation.world),
     openAccessRequests: getOpenAccessRequestsCount(simulation.accessRequests),
     safetySummary: formatSafetySummary(simulation.safety),
+    recoveryWaits: simulation.dwarves.flatMap((dwarf, index) => {
+      const reason = getDwarfRecoveryWait(dwarf)
+      return reason
+        ? [
+            {
+              id: dwarf.id,
+              ordinal: index + 1,
+              position: dwarf.position,
+              reason,
+            },
+          ]
+        : []
+    }),
   }
   hudViewModelCache.set(simulation, result)
   return result
