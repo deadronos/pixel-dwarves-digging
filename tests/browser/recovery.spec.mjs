@@ -43,10 +43,12 @@ test('locates a stranded dwarf by rendering its gold ring at the center', async 
   // Seed the live store with a stranded dwarf far from the starting camera.
   // The rest of the interaction uses the real HUD and WebGL scene.
   await page.evaluate(async () => {
-    const { createInitialSimulation, useGameStore } = await import(
-      '/src/game/state.ts'
-    )
-    const { clearCell } = await import('/src/game/generation.ts')
+    const source = new URL('src/game/', document.baseURI)
+    const [{ createInitialSimulation, useGameStore }, { clearCell }] =
+      await Promise.all([
+        import(new URL('state.ts', source).href),
+        import(new URL('generation.ts', source).href),
+      ])
     const fixture = createInitialSimulation('recovery-browser-check')
     const position = { x: 116, y: 32 }
     fixture.world = clearCell(clearCell(fixture.world, position), {
