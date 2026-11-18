@@ -9,9 +9,9 @@ import {
   getStorageExpansionDiagnostics,
   isBootstrapProtectedTarget,
   planAccessConstructionOrder,
-  planEmergencyCapacityOrder,
   planExpansionOrder,
   planOverflowDepotOrder,
+  planStorageConstruction,
   planStorageUpgradeOrder,
   recoverStaleAccessOrders,
   recoverStaleOutpostOrders,
@@ -884,7 +884,7 @@ describe('logistics helpers', () => {
       })),
     )
 
-    const planned = planEmergencyCapacityOrder(state)
+    const planned = planStorageConstruction(state)
 
     expect(planned.constructionOrders).toContainEqual(
       expect.objectContaining({ type: 'outpost', reason: 'outpost' }),

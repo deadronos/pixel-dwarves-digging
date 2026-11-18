@@ -277,19 +277,17 @@ export function planStorageUpgradeOrder(
   }
 }
 
-export function planEmergencyCapacityOrder(
+export function planStorageConstruction(
   state: SimulationState,
 ): SimulationState {
+  const planned = planStorageUpgradeOrder(planOverflowDepotOrder(state))
   if (
     state.safety.phase !== 'blocked' ||
-    state.safety.blockedReason !== 'storage-full'
+    state.safety.blockedReason === 'storage-full'
   ) {
-    return state
+    return planExpansionOrder(planned)
   }
-
-  return planExpansionOrder(
-    planStorageUpgradeOrder(planOverflowDepotOrder(state)),
-  )
+  return planned
 }
 
 export type ExpansionBuildingType = BuildingType

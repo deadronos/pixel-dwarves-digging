@@ -7,8 +7,8 @@ describe('safety observation', () => {
     const state = createInitialSimulation('safety-observation-test')
     const observation = deriveSafetyObservation(state)
 
-    expect(observation.hasActiveWork).toBe(false)
+    expect(observation.work).not.toBe('active')
     expect(observation.hasMineableSolids).toBe(true)
-    expect(observation.hasRecovery).toBe(false)
+    expect(observation.recovery).toBe('none')
   })
 })

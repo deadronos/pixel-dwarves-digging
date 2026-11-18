@@ -33,3 +33,30 @@ typecheck but fails, or silently corrupts, at runtime.
   time budgets. Fix the slowdown; don't loosen the budget.
 - **Gameplay changes update the design doc.** Keep `docs/game-design.md` in
   step with rules and balance in `content.ts` and `engine/`.
+
+## Colony safety transitions
+
+The engine samples work availability, recovery, access, and storage after
+advancing dwarves. The transition preserves the emergency material budget
+and the current no-progress counter.
+
+| Current phase | No blocker during bootstrap | No blocker after bootstrap threshold | Blocker present |
+| ------------- | --------------------------- | ------------------------------------ | --------------- |
+| Bootstrap     | Bootstrap                   | Operational                          | Blocked         |
+| Operational   | Operational                 | Operational                          | Blocked         |
+| Blocked       | Operational                 | Operational                          | Blocked         |
+
+A stalled recovery takes priority even when other work can be assigned.
+Otherwise, assignable work keeps the colony unblocked. When the colony has
+no active or assignable work, the first applicable reason is unfunded
+access, unfunded construction, waiting recovery, blocked storage, or
+unreachable access. After the colony timeout, waiting recovery also blocks
+a colony with active work and no assignable tasks. When no earlier rule
+applies, the timeout supplies a storage or safe-work blocker if mineable
+terrain remains and no task can be assigned. Bootstrap uses the shorter
+timeout.
+
+Before advancing dwarves, each tick recovers stale orders, evaluates access
+requests once, then plans storage once. A blocked colony may plan an
+outpost only when its blocker is full storage. A blocked colony that
+recovers becomes operational.
