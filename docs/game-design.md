@@ -50,8 +50,10 @@ dwarf that loses its route first secures the material it carries, and may
 place one anchored emergency ladder from carried or reserved stone.
 
 **Safety.** Before accepting a dig, a dwarf simulates the block becoming air
-and checks that it still has support and a route to storage. Unsafe targets
-become access requests instead. The colony prefers a safe side tunnel or
+and checks that it still has support and a route to storage. The colony also
+keeps support blocks that other dwarves depend on to reach storage and
+rechecks routes just before clearing the block. Unsafe targets become
+access requests instead. The colony prefers a safe side tunnel or
 stair-step route. If a shaft or gap needs infrastructure, builders reserve
 stone and build an anchored ladder or bridge first. A dig straight down that
 would drop a dwarf below its route still goes ahead: the dwarf mines, then
