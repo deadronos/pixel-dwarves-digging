@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { blockToId, cellsFromBlocks, encodeCells, idToBlock } from './blocks'
+import { getPrimaryStockpile } from './buildings'
 import { stepSimulation } from './engine'
-import { appendPlannedConstruction } from './logistics/expansionPlanning'
 import { parseSave, SAVE_VERSION, serializeState } from './serialization'
 import { createInitialSimulation } from './state'
 import { EMPTY_INVENTORY, type SimulationState } from './types'
@@ -157,40 +157,29 @@ describe('serialization', () => {
 
   it('repairs an older builder save that retained its previous satchel count', () => {
     const initial = createInitialSimulation('stale-builder-count')
-    const original = appendPlannedConstruction(initial, 'depot', {
-      x: initial.world.start.x + 4,
-      y: initial.world.start.y,
-    })
-    const order = original.constructionOrders[0]
-    order.reserved.stone = 1
-    original.dwarves[0] = {
-      ...original.dwarves[0],
-      carrying: 'stone',
-      carryingCount: 3,
-      task: {
-        kind: 'build',
-        target: original.dwarves[0].position,
-        path: [],
-        progress: 0,
-        block: 'stone',
-        buildingId: order.buildingId,
-        constructionOrderId: order.id,
-      },
-    }
+    const stockpile = getPrimaryStockpile(initial.world)
+    if (!stockpile?.storage) throw new Error('fixture stockpile missing')
+    stockpile.storage.inventory.stone = 100
+    initial.inventory.stone = 100
+
+    // Placing, funding, and assigning the depot use the same path as a run.
+    const original = stepSimulation(initial)
+    const builderIndex = original.dwarves.findIndex(
+      ({ task }) => task.kind === 'build',
+    )
+    expect(builderIndex).toBeGreaterThanOrEqual(0)
+    original.dwarves[builderIndex].carryingCount = 3
 
     const parsed = parseSave(serializeState(original))
 
-    expect(parsed).toMatchObject({
-      state: {
-        dwarves: [
-          expect.objectContaining({ carrying: 'stone' }),
-          ...original.dwarves.slice(1),
-        ],
-      },
-    })
-    expect(
-      'state' in parsed && parsed.state.dwarves[0].carryingCount,
-    ).toBeUndefined()
+    expect('state' in parsed).toBe(true)
+    if ('state' in parsed) {
+      expect(parsed.state.dwarves[builderIndex]).toMatchObject({
+        carrying: 'stone',
+        task: { kind: 'build' },
+      })
+      expect(parsed.state.dwarves[builderIndex].carryingCount).toBeUndefined()
+    }
   })
 
   it('loads an empty dwarf returning to the stockpile after rescue', () => {

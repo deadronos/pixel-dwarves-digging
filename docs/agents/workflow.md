@@ -6,8 +6,9 @@
 - Branch as `<type>/issue-<n>-<topic>`, e.g. `fix/issue-64-camera-zoom`.
 - Use conventional commits (`fix(camera): …`, `docs: …`) and reference the
   issue in the PR.
-- CI (`.github/workflows/ci.yml`) runs the four checks plus `git diff --check`
-  on every PR and every push to `main`. A `v*` tag deploys to GitHub Pages.
+- CI (`.github/workflows/ci.yml`) runs the four checks, a Chromium smoke
+  test, and `git diff --check` on every PR and every push to `main`.
+  A `v*` tag deploys to GitHub Pages.
 
 ## Docs
 
