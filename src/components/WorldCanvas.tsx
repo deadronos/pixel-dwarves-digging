@@ -1,6 +1,6 @@
 import { OrbitControls } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useEffectEvent, useRef } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { MOUSE, TOUCH } from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import type {
@@ -15,13 +15,14 @@ import {
   CAMERA_PAUSE_MS,
   clampCameraCenter,
   createCameraPauseController,
+  createFollowCamera,
   dampCameraValue,
-  getCameraTarget,
+  getMapFitZoom,
   hasCameraSettled,
   isDynamicCameraActive,
   MAX_ZOOM,
-  MIN_ZOOM,
   syncCameraControlTarget,
+  type Viewport,
 } from './cameraTracking'
 import DwarfLayer from './DwarfLayer'
 import MiningLayer from './MiningLayer'
@@ -51,12 +52,17 @@ function WorldScene({
   dynamicCameraEnabled,
   onTemporaryPauseChange,
   recoveryFocus,
-}: WorldCanvasProps) {
+  recenterRequest,
+}: WorldCanvasProps & { recenterRequest: number }) {
   const { camera, size, invalidate } = useThree()
   const controlsRef = useRef<OrbitControlsImpl>(null)
   const pauseController = useRef(createCameraPauseController())
+  const followCamera = useRef(createFollowCamera())
   const temporaryPaused = useRef(false)
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const previousMapFit = useRef<number | null>(null)
+  const minZoom = getMapFitZoom(world, size)
+  const maxZoom = Math.max(minZoom, MAX_ZOOM)
 
   useEffect(() => {
     return () => {
@@ -84,25 +90,25 @@ function WorldScene({
   }
 
   useFrame((_, delta) => {
-    const cameraPaused = pauseController.current.isPaused(performance.now())
+    const now = performance.now()
+    const cameraPaused = pauseController.current.isPaused(now)
     reportPause(cameraPaused)
     if (!isDynamicCameraActive(dynamicCameraEnabled, cameraPaused)) return
 
-    const target = getCameraTarget(world, dwarves, size)
+    const target = followCamera.current.update(world, dwarves, size, now)
     const targetX = target.center.x - world.width / 2
     const targetY = target.center.y - world.height / 2
     camera.position.x = dampCameraValue(camera.position.x, targetX, delta, 2.2)
     camera.position.y = dampCameraValue(camera.position.y, targetY, delta, 2.2)
     const zoomRate = target.zoom < camera.zoom ? 5.5 : 2.2
     camera.zoom = dampCameraValue(camera.zoom, target.zoom, delta, zoomRate)
+    clampManualView()
     camera.updateProjectionMatrix()
-    if (controlsRef.current) {
-      syncCameraControlTarget(controlsRef.current.target, camera.position)
-    }
 
     // Keep requesting frames until the camera settles, otherwise demand
     // rendering would freeze the follow animation mid-flight.
     if (
+      followCamera.current.switching ||
       !hasCameraSettled(
         camera.position,
         camera.zoom,
@@ -134,7 +140,26 @@ function WorldScene({
     }
   }
 
+  const fitResizedView = useEffectEvent(
+    (viewport: Viewport, width: number, height: number) => {
+      const fit = getMapFitZoom({ width, height }, viewport)
+      const wasFitted =
+        previousMapFit.current !== null &&
+        Math.abs(camera.zoom - previousMapFit.current) < 0.01
+      previousMapFit.current = fit
+      camera.zoom = wasFitted ? fit : Math.max(camera.zoom, fit)
+      clampManualView()
+      camera.updateProjectionMatrix()
+      invalidate()
+    },
+  )
+
+  useEffect(() => {
+    fitResizedView(size, world.width, world.height)
+  }, [size, world.width, world.height])
+
   const registerManualStart = () => {
+    followCamera.current.reset()
     pauseController.current.onDragStart(performance.now())
     reportPause(true)
     if (resumeTimer.current) clearTimeout(resumeTimer.current)
@@ -149,7 +174,17 @@ function WorldScene({
     resumeTimer.current = setTimeout(() => invalidate(), CAMERA_PAUSE_MS + 32)
   }
 
+  const flushManualDamping = () => {
+    const controls = controlsRef.current
+    if (!controls) return
+    const damping = controls.enableDamping
+    controls.enableDamping = false
+    controls.update()
+    controls.enableDamping = damping
+  }
+
   const focusRecovery = useEffectEvent((position: Position) => {
+    flushManualDamping()
     camera.position.x = position.x + 0.5 - world.width / 2
     camera.position.y = position.y + 0.5 - world.height / 2
     camera.zoom = Math.max(camera.zoom, RECOVERY_FOCUS_ZOOM)
@@ -162,6 +197,30 @@ function WorldScene({
   useEffect(() => {
     if (recoveryFocus) focusRecovery(recoveryFocus)
   }, [recoveryFocus])
+
+  const recenter = useEffectEvent(() => {
+    if (resumeTimer.current) clearTimeout(resumeTimer.current)
+    pauseController.current.resume()
+    reportPause(false)
+    flushManualDamping()
+    followCamera.current.reset()
+    const target = followCamera.current.update(
+      world,
+      dwarves,
+      size,
+      performance.now(),
+    )
+    camera.position.x = target.center.x - world.width / 2
+    camera.position.y = target.center.y - world.height / 2
+    camera.zoom = target.zoom
+    clampManualView()
+    camera.updateProjectionMatrix()
+    invalidate()
+  })
+
+  useEffect(() => {
+    if (recenterRequest > 0) recenter()
+  }, [recenterRequest])
 
   return (
     <>
@@ -188,8 +247,8 @@ function WorldScene({
           RIGHT: MOUSE.PAN,
         }}
         touches={{ ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_PAN }}
-        minZoom={MIN_ZOOM}
-        maxZoom={MAX_ZOOM}
+        minZoom={minZoom}
+        maxZoom={maxZoom}
         onChange={clampManualView}
         onStart={registerManualStart}
         onEnd={registerManualEnd}
@@ -201,25 +260,36 @@ function WorldScene({
 }
 
 export default function WorldCanvas(props: WorldCanvasProps) {
+  const [recenterRequest, setRecenterRequest] = useState(0)
   return (
-    <div
-      className="world-canvas"
-      role="img"
-      aria-label="Side-on pixel terrain simulation"
-    >
-      <Canvas
-        orthographic
-        camera={{ position: [0, 0, 100], zoom: 9 }}
-        // `flat` disables tone mapping, so `BLOCK_COLORS` values reach the
-        // screen unchanged and the HUD swatches match the map exactly.
-        flat
-        dpr={[1, 1.5]}
-        frameloop="demand"
-        gl={{ antialias: false }}
-        onCreated={({ gl }) => gl.setClearColor('#161916')}
+    <>
+      <button
+        type="button"
+        className="camera-recenter"
+        onClick={() => setRecenterRequest((count) => count + 1)}
+        title="Center on colony activity"
       >
-        <WorldScene {...props} />
-      </Canvas>
-    </div>
+        Recenter
+      </button>
+      <div
+        className="world-canvas"
+        role="img"
+        aria-label="Side-on pixel terrain simulation"
+      >
+        <Canvas
+          orthographic
+          camera={{ position: [0, 0, 100], zoom: 9 }}
+          // `flat` disables tone mapping, so `BLOCK_COLORS` values reach the
+          // screen unchanged and the HUD swatches match the map exactly.
+          flat
+          dpr={[1, 1.5]}
+          frameloop="demand"
+          gl={{ antialias: false }}
+          onCreated={({ gl }) => gl.setClearColor('#161916')}
+        >
+          <WorldScene {...props} recenterRequest={recenterRequest} />
+        </Canvas>
+      </div>
+    </>
   )
 }

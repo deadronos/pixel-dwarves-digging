@@ -12,8 +12,8 @@ describe('dynamic camera adapter seams', () => {
     pause.onDragEnd(1_000)
 
     expect(pause.isPaused(1_001)).toBe(true)
-    expect(pause.isPaused(3_499)).toBe(true)
-    expect(pause.isPaused(3_500)).toBe(false)
+    expect(pause.isPaused(6_999)).toBe(true)
+    expect(pause.isPaused(7_000)).toBe(false)
   })
 
   it('requires both the user toggle and no temporary pause to track', () => {
