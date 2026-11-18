@@ -74,14 +74,17 @@ describe('createGameStore', () => {
     expect(store.getState().simulation.tick).toBe(1)
   })
 
-  it('respects 1x, 2x, and 4x speed', () => {
-    const store = createGameStore('speed-test')
-    store.getState().setPaused(false)
-    store.getState().setSpeed(4)
-    store.getState().tickSimulation()
+  it.each([1, 2, 4] as const)(
+    'advances %i ticks at the selected speed',
+    (speed) => {
+      const store = createGameStore('speed-test')
+      store.getState().setPaused(false)
+      store.getState().setSpeed(speed)
+      store.getState().tickSimulation()
 
-    expect(store.getState().simulation.tick).toBe(4)
-  })
+      expect(store.getState().simulation.tick).toBe(speed)
+    },
+  )
 
   it('updates a policy without replacing unrelated state', () => {
     const store = createGameStore('policy-test')
@@ -208,6 +211,36 @@ describe('createGameStore', () => {
 
     store.getState().tickSimulation()
     expect(store.getState().saveStatus).toBe('DIRTY')
+  })
+
+  it('writes and reloads an autosave when 4× steps over the save boundary', () => {
+    const store = createGameStore('autosave-speed-switch')
+    store.getState().saveLocally()
+    const savedAtStart = window.localStorage.getItem(GAME_STORAGE_KEY)
+    store.getState().tickSimulation()
+    store.getState().setSpeed(4)
+
+    for (let index = 0; index < 4; index += 1) store.getState().tickSimulation()
+    expect(store.getState().simulation.tick).toBe(17)
+    expect(window.localStorage.getItem(GAME_STORAGE_KEY)).toBe(savedAtStart)
+
+    store.getState().tickSimulation()
+
+    expect(store.getState().simulation.tick).toBe(21)
+    expect(store.getState().saveStatus).toBe('SAVED')
+    expect(createGameStore('reload').getState().simulation.tick).toBe(21)
+  })
+
+  it('preserves the active simulation and persisted bytes after a rejected import', () => {
+    const store = createGameStore('reject-import')
+    store.getState().saveLocally()
+    const saved = window.localStorage.getItem(GAME_STORAGE_KEY)
+    store.getState().tickSimulation()
+    const active = store.getState().simulation
+
+    expect(store.getState().importSave('{"schemaVersion":5}')).toBe(false)
+    expect(store.getState().simulation).toBe(active)
+    expect(window.localStorage.getItem(GAME_STORAGE_KEY)).toBe(saved)
   })
 
   it('marks the top-level save status as dirty when updating work preference', () => {

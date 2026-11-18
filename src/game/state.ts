@@ -26,6 +26,7 @@ import {
 export const GAME_STORAGE_KEY = 'pixel-dwarves-digging/save-v2'
 export const LEGACY_GAME_STORAGE_KEY = 'pixel-dwarves-digging/save-v1'
 export const SIMULATION_TICK_MS = 100
+const AUTOSAVE_INTERVAL_TICKS = 20
 export type SimulationSpeed = 1 | 2 | 4
 
 const DEFAULT_POLICY: PolicyState = {
@@ -185,7 +186,9 @@ export function createGameStore(
       const current = get()
       if (current.paused) return
       const simulation = stepSimulation(current.simulation, current.speed)
-      const autosaved = simulation.tick % 20 === 0
+      const autosaved =
+        Math.floor(simulation.tick / AUTOSAVE_INTERVAL_TICKS) >
+        Math.floor(current.simulation.tick / AUTOSAVE_INTERVAL_TICKS)
       const saveStatus: SaveStatus = autosaved ? 'SAVED' : 'DIRTY'
       // Only touch saveStatus when it changes, so selectors on it stay quiet.
       set(

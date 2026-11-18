@@ -48,7 +48,7 @@ function digSafetyKey(
       const targetKey = dwarf.task.target
         ? `${dwarf.task.target.x}:${dwarf.task.target.y}`
         : ''
-      return `${dwarf.id}:${dwarf.task.buildingId ?? ''}:${targetKey}`
+      return `${dwarf.id}:${dwarf.task.buildingId ?? ''}:${targetKey}:${dwarf.carryingCount ?? 1}`
     })
     .sort()
     .join('|')

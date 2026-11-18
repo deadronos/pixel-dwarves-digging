@@ -5,6 +5,7 @@ import {
   assessDigSafety,
   getAggregateInventory,
   getAvailableConstructionMaterial,
+  getAvailableStateCapacity,
   getStorageDiagnostics,
   getStorageExpansionDiagnostics,
   isBootstrapProtectedTarget,
@@ -529,6 +530,19 @@ describe('logistics helpers', () => {
     expect(stockpile.storage?.inventory.dirt ?? 0).toBe(0)
   })
 
+  it('counts the entire satchel in the global inventory', () => {
+    const state = makeStorageState()
+    state.inventory.stone = 2
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      carrying: 'stone',
+      carryingCount: 3,
+    }
+
+    expect(getAggregateInventory(state).stone).toBe(5)
+    expect(state.inventory.stone).toBe(2)
+  })
+
   it('redirects a haul to an outpost when the main stockpile is full', () => {
     const state = makeStorageState()
     state.world.buildings[0].storage = {
@@ -601,6 +615,71 @@ describe('logistics helpers', () => {
     expect(
       selectStorageDestination(state, 'stone', { x: 2, y: 1 }, 'dwarf-2'),
     ).toBeNull()
+  })
+
+  it('reserves the whole load only against its intended destination', () => {
+    const state = makeStorageState()
+    state.world.cells[state.world.width + 2] = blockToId('air')
+    const main = state.world.buildings[0]
+    main.storage = { capacity: 2, inventory: {} }
+    const depot = {
+      ...main,
+      id: 'depot-1',
+      type: 'depot' as const,
+      position: { x: 4, y: 1 },
+      storage: { capacity: 2, inventory: {} },
+    }
+    state.world.buildings.push(depot)
+    const hauler = {
+      ...state.dwarves[0],
+      carrying: 'stone' as const,
+      carryingCount: 3,
+      task: {
+        kind: 'haul' as const,
+        target: main.position,
+        path: [],
+        progress: 0,
+        block: 'stone' as const,
+        buildingId: main.id,
+      },
+    }
+    state.dwarves = [hauler]
+
+    expect(getStorageDiagnostics(state).reservedCapacity).toBe(3)
+    expect(getAvailableStateCapacity(state)).toBe(2)
+    expect(selectStorageDestination(state, 'stone', hauler.position)?.id).toBe(
+      depot.id,
+    )
+  })
+
+  it('rechecks dig safety when a reserved load changes size', () => {
+    const state = makeStorageState()
+    const main = state.world.buildings[0]
+    main.storage = { capacity: 2, inventory: {} }
+    const hauler = {
+      ...state.dwarves[0],
+      carrying: 'stone' as const,
+      task: {
+        kind: 'haul' as const,
+        target: main.position,
+        path: [],
+        progress: 0,
+        block: 'stone' as const,
+        buildingId: main.id,
+      },
+    }
+    const stand = { x: 1, y: 1 }
+    const target = { x: 2, y: 1 }
+    expect(
+      assessDigSafety({ ...state, dwarves: [hauler] }, stand, target).safe,
+    ).toBe(true)
+    expect(
+      assessDigSafety(
+        { ...state, dwarves: [{ ...hauler, carryingCount: 2 }] },
+        stand,
+        target,
+      ),
+    ).toMatchObject({ safe: false, failure: 'storage-route' })
   })
 
   it('plans one remote outpost when expansion policy has enough stone', () => {

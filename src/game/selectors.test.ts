@@ -299,6 +299,15 @@ describe('formatting & directive selectors', () => {
         'expand',
       ),
     ).toBe('ore first · nearest stockpile · expand construction')
+    expect(
+      formatDirectiveSummary(
+        {
+          workPreference: 'deepest-first',
+          haulingPreference: 'finish-current-route',
+        },
+        'balanced',
+      ),
+    ).toBe('deepest first · finish current route · balanced construction')
   })
 
   it('resolves center biome definition', () => {

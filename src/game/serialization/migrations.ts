@@ -180,6 +180,24 @@ export function normalizeV3State(
   const normalized = {
     ...cleanValue,
     world: { ...world, cells },
+    dwarves: Array.isArray(value.dwarves)
+      ? value.dwarves.map((dwarf: unknown) => {
+          if (
+            isRecord(dwarf) &&
+            typeof dwarf.carryingCount === 'number' &&
+            Number.isInteger(dwarf.carryingCount) &&
+            dwarf.carryingCount > 0 &&
+            (dwarf.carrying === null ||
+              (isRecord(dwarf.task) && dwarf.task.kind === 'build'))
+          ) {
+            // Older saves can retain a previous haul's count after unloading
+            // or while carrying a single construction material.
+            const { carryingCount: _staleCount, ...rest } = dwarf
+            return rest
+          }
+          return dwarf
+        })
+      : value.dwarves,
     accessRequests: Array.isArray(value.accessRequests)
       ? value.accessRequests
       : [],

@@ -129,7 +129,8 @@ export function isSimulationState(
         (task.task.accessRequestId === undefined ||
           requestIds.has(task.task.accessRequestId as string)) &&
         ((task.task.kind !== 'haul' && task.task.kind !== 'build') ||
-          task.task.block === (dwarf as { carrying: string | null }).carrying)
+          (task.task.block ?? null) ===
+            (dwarf as { carrying: string | null }).carrying)
       )
     })
   )
