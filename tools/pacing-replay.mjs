@@ -1,17 +1,22 @@
+import { readFileSync, writeFileSync } from 'node:fs'
 import { registerHooks } from 'node:module'
 
 const [policy, tickLimit, ...seeds] = process.argv.slice(2)
 const ticks = Number(tickLimit)
-const hauling = process.env.PACING_HAULING ?? 'nearest-stockpile'
+const hauling = process.env.PACING_HAULING
+const resumePath = process.env.PACING_RESUME
+const capturePath = process.env.PACING_CAPTURE
 if (
   !['balanced', 'expand', 'conserve'].includes(policy) ||
-  !['nearest-stockpile', 'finish-current-route'].includes(hauling) ||
+  (hauling !== undefined &&
+    !['nearest-stockpile', 'finish-current-route'].includes(hauling)) ||
   !Number.isSafeInteger(ticks) ||
   ticks < 1 ||
-  seeds.length === 0
+  seeds.length === 0 ||
+  ((resumePath || capturePath) && seeds.length !== 1)
 ) {
   throw new Error(
-    'Usage: node tools/pacing-replay.mjs <balanced|expand|conserve> <ticks> <seed> [...]',
+    'Usage: node tools/pacing-replay.mjs <balanced|expand|conserve> <end-tick> <seed> [...]. PACING_RESUME and PACING_CAPTURE require a single seed.',
   )
 }
 
@@ -38,6 +43,7 @@ const [
   { stepSimulation },
   { createInitialSimulation },
   { countSolids },
+  { parseSave, serializeState },
   { assessDigSafety },
   { isFrontierDepot },
   { getStorageDiagnostics },
@@ -47,6 +53,7 @@ const [
     'engine',
     'state',
     'generation',
+    'serialization',
     'logistics/safety',
     'logistics/storage',
     'logistics/expansion',
@@ -97,13 +104,24 @@ function sampleIdle(state, counts) {
 }
 
 for (const seed of seeds) {
-  let state = createInitialSimulation(seed)
+  let state = resumePath
+    ? parseSave(readFileSync(resumePath, 'utf8')).state
+    : createInitialSimulation(seed)
+  if (!state || state.world.seed !== seed || state.tick >= ticks) {
+    throw new Error(
+      'Checkpoint must load, match the seed, and precede the end tick.',
+    )
+  }
   state = {
     ...state,
     constructionPolicy: policy,
-    policy: { ...state.policy, haulingPreference: hauling },
+    policy: {
+      ...state.policy,
+      haulingPreference: hauling ?? state.policy.haulingPreference,
+    },
   }
-  const mineable = countSolids(state.world)
+  const startTick = state.tick
+  const mineable = countSolids(state.world) + state.totalCleared
   const taskTicks = {}
   const blockedTicks = {}
   const idleSamples = {}
@@ -111,13 +129,17 @@ for (const seed of seeds) {
   let longestNoDig = 0
   let longestBlocked = 0
   let blocked = 0
-  let lastMiningTick = 0
+  let firstMiningTick = null
+  let lastMiningTick = startTick
   let firstRelicTick = null
 
-  for (let tick = 1; tick <= ticks; tick += 1) {
+  for (let tick = startTick + 1; tick <= ticks; tick += 1) {
     const next = stepSimulation(state)
-    if (next.totalCleared > state.totalCleared) lastMiningTick = tick
-    if (firstRelicTick === null && next.discoveredRelics > 0)
+    if (next.totalCleared > state.totalCleared) {
+      firstMiningTick ??= tick
+      lastMiningTick = tick
+    }
+    if (state.discoveredRelics === 0 && next.discoveredRelics > 0)
       firstRelicTick = tick
     longestNoDig = Math.max(longestNoDig, tick - lastMiningTick)
     if (next.safety.blockedReason) {
@@ -169,12 +191,14 @@ for (const seed of seeds) {
         JSON.stringify({
           seed,
           policy,
-          hauling,
+          hauling: state.policy.haulingPreference,
+          startTick,
           tick,
           mineable,
           cleared: state.totalCleared,
           relics: state.discoveredRelics,
           firstRelicTick,
+          firstMiningTick,
           lastMiningTick,
           longestNoDig,
           longestBlocked,
@@ -199,4 +223,5 @@ for (const seed of seeds) {
       )
     }
   }
+  if (capturePath) writeFileSync(capturePath, serializeState(state))
 }

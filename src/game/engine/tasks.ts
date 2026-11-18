@@ -56,21 +56,26 @@ export function chooseBuildOrder(
       ) {
         return false
       }
-      if (
-        order.reason === 'access' &&
-        !canCompleteConstruction(state.world, building.id)
-      ) {
-        return false
-      }
-      return Object.keys(order.required).some((material) => {
-        const key = material as keyof Inventory
-        const required = order.required[key] ?? 0
-        const delivered = order.delivered[key] ?? 0
-        const reserved = order.reserved[key] ?? 0
-        return (
-          delivered < required && reserved - activeClaims(order.id, key) > 0
-        )
-      })
+      const hasAvailableMaterial = Object.keys(order.required).some(
+        (material) => {
+          const key = material as keyof Inventory
+          const required = order.required[key] ?? 0
+          const delivered = order.delivered[key] ?? 0
+          const reserved = order.reserved[key] ?? 0
+          return (
+            delivered < required && reserved - activeClaims(order.id, key) > 0
+          )
+        },
+      )
+      return (
+        hasAvailableMaterial &&
+        (order.reason === 'policy' ||
+          canCompleteConstruction(
+            state.world,
+            building.id,
+            order.reason === 'storage-upgrade',
+          ))
+      )
     })
     .flatMap((order) => {
       const material = (
@@ -137,6 +142,27 @@ export function validPath(
   return true
 }
 
+export function releaseBuildReservation(
+  orders: ConstructionOrder[],
+  dwarf: DwarfState,
+): ConstructionOrder[] {
+  const material = dwarf.carrying
+  const orderId = dwarf.task.constructionOrderId
+  if (dwarf.task.kind !== 'build' || !orderId || !material) return orders
+
+  return orders.map((order) =>
+    order.id === orderId
+      ? {
+          ...order,
+          reserved: {
+            ...order.reserved,
+            [material]: Math.max(0, (order.reserved[material] ?? 0) - 1),
+          },
+        }
+      : order,
+  )
+}
+
 export function invalidateTask(
   state: SimulationState,
   dwarf: DwarfState,
@@ -155,23 +181,9 @@ export function invalidateTask(
           [buildMaterial]: state.inventory[buildMaterial] + 1,
         }
       : undefined
-  const constructionOrders =
-    buildMaterial && dwarf.task.constructionOrderId
-      ? state.constructionOrders.map((order) =>
-          order.id === dwarf.task.constructionOrderId
-            ? {
-                ...order,
-                reserved: {
-                  ...order.reserved,
-                  [buildMaterial]: Math.max(
-                    0,
-                    (order.reserved[buildMaterial] ?? 0) - 1,
-                  ),
-                },
-              }
-            : order,
-        )
-      : undefined
+  const constructionOrders = buildMaterial
+    ? releaseBuildReservation(state.constructionOrders, dwarf)
+    : undefined
   return {
     dwarf: {
       ...dwarf,

@@ -8,8 +8,8 @@ export {
   planAccessConstructionOrder,
   recoverOrphanedAccessOrders,
   recoverStaleAccessOrders,
-  recoverStaleOutpostOrders,
 } from './logistics/access'
+export { recoverStaleStorageOrders } from './logistics/constructionRecovery'
 export type {
   StorageDiagnostics,
   StorageExpansionDiagnostic,

@@ -26,7 +26,6 @@ import {
   getAvailableConstructionMaterial,
   hasActiveBuilder,
   hasReachableBuilder,
-  hasReachableConstructionSite,
   type StorageDestination,
   selectStorageDestination,
 } from './storage'
@@ -238,7 +237,6 @@ function recoverAccessOrders(
     ) {
       const cancelled = removeRecoveredConstructionOrder(next, order)
       if (cancelled) {
-        // A builder's load is already included in the order's reservation.
         next = {
           ...cancelled,
           accessRequests: cancelled.accessRequests.map((candidate) =>
@@ -248,17 +246,6 @@ function recoverAccessOrders(
             )
               ? { ...candidate, status: 'resolved', blockedReason: undefined }
               : candidate,
-          ),
-          dwarves: cancelled.dwarves.map((dwarf) =>
-            dwarf.task.kind === 'build' &&
-            dwarf.task.constructionOrderId === order.id
-              ? {
-                  ...dwarf,
-                  carrying: null,
-                  carryingCount: undefined,
-                  task: { kind: 'idle', path: [], progress: 0 },
-                }
-              : dwarf,
           ),
         }
       }
@@ -297,27 +284,4 @@ export function recoverStaleAccessOrders(
   state: SimulationState,
 ): SimulationState {
   return recoverAccessOrders(state, true)
-}
-
-export function recoverStaleOutpostOrders(
-  state: SimulationState,
-): SimulationState {
-  let next = state
-  for (const order of state.constructionOrders) {
-    if (order.reason !== 'outpost') continue
-    const building = next.world.buildings.find(
-      (candidate) => candidate.id === order.buildingId,
-    )
-    if (
-      building?.construction !== 'planned' ||
-      hasActiveBuilder(next, building.id) ||
-      hasReachableConstructionSite(next, building.position)
-    ) {
-      continue
-    }
-
-    const recovered = removeRecoveredConstructionOrder(next, order)
-    if (recovered) next = recovered
-  }
-  return next
 }

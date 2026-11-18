@@ -3,6 +3,7 @@ import { getCompletedStorageBuildings } from '../buildings/selectors'
 import { addMaterialToStorage, storedCount } from '../buildings/storage'
 import {
   COMMON_BUILDING_MATERIALS,
+  EXTRA_FRONTIER_DEPOTS_PER_STOCKPILE,
   FRONTIER_DEPOT_MIN_DISTANCE,
   getEmergencyReserveMaterial,
   MAX_DEPOTS_PER_STOCKPILE,
@@ -11,6 +12,7 @@ import { findAdjacentConstructionPaths, findPath } from '../pathfinding'
 import {
   type BuildingState,
   type CommonBuildingMaterial,
+  type ConstructionPolicy,
   cloneInventory,
   type Inventory,
   type MineableBlockType,
@@ -48,16 +50,23 @@ export function isFrontierDepotSite(
   )
 }
 
-export function getDepotLimit(world: World): number {
+export function getDepotLimit(
+  world: World,
+  policy?: ConstructionPolicy,
+): number {
   const stockpileCount = world.buildings.filter(
     (building) =>
       building.type === 'stockpile' && building.construction === 'completed',
   ).length
-  return stockpileCount * MAX_DEPOTS_PER_STOCKPILE
+  const extra = policy === 'expand' ? EXTRA_FRONTIER_DEPOTS_PER_STOCKPILE : 0
+  return stockpileCount * (MAX_DEPOTS_PER_STOCKPILE + extra)
 }
 
-export function canPlanAdditionalDepot(world: World): boolean {
-  const depotLimit = getDepotLimit(world)
+export function canPlanAdditionalDepot(
+  world: World,
+  policy?: ConstructionPolicy,
+): boolean {
+  const depotLimit = getDepotLimit(world, policy)
   if (depotLimit === 0) return false
 
   const depotCount = world.buildings.filter(

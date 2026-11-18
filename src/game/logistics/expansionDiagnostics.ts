@@ -121,13 +121,16 @@ export function getStorageExpansionDiagnostics(
   if (cached) return cached
 
   const availableCapacity = eligibility.availableCapacity
+  const lateOnly =
+    state.constructionPolicy === 'expand' &&
+    !canPlanAdditionalDepot(state.world)
   const expansion: StorageExpansionDiagnostic[] = []
 
   if (state.constructionPolicy === 'conserve') {
     expansion.push({ kind: 'depot', reason: 'policy-disabled' })
-  } else if (availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
+  } else if (!lateOnly && availableCapacity > OVERFLOW_DEPOT_TRIGGER_CAPACITY) {
     expansion.push({ kind: 'depot', reason: 'capacity-not-low' })
-  } else if (!canPlanAdditionalDepot(state.world)) {
+  } else if (!canPlanAdditionalDepot(state.world, state.constructionPolicy)) {
     expansion.push({ kind: 'depot', reason: 'depot-limit' })
   } else if (state.constructionOrders.some((order) => order.type === 'depot')) {
     expansion.push({ kind: 'depot', reason: 'pending-order' })
@@ -222,7 +225,7 @@ export function getStorageDiagnostics(
     availableCapacity,
     reservedCapacity: getReservedStorageCapacity(state),
     stateAvailableCapacity: getAvailableStateCapacity(state),
-    depotLimit: getDepotLimit(state.world),
+    depotLimit: getDepotLimit(state.world, state.constructionPolicy),
     completedDepots,
     buildings,
     expansion: getStorageExpansionDiagnostics(state),
