@@ -68,7 +68,10 @@ ladders, depots, outposts or storage upgrades over several trips. A builder
 spends a few ticks working on site per load, so a site reads as a dashed
 footprint until work starts, then as a braced scaffold that fills up as
 material arrives. Outposts and depots add local storage and shorten haul
-routes.
+routes. When expansion is enabled, the colony plans an overflow depot with
+36 free storage slots remaining and reserves its stone when the order is
+created. A loaded dwarf that reaches a full destination looks for another
+reachable store before attempting emergency recovery.
 
 ## Player directives
 

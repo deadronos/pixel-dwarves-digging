@@ -2,7 +2,7 @@ import { depositCarriedMaterial, selectStorageDestination } from '../logistics'
 import { findPath } from '../pathfinding'
 import type { DwarfState, SimulationState } from '../types'
 import type { AdvanceResult } from './recovery'
-import { attemptEmergencyRecovery } from './recovery'
+import { attemptEmergencyRecovery, recoveryTask } from './recovery'
 import { idleTask, invalidateTask, samePosition, unchanged } from './tasks'
 
 export function advanceHaul(
@@ -75,19 +75,9 @@ export function advanceHaul(
       deposited += 1
     }
     if (deposited === 0) {
-      return (
-        attemptEmergencyRecovery(state, dwarf) ??
-        unchanged(
-          {
-            ...dwarf,
-            task: {
-              ...task,
-              purpose: 'recovery',
-              recoveryReason: 'storage-route',
-            },
-          },
-          state.world,
-        )
+      return unchanged(
+        { ...dwarf, task: recoveryTask(dwarf, 'storage-route') },
+        state.world,
       )
     }
     const remaining = load - deposited
