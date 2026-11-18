@@ -1,4 +1,5 @@
 import { getBlock } from '../blocks'
+import { getPrimaryStockpile } from '../buildings'
 import { findPath, isSupported, simulateDigWorld } from '../pathfinding'
 import type {
   AccessFailure,
@@ -11,6 +12,7 @@ import type {
 import { findEmergencyLadderPlan } from './access'
 import {
   chooseCommonConstructionMaterial,
+  isFrontierDepot,
   type StorageDestination,
   selectStorageDestination,
   storageBuildings,
@@ -142,7 +144,7 @@ function assessDigSafetyUncached(
     : { safe: false, failure: 'storage-route' }
 }
 
-function preservesCoworkerStorageRoutes(
+function preservesStorageRoutes(
   state: SimulationState,
   target: Position,
   minerId?: string,
@@ -158,6 +160,25 @@ function preservesCoworkerStorageRoutes(
 
   // Movement is symmetric, so each storage-origin search can serve every dwarf.
   const storage = storageBuildings(state.world)
+  const stockpile = getPrimaryStockpile(state.world)
+  if (stockpile) {
+    const pendingDepots = state.constructionOrders
+      .filter(({ type, reason }) => type === 'depot' && reason === 'capacity')
+      .flatMap(({ buildingId }) =>
+        state.world.buildings.filter(({ id }) => id === buildingId),
+      )
+    // A local store can keep a disconnected group hauling while cutting it
+    // off from the colony. Keep each frontier depot joined to the base.
+    const cutsDepotRoute = [...storage, ...pendingDepots].some(
+      (depot) =>
+        isFrontierDepot(depot) &&
+        findPath(state.world, stockpile.position, depot.position, target) ===
+          null &&
+        findPath(state.world, stockpile.position, depot.position) !== null,
+    )
+    if (cutsDepotRoute) return false
+  }
+
   const hasStorageRoute = (to: Position, cleared?: Position) =>
     storage.some(
       ({ position }) => findPath(state.world, position, to, cleared) !== null,
@@ -191,7 +212,7 @@ export function assessDigSafety(
     worldCache.set(key, result)
   }
   // Dwarves can move while the world and the miner's route stay the same.
-  if (result.safe && !preservesCoworkerStorageRoutes(state, target, minerId)) {
+  if (result.safe && !preservesStorageRoutes(state, target, minerId)) {
     return { safe: false, failure: 'support' }
   }
   return result

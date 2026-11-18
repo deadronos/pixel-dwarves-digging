@@ -631,6 +631,86 @@ describe('stepSimulation', () => {
     expect(together.minedBlock).toBeNull()
   })
 
+  it.each(['under-construction', 'completed'] as const)(
+    'keeps the route to a frontier depot %s open',
+    (construction) => {
+      const state = makeState([
+        '################',
+        '...############.',
+        '................',
+      ])
+      state.world.buildings = [
+        ...state.world.buildings.filter(({ type }) => type === 'stockpile'),
+        {
+          id: 'route-ladder',
+          type: 'ladder',
+          position: { x: 2, y: 2 },
+          width: 1,
+          height: 1,
+          level: 1,
+          construction: 'completed',
+        },
+        {
+          id: 'depot-frontier-1',
+          type: 'depot',
+          position: { x: 13, y: 2 },
+          width: 1,
+          height: 1,
+          level: 1,
+          construction,
+          ...(construction === 'completed' && {
+            storage: { capacity: 24, inventory: {} },
+          }),
+        },
+      ]
+      if (construction === 'under-construction') {
+        state.constructionOrders = [
+          {
+            id: 'depot-frontier-1-order',
+            buildingId: 'depot-frontier-1',
+            type: 'depot',
+            required: { stone: 4 },
+            reserved: { stone: 3 },
+            delivered: { stone: 1 },
+            progress: 1,
+            reason: 'capacity',
+          },
+        ]
+      }
+      const miner = {
+        ...state.dwarves[0],
+        position: { x: 2, y: 1 },
+        task: {
+          kind: 'dig' as const,
+          target: { x: 3, y: 1 },
+          path: [],
+          progress: DIG_DURATION.dirt - 1,
+        },
+      }
+      state.dwarves = [miner]
+
+      expect(advanceDig(state, miner).minedBlock).toBeNull()
+
+      const ordinaryDepot = {
+        ...state,
+        world: {
+          ...state.world,
+          buildings: state.world.buildings.map((building) =>
+            building.id === 'depot-frontier-1'
+              ? { ...building, id: 'depot-1' }
+              : building,
+          ),
+        },
+        constructionOrders: state.constructionOrders.map((order) => ({
+          ...order,
+          id: 'depot-1-order',
+          buildingId: 'depot-1',
+        })),
+      }
+      expect(advanceDig(ordinaryDepot, miner).minedBlock).toBe('dirt')
+    },
+  )
+
   it('preserves the world reference during movement-only ticks', () => {
     const initial = makeState(['........', '.....d..', '........'])
     const assigned = stepSimulation(initial, 1)

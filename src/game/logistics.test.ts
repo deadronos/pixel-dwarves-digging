@@ -681,6 +681,55 @@ describe('logistics helpers', () => {
     )
   })
 
+  it('sits an overflow depot near connected mining work in expand mode', () => {
+    const state = makeStorageState()
+    const width = 20
+    state.world.width = width
+    state.world.cells = Uint8Array.from({ length: width * 3 }, (_, index) =>
+      blockToId(index < width || index === width + 17 ? 'stone' : 'air'),
+    )
+    state.inventory.stone = 4
+    state.world.buildings[0].storage = {
+      capacity: 120,
+      inventory: { stone: 4, dirt: 106 },
+    }
+    state.dwarves[0] = {
+      ...state.dwarves[0],
+      position: { x: 8, y: 1 },
+      task: {
+        kind: 'dig',
+        target: { x: 17, y: 1 },
+        path: Array.from({ length: 8 }, (_, i) => ({ x: 9 + i, y: 1 })),
+        progress: 0,
+      },
+    }
+
+    const expand = { ...state, constructionPolicy: 'expand' as const }
+    const planned = planOverflowDepotOrder(expand)
+    expect(planned.world.buildings.at(-1)?.position).toEqual({ x: 16, y: 1 })
+    expect(planned.world.buildings.at(-1)?.id).toMatch(/^depot-frontier-/)
+    expect(getStorageExpansionDiagnostics(expand)).toContainEqual(
+      expect.objectContaining({
+        kind: 'depot',
+        reason: 'available',
+        candidate: { x: 16, y: 1 },
+      }),
+    )
+    expect(
+      planOverflowDepotOrder(state).world.buildings.at(-1)?.position.x,
+    ).toBeLessThan(10)
+
+    const cells = expand.world.cells.slice()
+    cells[width + 8] = blockToId('stone')
+    const disconnected = {
+      ...expand,
+      world: { ...expand.world, cells, topologyKey: undefined },
+    }
+    expect(
+      planOverflowDepotOrder(disconnected).world.buildings.at(-1)?.position.x,
+    ).toBeLessThan(10)
+  })
+
   it('plans an overflow depot on an alternate perimeter cell', () => {
     const state = makeStorageState()
     state.world.height = 5
